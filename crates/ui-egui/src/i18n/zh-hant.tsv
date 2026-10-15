@@ -4,7 +4,6 @@
 	(no style)	（無樣式）
 	(no suggestions)	（無建議）
 	1.5 Line Spacing	1.5 倍行距
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	一款以 Rust 從零開始撰寫的免費開源文書處理軟體。\n屬於 ArtCraft 團隊的 Crafting Apps 系列。
 	About	關於
 	About WordCraft	關於 WordCraft
 	Accept	接受
@@ -281,7 +280,6 @@
 	Comment	註解
 	Comments	註解
 	Comments Pane	註解窗格
-	Community\nDiscord	社群\nDiscord
 	Compact	緊密
 	Compare	比較
 	Compress Pictures	壓縮圖片
@@ -336,8 +334,6 @@
 	Dictate	聽寫
 	Different First Page	首頁不同
 	Different Odd & Even Pages	奇偶頁不同
-	Discord	Discord
-	Discord community	Discord 社群
 	Display	顯示
 	Display for Review	顯示以供檢閱
 	Distribute Columns	平均分配欄寬
@@ -496,8 +492,6 @@
 	Inspect Document	檢查文件
 	Interface language:	介面語言：
 	Italic	斜體
-	Join the ArtCraft community on Discord	加入 Discord 上的 ArtCraft 社群
-	Join us on Discord: discord.gg/artcraft	在 Discord 上加入我們：discord.gg/artcraft
 	Justify	左右對齊
 	Keep Lines Together	段落中不分頁
 	Keep lines together	段落中不分頁
@@ -553,7 +547,6 @@
 	Merge Formatting	合併格式設定
 	Merged PRs	已合併的 PR
 	Mirrored	左右對稱
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT OR Apache-2.0。著作權所有 (c) 2026 ArtCraft 團隊及 WordCraft 貢獻者。
 	Moderate	中等
 	Modify Style	修改樣式
 	Modify…	修改…
@@ -801,7 +794,6 @@
 	Animation	動畫
 	Animate the caret (it glides and fades)	為游標加上動畫（平滑移動並淡入淡出）
 	On: the caret glides to its new place when you type or use the arrow keys, and its blink fades. Off: it jumps and blinks on and off.	開啟：輸入或使用方向鍵時，游標會平滑移動到新位置，閃爍時淡入淡出。關閉：游標直接跳到新位置，閃爍時直接顯示和隱藏。
-	Show the community button in the title bar	在標題列中顯示社群按鈕
 	Show/Hide ¶	顯示/隱藏 ¶
 	Show\nComments	顯示註解
 	Shrink Font 1 Point	字型縮小 1 點
@@ -817,7 +809,6 @@
 	Small caps	小型大寫字
 	SmartArt	SmartArt
 	Sort	排序
-	Source code: github.com/storytold/wordcraft	原始碼：github.com/storytold/wordcraft
 	Space	空格
 	Space before/after:	段落前/後間距：
 	Spacing	間距
@@ -1205,7 +1196,6 @@
 	Insert a new equation (Alt+=)	插入新方程式 (Alt+=)
 	Leave the equation (Esc)	離開方程式 (Esc)
 	Preview	預覽
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Draw Ink	繪製筆跡
 	Erase Ink	擦除筆跡
 	Hide Ink	隱藏筆跡

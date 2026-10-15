@@ -12,7 +12,6 @@
 	(no style)	(Aucun style)
 	(no suggestions)	(aucune suggestion)
 	1.5 Line Spacing	Interligne 1,5
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Un traitement de texte gratuit et open source, écrit de zéro en Rust.\nPartie de la suite Crafting Apps de l’équipe ArtCraft.
 	About	À propos
 	About WordCraft	À propos de WordCraft
 	Accept	Accepter
@@ -220,7 +219,6 @@
 	Comment	Commentaire
 	Comments	Commentaires
 	Comments Pane	Volet Commentaires
-	Community\nDiscord	Communauté\nDiscord
 	Compact	Compact
 	Compare	Comparer
 	Compress Pictures	Compresser les images
@@ -292,8 +290,6 @@
 	Different First Page	Première page différente
 	Different Odd & Even Pages	Pages paires et impaires différentes
 	Direct formatting	Mise en forme directe
-	Discord	Discord
-	Discord community	Communauté Discord
 	Display	Affichage
 	Display for Review	Affichage pour la révision
 	Distribute Columns	Répartir les colonnes
@@ -453,8 +449,6 @@
 	Inspect Styles at Selection	Inspecter les styles de la sélection
 	Interface language:	Langue de l’interface :
 	Italic	Italique
-	Join the ArtCraft community on Discord	Rejoignez la communauté ArtCraft sur Discord
-	Join us on Discord: discord.gg/artcraft	Rejoignez-nous sur Discord : discord.gg/artcraft
 	Justify	Justifier
 	Keep Lines Together	Lignes solidaires
 	Keep lines together	Lignes solidaires
@@ -511,7 +505,6 @@
 	Merge Formatting	Fusionner la mise en forme
 	Merged PRs	PR fusionnées
 	Mirrored	Miroir
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team et les contributeurs de WordCraft.
 	Moderate	Modérées
 	Modify Style	Modifier le style
 	Modify…	Modifier…
@@ -765,7 +758,6 @@
 	Show only comments and formatting in balloons	Afficher uniquement les commentaires et la mise en forme dans les bulles
 	Show revisions in balloons	Afficher les révisions dans les bulles
 	Show rulers	Afficher les règles
-	Show the community button in the title bar	Afficher le bouton Communauté dans la barre de titre
 	Show/Hide ¶	Afficher/Masquer ¶
 	Show\nComments	Afficher\nles commentaires
 	Shrink Font 1 Point	Réduire la police d’1 point
@@ -781,7 +773,6 @@
 	Small caps	Petites majuscules
 	SmartArt	SmartArt
 	Sort	Trier
-	Source code: github.com/storytold/wordcraft	Code source : github.com/storytold/wordcraft
 	Space	Espace
 	Space before/after:	Espacement avant/après :
 	Spacing	Espacement
@@ -1145,7 +1136,6 @@
 	Insert a new equation (Alt+=)	Insérer une nouvelle équation (Alt+=)
 	Leave the equation (Esc)	Quitter l’équation (Esc)
 	Preview	Aperçu
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Draw Ink	Dessiner à l’encre
 	Erase Ink	Effacer l’encre
 	Hide Ink	Masquer l’encre

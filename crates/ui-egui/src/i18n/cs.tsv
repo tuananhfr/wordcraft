@@ -22,7 +22,6 @@
 	1/4 Em Space	Čtvrtčtverčíková mezera
 	3-D	3D
 	A file dialog is already open.	Dialogové okno souboru je již otevřené.
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Bezplatný textový procesor s otevřeným zdrojovým kódem napsaný od základu v jazyce Rust.\nSoučást sady Crafting Apps od týmu ArtCraft.
 	A mail merge field	Pole hromadné korespondence
 	A numbered sequence (figures, tables…)	Číslovaná posloupnost (obrázky, tabulky…)
 	A password is required to open this document.	K otevření tohoto dokumentu je vyžadováno heslo.
@@ -230,7 +229,6 @@
 	Comment	Komentář
 	Comments	Komentáře
 	Comments Pane	Podokno komentářů
-	Community\nDiscord	Komunita\nDiscord
 	Compact	Kompaktní
 	Company	Společnost
 	Compare	Porovnat
@@ -311,8 +309,6 @@
 	Direct formatting	Přímé formátování
 	Direction:	Směr:
 	Directory	Katalog
-	Discord	Discord
-	Discord community	Komunita na Discordu
 	Display	Zobrazení
 	Display for Review	Zobrazení k revizi
 	Distribute Columns	Rovnoměrně rozložit sloupce
@@ -463,7 +459,6 @@
 	from Unicode (hex)	z Unicode (hex)
 	Function	Funkce
 	General	Obecné
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Glow	Záře
 	Glow Colors	Barvy záře
 	Go To	Přejít na
@@ -570,8 +565,6 @@
 	Interface theme:	Motiv rozhraní:
 	Interface\nTheme	Motiv\nrozhraní
 	Italic	Kurzíva
-	Join the ArtCraft community on Discord	Připojte se ke komunitě ArtCraft na Discordu
-	Join us on Discord: discord.gg/artcraft	Připojte se k nám na Discordu: discord.gg/artcraft
 	Justification	Zarovnání
 	Justified	Do bloku
 	Justify	Do bloku
@@ -659,7 +652,6 @@
 	Merge Record #	Číslo slučovaného záznamu
 	Merged PRs	Sloučené PR
 	Mirrored	Zrcadlové
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team a přispěvatelé projektu WordCraft.
 	Moderate	Střední
 	Modify Style	Upravit styl
 	Modify Table Style	Upravit styl tabulky
@@ -1025,7 +1017,6 @@
 	Show or Hide Style	Zobrazit nebo skrýt styl
 	Show revisions in balloons	Zobrazit revize v bublinách
 	Show rulers	Zobrazit pravítka
-	Show the community button in the title bar	Zobrazit tlačítko komunity v záhlaví okna
 	Show/Hide ¶	Zobrazit/skrýt ¶
 	Show\nComments	Zobrazit\nkomentáře
 	Shrink Font 1 Point	Zmenšit písmo o 1 bod
@@ -1048,7 +1039,6 @@
 	Soft Edges	Měkké okraje
 	Sort	Seřadit
 	Sort order:	Pořadí řazení:
-	Source code: github.com/storytold/wordcraft	Zdrojový kód: github.com/storytold/wordcraft
 	Space	Mezera
 	Space after	Mezera za
 	Space after: {pt} pt	Mezera za: {pt} b.

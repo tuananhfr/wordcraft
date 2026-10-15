@@ -17,7 +17,6 @@
 
 	(no suggestions)	(nincs javaslat)
 	1.5 Line Spacing	1,5-es sorköz
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Ingyenes, nyílt forráskódú szövegszerkesztő, az alapoktól Rustban írva.\nA Crafting Apps családba tartozik, az ArtCraft csapatától.
 	AaBbCcDd	AaÁáBbCc
 	About	Névjegy
 	About WordCraft	A WordCraft névjegye
@@ -145,7 +144,6 @@
 	Comment	Megjegyzés
 	Comments	Megjegyzések
 	Comments Pane	Megjegyzések panel
-	Community\nDiscord	Közösségi\nDiscord
 	Compact	Tömör
 	Compare	Összehasonlítás
 	Compress Pictures	Képek tömörítése
@@ -198,8 +196,6 @@
 	Dictate	Diktálás
 	Different First Page	Eltérő első oldal
 	Different Odd & Even Pages	Eltérő páros és páratlan oldalak
-	Discord	Discord
-	Discord community	Discord-közösség
 	Display	Megjelenítés
 	Display for Review	Megjelenítés véleményezéshez
 	Distribute Columns	Oszlopok egyenletes elosztása
@@ -369,8 +365,6 @@
 	Intense Reference	Erős hivatkozás
 	Interface language:	Felület nyelve:
 	Italic	Dőlt
-	Join the ArtCraft community on Discord	Csatlakozz az ArtCraft közösséghez a Discordon
-	Join us on Discord: discord.gg/artcraft	Csatlakozz hozzánk a Discordon: discord.gg/artcraft
 	Justify	Sorkizárás
 	Keep Lines Together	Sorok együtt tartása
 	Keep lines together	Sorok együtt tartása
@@ -429,7 +423,6 @@
 	Merge Formatting	Formázás összefésülése
 	Merged PRs	Beolvasztott PR-ek
 	Mirrored	Tükrözött
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT vagy Apache-2.0. Copyright (c) 2026 ArtCraft Team és a WordCraft közreműködői.
 	Moderate	Mérsékelt
 	Modify Style	Stílus módosítása
 	Modify…	Módosítás…
@@ -666,7 +659,6 @@
 	Animate the caret (it glides and fades)	Animált kurzor (csúszva mozog, halványulva villog)
 	Animation	Animáció
 	On: the caret glides to its new place when you type or use the arrow keys, and its blink fades. Off: it jumps and blinks on and off.	Be: gépeléskor és a nyílbillentyűk használatakor a kurzor csúszva mozog az új helyére, és halványulva villog. Ki: a kurzor ugrik, és egyszerűen ki-be villog.
-	Show the community button in the title bar	Közösség gomb megjelenítése a címsorban
 	Show/Hide ¶	Megjelenítés/elrejtés ¶
 	Show\nComments	Megjegyzések\nmegjelenítése
 	Shrink Font 1 Point	Betűméret csökkentése 1 ponttal
@@ -681,7 +673,6 @@
 	Small caps	Kiskapitális
 	SmartArt	SmartArt
 	Sort	Rendezés
-	Source code: github.com/storytold/wordcraft	Forráskód: github.com/storytold/wordcraft
 	Space before/after:	Térköz előtte/utána:
 	Spacing	Térköz
 	Spacing (pt):	Térköz (pt):
@@ -1083,7 +1074,6 @@
 	Insert a new equation (Alt+=)	Új egyenlet beszúrása (Alt+=)
 	Leave the equation (Esc)	Kilépés az egyenletből (Esc)
 	Preview	Előnézet
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Browse…	Tallózás…
 	AaBbYyZz	AaBbYyZz ŐőŰű
 	Align Top Left	Igazítás balra fel

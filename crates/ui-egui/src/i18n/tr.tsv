@@ -14,7 +14,6 @@
 
 	(no suggestions)	(öneri yok)
 	1.5 Line Spacing	1,5 Satır Aralığı
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Rust ile sıfırdan yazılmış ücretsiz, açık kaynak bir kelime işlemci.\nArtCraft ekibinin Crafting Apps ailesinin bir parçası.
 	AaBbCcDd	AaBbCcÇç
 	About	Hakkında
 	About WordCraft	WordCraft Hakkında
@@ -142,7 +141,6 @@
 	Comment	Yorum
 	Comments	Yorumlar
 	Comments Pane	Yorumlar Bölmesi
-	Community\nDiscord	Topluluk\nDiscord'u
 	Compact	Kompakt
 	Compare	Karşılaştır
 	Compress Pictures	Resimleri Sıkıştır
@@ -196,8 +194,6 @@
 	Dictate	Dikte Et
 	Different First Page	İlk Sayfa Farklı
 	Different Odd & Even Pages	Tek ve Çift Sayfalar Farklı
-	Discord	Discord
-	Discord community	Discord topluluğu
 	Display	Görüntü
 	Display for Review	İnceleme Görünümü
 	Distribute Columns	Sütunları Eşit Dağıt
@@ -368,8 +364,6 @@
 	Inspect Document	Belgeyi İncele
 	Interface language:	Arayüz dili:
 	Italic	İtalik
-	Join the ArtCraft community on Discord	Discord'da ArtCraft topluluğuna katılın
-	Join us on Discord: discord.gg/artcraft	Discord'da bize katılın: discord.gg/artcraft
 	Justify	İki Yana Yasla
 	Keep Lines Together	Satırları Birlikte Tut
 	Keep lines together	Satırları birlikte tut
@@ -429,7 +423,6 @@
 	Merge Formatting	Biçimlendirmeyi Birleştir
 	Merged PRs	Birleştirilen PR'lar
 	Mirrored	Aynalı
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT OR Apache-2.0. Telif hakkı (c) 2026 ArtCraft ekibi ve WordCraft'a katkıda bulunanlar.
 	Moderate	Orta
 	Modify Style	Stili Değiştir
 	Modify…	Değiştir…
@@ -672,7 +665,6 @@
 	Animate the caret (it glides and fades)	İmleci canlandır (kayarak ilerler ve solarak yanıp söner)
 	Animation	Animasyon
 	On: the caret glides to its new place when you type or use the arrow keys, and its blink fades. Off: it jumps and blinks on and off.	Açık: yazarken veya ok tuşlarını kullanırken imleç yeni yerine kayarak gider ve yanıp sönerken solar. Kapalı: imleç yeni yerine atlar, keskin biçimde yanıp söner.
-	Show the community button in the title bar	Başlık çubuğunda topluluk düğmesini göster
 	Show/Hide ¶	Göster/Gizle ¶
 	Show\nComments	Yorumları\nGöster
 	Shrink Font 1 Point	Yazı Tipini 1 Punto Küçült
@@ -687,7 +679,6 @@
 	Small caps	Küçük büyük harf
 	SmartArt	SmartArt
 	Sort	Sırala
-	Source code: github.com/storytold/wordcraft	Kaynak kod: github.com/storytold/wordcraft
 	Space before/after:	Önce/sonra boşluk:
 	Spacing	Aralık
 	Spacing (pt):	Aralık (pt):
@@ -1093,7 +1084,6 @@ preview	Title	Örnek
 	Insert a new equation (Alt+=)	Yeni denklem ekle (Alt+=)
 	Leave the equation (Esc)	Denklemden çık (Esc)
 	Preview	Önizleme
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Browse…	Gözat…
 
 # Equation gallery, themes, watermarks, paper sizes, table styles and other strings the

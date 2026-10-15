@@ -19,7 +19,6 @@
 	(no suggestions)	(нема предлога)
 	(picture or object)	(слика или објекат)
 	1.5 Line Spacing	Проређеност 1,5
-	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Бесплатан, отворени обрађивач текста написан од нуле у Rust-у.\nДео Crafting Apps пакета тима ArtCraft.
 	A password is required to open this document.	За отварање овог документа потребна је лозинка.
 	About	О програму
 	About WordCraft	О WordCraft-у
@@ -332,7 +331,6 @@
 	Comment	Коментар
 	Comments	Коментари
 	Comments Pane	Окно коментара
-	Community\nDiscord	Заједница\nна Discord-у
 	Compact	Сажето
 	Compare	Упоређивање
 	Compress Pictures	Компресуј слике
@@ -387,8 +385,6 @@
 	Dictate	Диктирање
 	Different First Page	Другачија прва страна
 	Different Odd & Even Pages	Другачије непарне и парне стране
-	Discord	Discord
-	Discord community	Заједница на Discord-у
 	Display	Приказ
 	Display for Review	Приказ за преглед
 	Distribute Columns	Равномерно размести колоне
@@ -547,8 +543,6 @@
 	Inspect Document	Прегледај документ
 	Interface language:	Језик интерфејса:
 	Italic	Курзив
-	Join the ArtCraft community on Discord	Придружите се ArtCraft заједници на Discord-у
-	Join us on Discord: discord.gg/artcraft	Придружите нам се на Discord-у: discord.gg/artcraft
 	Justify	Обострано поравнање
 	Keep Lines Together	Задржи редове заједно
 	Keep lines together	Задржи редове заједно
@@ -604,7 +598,6 @@
 	Merge Formatting	Споји форматирање
 	Merged PRs	Спојени PR-ови
 	Mirrored	Зрцаљено
-	MIT OR Apache-2.0. Copyright (c) 2026 ArtCraft Team and the WordCraft contributors.	MIT OR Apache-2.0. Ауторска права (c) 2026 ArtCraft Team и сарадници на WordCraft-у.
 	Moderate	Умерено
 	Modify Style	Измени стил
 	Modify…	Измени…
@@ -854,7 +847,6 @@
 	Animation	Анимација
 	Animate the caret (it glides and fades)	Анимирај курсор (клизи и постепено се гаси)
 	On: the caret glides to its new place when you type or use the arrow keys, and its blink fades. Off: it jumps and blinks on and off.	Укључено: курсор клизи на ново место док куцате или користите стрелице, а његово трептање се постепено гаси. Искључено: скаче и трепће нагло.
-	Show the community button in the title bar	Прикажи дугме заједнице у траци наслова
 	Show/Hide ¶	Прикажи/сакриј ¶
 	Show\nComments	Прикажи\nкоментаре
 	Shrink Font 1 Point	Смањи фонт за 1 тачку
@@ -872,7 +864,6 @@
 	Soft Edges	Меке ивице
 	Sort	Сортирај
 	Sort order:	Редослед сортирања:
-	Source code: github.com/storytold/wordcraft	Изворни код: github.com/storytold/wordcraft
 	Space	Размак
 	Space after: {pt} pt	Размак после: {pt} пт
 	Space before/after:	Размак пре/после:
@@ -1273,7 +1264,6 @@
 	Reset Crop	Поништи исецање
 	Insert a new equation (Alt+=)	Уметни нову једначину (Alt+=)
 	Leave the equation (Esc)	Напусти једначину (Esc)
-	getartcraft.com/apps/wordcraft	getartcraft.com/apps/wordcraft
 	Draw Ink	Цртај мастилом
 	Erase Ink	Обриши мастило
 	Hide Ink	Сакриј мастило

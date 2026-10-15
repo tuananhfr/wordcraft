@@ -199,7 +199,6 @@ pub struct UiState {
     #[serde(rename = "dark", skip_serializing)]
     pub(crate) legacy_dark: Option<bool>,
     pub nav_tab: String,
-    pub show_discord: bool,
     /// User name (File › Options) for comments and tracked changes; empty keeps the default.
     pub author: String,
     /// Desktop: the main window's size and position, restored at the next launch.
@@ -287,7 +286,6 @@ impl Default for UiState {
             animations: theme::Animations::default(),
             legacy_dark: None,
             nav_tab: "headings".into(),
-            show_discord: true,
             author: String::new(),
             window: None,
             language: i18n::AUTO.into(),
@@ -1171,10 +1169,6 @@ impl WordApp {
                         .into(),
                 ));
             }
-            "ui.discord" => {
-                self.canvas.open_url = Some("https://discord.gg/artcraft".into());
-                json!({})
-            }
             "ui.caretAnimation" => {
                 // File › Options › Advanced › Animation: `value` true or false turns the caret's
                 // glide and fading blink on or off; no value reads it.
@@ -1908,7 +1902,6 @@ pub(crate) fn works_without_document(id: &str) -> bool {
             | "ui.openFileDialog"
             | "ui.fileBrowser"
             | "ui.makeDefaultApp"
-            | "ui.discord"
             | "ui.caretAnimation"
             | "ui.startScreen"
     ) || id.starts_with("help.")
@@ -2095,7 +2088,7 @@ mod tests {
         for id in ["format.bold", "text.insert", "file.save", "file.saveAs", "file.print", "edit.paste", "insert.table", "ui.print"] {
             assert!(!widgets::enabled(a, id), "{id} is off with no document");
         }
-        for id in ["file.new", "file.open", "ui.backstage", "ui.tab", "ui.discord", "file.options", "ui.theme"] {
+        for id in ["file.new", "file.open", "ui.backstage", "ui.tab", "file.options", "ui.theme"] {
             assert!(widgets::enabled(a, id), "{id} works with no document");
         }
         assert!(!chrome::qat_enabled(a, "file.save"));
@@ -3311,7 +3304,7 @@ mod tests {
                 a,
             );
             h.run_steps(4);
-            assert!(h.query_by_label("Show the community button in the title bar").is_some(), "hook {hook}: the Options page rendered");
+            assert!(h.query_by_label("Dark page (white text on black)").is_some(), "hook {hook}: the Options page rendered");
             assert_eq!(h.query_by_label(LABEL).is_some(), hook, "hook {hook}: the button");
             if hook {
                 h.get_by_label(LABEL).click();
@@ -3319,6 +3312,22 @@ mod tests {
                 assert_eq!(calls.get(), 1, "the button ran the hook");
             }
         }
+    }
+
+    /// The ERPCons fork credits WordCraft's authors in words and links its own source (ArtCraft
+    /// brand terms: forks drop the marks and the community links).
+    #[test]
+    fn about_credits_upstream_without_artcraft_links() {
+        use egui_kittest::kittest::Queryable;
+        let mut a = app();
+        a.run("ui.dialog", json!({"name": "about"})).unwrap();
+        let mut h = harness(a);
+        h.run_steps(4);
+        assert!(h.query_by_label("ERPCons Văn phòng — dựa trên WordCraft của nhóm ArtCraft. MIT OR Apache-2.0.").is_some());
+        assert!(h.query_by_label("Source code: github.com/tuananhfr/wordcraft").is_some());
+        assert!(h.query_by_label_contains("Discord").is_none());
+        assert!(h.query_by_label_contains("getartcraft").is_none());
+        assert!(h.state_mut().run("ui.discord", json!({})).is_err(), "the Discord command is gone");
     }
 
     /// A prompt about document A outlived an agent replacing A with B, and Don't Save then ran
