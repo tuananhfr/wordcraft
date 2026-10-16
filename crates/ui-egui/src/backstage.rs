@@ -457,7 +457,7 @@ mod tests {
         let services = Services {
             download: Some(Box::new(move |n: &str, b: &[u8]| {
                 sink.borrow_mut().push((n.to_string(), b.to_vec()));
-                Ok(())
+                Ok(crate::Download::Done)
             })),
             ..Default::default()
         };
@@ -580,7 +580,7 @@ mod tests {
         let services = Services {
             download: Some(Box::new(move |n: &str, b: &[u8]| {
                 sink.borrow_mut().push((n.to_string(), b.to_vec()));
-                Ok(())
+                Ok(crate::Download::Done)
             })),
             ..Default::default()
         };

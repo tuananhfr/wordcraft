@@ -84,7 +84,7 @@ use serde_json::{Value, json};
 use wordcraft_engine::Session;
 
 pub use control::ControlRequest;
-pub use file_dialogs::{FileDialogAnswer, FileDialogRequest, open_filters};
+pub use file_dialogs::{Download, FileDialogAnswer, FileDialogRequest, PickerAnswer, open_filters};
 
 /// Platform services injected by the host (file dialogs, file I/O).
 #[derive(Default)]
@@ -107,9 +107,10 @@ pub struct Services {
     pub open_async: Option<Box<dyn Fn(&str)>>,
     /// Web: files (name, bytes) delivered asynchronously (picker, drag and drop).
     pub inbox: Option<Inbox>,
-    /// Web: hand bytes to the browser as a download. An error means no download started (the
-    /// browser can't tell the page whether the user then kept the file).
-    pub download: Option<Box<dyn Fn(&str, &[u8]) -> Result<(), String>>>,
+    /// Web: hand bytes to the browser as a download. An error means no download started. An
+    /// anchor download is [`Download::Done`] (the browser can't tell the page whether the user
+    /// then kept the file); a save picker is [`Download::Pending`] until the user answers it.
+    pub download: Option<Box<dyn Fn(&str, &[u8]) -> Result<Download, String>>>,
     /// Web: told whether the document has unsaved changes after each pass, for the browser's
     /// leave-page guard (`beforeunload` runs between frames and can't ask the app).
     pub on_dirty: Option<Box<dyn Fn(bool)>>,
@@ -444,6 +445,8 @@ pub struct WordApp {
     autosave_path: Option<std::path::PathBuf>,
     /// The file dialog the host is showing, and what its answer is for ([`file_dialogs`]).
     file_dialog: Option<file_dialogs::PendingDialog>,
+    /// Web: saves still in the browser's save picker ([`file_dialogs`]).
+    picker_saves: Vec<file_dialogs::PickerSave>,
     /// The built-in file browser, when it is open, and the folder it showed last (#576).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) file_browser: file_browser::State,
@@ -538,6 +541,7 @@ impl WordApp {
             font_generation: wordcraft_fonts::FontDb::global().generation(),
             dialog_pick: None,
             file_dialog: None,
+            picker_saves: Vec::new(),
             #[cfg(not(target_arch = "wasm32"))]
             file_browser: file_browser::State::default(),
             info_editing: None,
@@ -730,20 +734,27 @@ impl WordApp {
                 if matches!(id, "file.save" | "file.saveAs") { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
             let opts = wordcraft_engine::cmd::file::export_options(&self.session, &params);
             let bytes = wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts)?;
-            if let Some(d) = &self.services.download
-                && let Err(e) = d(&name, &bytes)
-            {
-                let msg = i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &name), ("error", &e)]);
-                log::error!("download of {name} failed: {e}");
-                self.status(msg.clone());
-                return Err(msg);
-            }
+            let picker = match self.services.download.as_ref().map(|d| d(&name, &bytes)) {
+                Some(Err(e)) => {
+                    let msg = i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &name), ("error", &e)]);
+                    log::error!("download of {name} failed: {e}");
+                    self.status(msg.clone());
+                    return Err(msg);
+                }
+                Some(Ok(Download::Pending(rx))) => Some(rx),
+                Some(Ok(Download::Done)) | None => None,
+            };
             // An export is a copy, and so is a save in a format that doesn't keep everything (a
             // page image, plain text): the document itself still has unsaved changes.
-            if matches!(id, "file.save" | "file.saveAs") && keeps_everything(&name) {
+            let marked_saved = matches!(id, "file.save" | "file.saveAs") && keeps_everything(&name);
+            if marked_saved {
                 self.session.dirty = false;
             }
-            return Ok(json!({"downloaded": name, "bytes": bytes.len()}));
+            let pending = picker.is_some();
+            if let Some(rx) = picker {
+                self.track_picker_save(rx, &name, marked_saved);
+            }
+            return Ok(json!({"downloaded": name, "bytes": bytes.len(), "pending": pending}));
         }
         let document = self.session.document_id();
         let r = self.session.run(id, &params).map_err(|e| e.to_string());
@@ -832,7 +843,14 @@ impl WordApp {
                     file_dialogs::Asked::Busy => Ok(json!({"done": false})),
                 };
             }
-            SaveChoice::Save => self.save_for_prompt(),
+            SaveChoice::Save => match self.save_for_prompt() {
+                Some(saved) => saved,
+                // Web: the browser's save picker is still open; carry on once it has written the file.
+                None => {
+                    self.continue_after_picker_save(then, params);
+                    return Ok(json!({"pending": "save"}));
+                }
+            },
         };
         if !go {
             return Ok(json!({"done": false}));
@@ -859,13 +877,18 @@ impl WordApp {
     /// Save before New/Open/Close (and the mailings that replace the document): true once the
     /// document is safely written. A save in a format that doesn't keep everything (a page
     /// image, plain text) writes a copy and leaves the document unsaved, so it doesn't count:
-    /// the command is cancelled and the document stays.
-    fn save_for_prompt(&mut self) -> bool {
-        let saved = match self.execute("file.save", json!({})) {
-            Ok(v) => v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some(),
-            Err(_) => false,
+    /// the command is cancelled and the document stays. `None` while the browser's save picker
+    /// hasn't written the file yet.
+    fn save_for_prompt(&mut self) -> Option<bool> {
+        let (saved, pending) = match self.execute("file.save", json!({})) {
+            Ok(v) => (
+                v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some(),
+                v.get("pending").and_then(Value::as_bool) == Some(true),
+            ),
+            Err(_) => (false, false),
         };
-        self.safely_saved(saved)
+        let safe = self.safely_saved(saved);
+        if safe && pending { None } else { Some(safe) }
     }
 
     /// Whether a save before New/Open/Close counts: it happened, and kept everything.
@@ -1426,6 +1449,7 @@ impl WordApp {
         read_aloud::poll(self, ctx);
         self.clear_stale_change_picture();
         let _ = self.poll_file_dialog();
+        self.poll_picker_saves();
         self.drain_inbox();
         self.watch_fonts(ctx);
         self.autosave_tick(now_ms());
@@ -3683,13 +3707,13 @@ mod tests {
     fn web_downloads_that_drop_content_leave_the_document_unsaved() {
         for name in ["novel.png", "novel.txt", "novel.md"] {
             let mut a = typed();
-            a.services.download = Some(Box::new(|_, _| Ok(())));
+            a.services.download = Some(Box::new(|_, _| Ok(Download::Done)));
             a.execute("file.saveAs", json!({"path": name})).unwrap();
             assert!(a.session.dirty, "{name}");
         }
         for name in ["novel.docx", "novel.docm", "novel.DOTX", "novel.dotm", "novel.odt", "novel.rtf"] {
             let mut a = typed();
-            a.services.download = Some(Box::new(|_, _| Ok(())));
+            a.services.download = Some(Box::new(|_, _| Ok(Download::Done)));
             a.execute("file.saveAs", json!({"path": name})).unwrap();
             assert!(!a.session.dirty, "{name}");
         }
@@ -3731,6 +3755,83 @@ mod tests {
         assert!(a.session.dirty);
         let msg = a.status_msg.as_ref().map(|(m, _)| m.clone()).unwrap_or_default();
         assert!(msg.contains("blocked by the browser"), "the status bar says why: {msg:?}");
+    }
+
+    /// Web (Chromium): a save goes through the browser's save picker, which answers later. Save
+    /// in "Save changes?" carried on at once: the New/Open replaced the document while the picker
+    /// was open, and cancelling the picker lost it and marked the new document unsaved.
+    #[test]
+    fn save_changes_waits_for_the_browsers_save_picker() {
+        use std::sync::mpsc::{Sender, channel};
+        let answers: std::rc::Rc<std::cell::RefCell<Vec<Sender<PickerAnswer>>>> = Default::default();
+        let with_picker = |mut a: WordApp| {
+            let answers = answers.clone();
+            a.services.download = Some(Box::new(move |_, _| {
+                let (tx, rx) = channel();
+                answers.borrow_mut().push(tx);
+                Ok(Download::Pending(rx))
+            }));
+            a
+        };
+        let answer = |a: PickerAnswer| answers.borrow_mut().remove(0).send(a).unwrap();
+        let ctx = egui::Context::default();
+        let frame = |a: &mut WordApp| ctx.run_ui(egui::RawInput::default(), |ui| a.logic(ui.ctx())).drop_without_applying_deltas();
+
+        // Cancelled: the document stays, unsaved, and the New never runs.
+        let mut a = with_picker(typed());
+        a.run("file.new", json!({})).unwrap();
+        let r = a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();
+        assert_eq!(r["pending"], "save");
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED), "nothing is replaced while the picker is open");
+        a.status_msg = None;
+        answer(Err(None));
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED), "the cancelled save kept the document");
+        assert!(a.session.dirty, "with its unsaved changes");
+        assert_eq!(prompt(&a), None);
+        assert!(a.status_msg.is_none(), "a plain cancel needs no message");
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED), "the New doesn't run later either");
+
+        // Written: the held-back New runs then, and only then.
+        a.run("file.new", json!({})).unwrap();
+        a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED));
+        answer(Ok(()));
+        frame(&mut a);
+        assert!(!body_text(&a).contains(UNSAVED), "the New ran once the file was written");
+        assert!(!a.session.dirty);
+
+        // Open too; a failed save keeps the document and the status bar says why.
+        let dir = scratch("picker-open");
+        let other = dir.join("other.docx");
+        Session::new(wordcraft_doc::Document::from_text("Other document")).run("file.save", &json!({"path": other.to_string_lossy()})).unwrap();
+        let mut a = with_picker(typed());
+        a.run("file.open", json!({"path": other.to_string_lossy()})).unwrap();
+        a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();
+        answer(Err(Some("disk full".into())));
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED) && a.session.dirty);
+        assert!(a.status_msg.as_ref().is_some_and(|(m, _)| m.contains("disk full")), "the status bar says why");
+        a.run("file.open", json!({"path": other.to_string_lossy()})).unwrap();
+        a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();
+        frame(&mut a);
+        assert!(body_text(&a).contains(UNSAVED));
+        answer(Ok(()));
+        frame(&mut a);
+        assert!(body_text(&a).contains("Other document"), "the Open ran once the file was written");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // The answer is about the document that was saved, not whichever is open by then.
+        let mut a = with_picker(typed());
+        a.run("file.save", json!({})).unwrap();
+        a.run("file.new", json!({})).unwrap();
+        assert!(!body_text(&a).contains(UNSAVED), "saved, so New didn't ask");
+        answer(Err(None));
+        frame(&mut a);
+        assert!(!a.session.dirty, "the new document isn't marked unsaved");
     }
 
     /// A new document has no path: Save goes through Save As, and cancelling that cancels the New.
@@ -4011,7 +4112,7 @@ mod tests {
     /// switch is blocked with a reason instead of being on while nothing is saved.
     #[test]
     fn autosave_is_unavailable_in_the_browser() {
-        let services = Services { download: Some(Box::new(|_: &str, _: &[u8]| Ok(()))), ..Default::default() };
+        let services = Services { download: Some(Box::new(|_: &str, _: &[u8]| Ok(Download::Done))), ..Default::default() };
         let mut a = WordApp::new(Session::new(wordcraft_doc::Document::new()), services);
         a.run("text.insert", json!({"text": "Hello"})).unwrap();
         a.run("file.save", json!({"path": "draft.docx"})).unwrap();
@@ -4079,7 +4180,7 @@ mod tests {
         let services = Services {
             download: Some(Box::new(move |n: &str, b: &[u8]| {
                 sink.borrow_mut().push((n.to_string(), b.to_vec()));
-                Ok(())
+                Ok(crate::Download::Done)
             })),
             ..Default::default()
         };

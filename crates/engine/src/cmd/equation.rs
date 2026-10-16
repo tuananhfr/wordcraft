@@ -30,7 +30,9 @@ pub fn specs() -> Vec<CommandSpec> {
             .when(near_equation)
             .params(r#"{"pos"?: {"path": [[node, child]…], "off": n}}"#),
         CommandSpec::new("equation.exit", "Leave Equation", "Equation", exit).pure().when(editing).params(r#"{"before"?: bool}"#),
-        CommandSpec::new("equation.type", "Type in Equation", "Equation", type_text).when(editing).params(r#"{"text": string}"#),
+        CommandSpec::new("equation.type", "Type in Equation", "Equation", type_text)
+            .when(editing)
+            .params(r#"{"text": string, "deleteBefore"?: n, "deleteAfter"?: n}  (an input method's replacement: first deletes like that many Backspace / Delete presses)"#),
         CommandSpec::new("equation.insertStructure", "Insert Structure", "Equation › Structures", insert_structure)
             .params(r#"{"id"?: string (see equation.gallery), "linear"?: string, "latex"?: string}"#),
         CommandSpec::new("equation.insertSymbol", "Insert Symbol", "Equation › Symbols", insert_symbol).params(r#"{"char": string}"#),
@@ -223,8 +225,17 @@ fn type_text(s: &mut Session, v: &Value) -> CmdResult {
     let m = current(s)?;
     let latex = s.math_latex;
     let style = TypeStyle { nor: s.math_normal_text };
+    // An input method rewriting characters it typed (Vietnamese Telex "a" + "s" → "á").
+    let count = |k: &str| p::u64(v, k).map_or(0, |n| n.min(10_000));
+    let (before, after) = (count("deleteBefore"), count("deleteAfter"));
     let mut pos = m.pos.clone();
     with_eq(s, &m.at, |math, _| {
+        for _ in 0..before {
+            pos = me::delete_back(&mut math.nodes, &pos);
+        }
+        for _ in 0..after {
+            pos = me::delete_forward(&mut math.nodes, &pos);
+        }
         if math.linear {
             // Linear form is plain text: no build-up.
             pos = me::insert_text(&mut math.nodes, &pos, &text, TypeStyle::default());
@@ -674,6 +685,20 @@ mod tests {
         s.run("equation.exit", &json!({})).unwrap();
         s.run("edit.undo", &json!({})).unwrap();
         assert!(linear(&s).is_empty());
+    }
+
+    /// An input method taking back what it typed (Vietnamese Telex "a" + "s" → "á") deletes in
+    /// the equation like Backspace / Delete, then types the replacement.
+    #[test]
+    fn input_method_replacements_delete_in_the_equation() {
+        let mut s = session();
+        s.run("insert.equation", &json!({})).unwrap();
+        s.run("equation.type", &json!({"text": "xa"})).unwrap();
+        s.run("equation.type", &json!({"text": "á", "deleteBefore": 1})).unwrap();
+        assert_eq!(linear(&s), "xá");
+        s.run("equation.move", &json!({"dir": "left"})).unwrap();
+        s.run("equation.type", &json!({"text": "", "deleteBefore": 1, "deleteAfter": 1})).unwrap();
+        assert_eq!(linear(&s), "");
     }
 
     #[test]

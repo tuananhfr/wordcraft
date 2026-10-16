@@ -229,12 +229,22 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
         }
         return;
     }
+    // Characters an input method took back (Telex "a" + "s" → "á"): deleted with the replacement
+    // that follows, as one edit, or on their own when none does.
+    let mut take_back = (0usize, 0usize);
     for e in events {
         // An Alt shortcut (Alt+Shift+D, Alt+F7…) may also send its key's text; it isn't typed.
         match &e {
             egui::Event::Key { pressed: true, .. } => app.canvas.swallow_text = false,
             egui::Event::Text(_) if std::mem::take(&mut app.canvas.swallow_text) => continue,
             _ => {}
+        }
+        if let egui::Event::Ime(egui::ImeEvent::DeleteSurrounding { before_chars, after_chars }) = &e {
+            take_back = (take_back.0.saturating_add(*before_chars), take_back.1.saturating_add(*after_chars));
+            continue;
+        }
+        if !matches!(e, egui::Event::Text(_) | egui::Event::Ime(egui::ImeEvent::Commit(_))) {
+            take_back_now(app, &mut take_back);
         }
         if let egui::Event::Paste(t) = &e {
             app.canvas.pasted = true;
@@ -265,14 +275,14 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
                 egui::Event::Text(t) => {
                     let m = ctx.input(|i| i.modifiers);
                     if !(m.command || t.is_empty() || (m.ctrl && !cfg!(target_os = "macos"))) && t.chars().all(|c| !c.is_control()) {
-                        let _ = app.run("equation.type", json!({"text": t}));
+                        let _ = app.run("equation.type", typed(t, &mut take_back));
                     }
                     continue;
                 }
                 egui::Event::Ime(egui::ImeEvent::Commit(text)) => {
                     app.canvas.ime_preedit.clear();
                     if !text.is_empty() {
-                        let _ = app.run("equation.type", json!({"text": text}));
+                        let _ = app.run("equation.type", typed(text, &mut take_back));
                     }
                     continue;
                 }
@@ -293,14 +303,14 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
                 if t.chars().all(|c| !c.is_control()) && !t.is_empty() {
                     // Typing with a text box selected types into it.
                     crate::objects::enter_text_box(app);
-                    let _ = app.run("text.insert", json!({"text": t}));
+                    let _ = app.run("text.insert", typed(&t, &mut take_back));
                 }
             }
             egui::Event::Ime(egui::ImeEvent::Preedit { text, .. }) => app.canvas.ime_preedit = text,
             egui::Event::Ime(egui::ImeEvent::Commit(text)) => {
                 app.canvas.ime_preedit.clear();
                 if !text.is_empty() {
-                    let _ = app.run("text.insert", json!({"text": text}));
+                    let _ = app.run("text.insert", typed(&text, &mut take_back));
                 }
             }
             egui::Event::Paste(t) => {
@@ -371,6 +381,31 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
             _ => {}
         }
     }
+    take_back_now(app, &mut take_back);
+}
+
+/// `text.insert` / `equation.type` params for `text`, deleting first what the input method took
+/// back (see `canvas_events`).
+fn typed(text: &str, take_back: &mut (usize, usize)) -> Value {
+    let (before, after) = std::mem::take(take_back);
+    let mut params = json!({"text": text});
+    if before > 0 {
+        params["deleteBefore"] = json!(before);
+    }
+    if after > 0 {
+        params["deleteAfter"] = json!(after);
+    }
+    params
+}
+
+/// Delete what the input method took back when no replacement came with it.
+fn take_back_now(app: &mut WordApp, take_back: &mut (usize, usize)) {
+    if *take_back == (0, 0) {
+        return;
+    }
+    // `text.*` would leave an equation being edited.
+    let id = if app.session.math.is_some() { "equation.type" } else { "text.insert" };
+    let _ = app.run(id, typed("", take_back));
 }
 
 /// Whether a key runs its shortcut with the canvas unfocused (after a ribbon click, say): Mod and
@@ -398,6 +433,90 @@ pub fn global_shortcuts(app: &mut WordApp, ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn harness() -> egui_kittest::Harness<'static, WordApp> {
+        let mut a = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        a.canvas.want_focus = true;
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).build_ui_state(
+            |ui, app: &mut WordApp| {
+                let ctx = ui.ctx().clone();
+                app.logic(&ctx);
+                app.ui(ui);
+            },
+            a,
+        );
+        for _ in 0..6 {
+            h.step();
+        }
+        assert!(h.state().canvas.focused, "the canvas has the keyboard focus");
+        h
+    }
+
+    fn body(h: &egui_kittest::Harness<'_, WordApp>) -> String {
+        h.state().session.doc.plain_text(wordcraft_doc::StoryRef::Body)
+    }
+
+    fn surrounding(before_chars: usize, after_chars: usize) -> egui::Event {
+        egui::Event::Ime(egui::ImeEvent::DeleteSurrounding { before_chars, after_chars })
+    }
+
+    /// The browser's text agent reports an input method rewriting what it typed (Vietnamese Telex
+    /// "a" + "s" → "á", phone corrections) as DeleteSurrounding then the replacement. It was
+    /// ignored, so the old letters stayed: "aá".
+    #[test]
+    fn an_input_method_replacing_what_it_typed_replaces_it() {
+        // Plain typing: the replacement in the same frame as the deletion, then in the next one.
+        for split in [false, true] {
+            let mut h = harness();
+            h.event(egui::Event::Text("a".into()));
+            h.step();
+            h.event(surrounding(1, 0));
+            if split {
+                h.step();
+            }
+            h.event(egui::Event::Text("á".into()));
+            h.step();
+            assert_eq!(body(&h), "á", "split: {split}");
+            assert_eq!(h.state().session.undo_depth(), 1, "split: {split}: one Typing step");
+            assert!(h.state_mut().session.undo());
+            assert_eq!(body(&h), "", "split: {split}: Undo takes the typing back");
+        }
+        // Composition: committed text, then the deletion and a new composition.
+        let mut h = harness();
+        h.event(egui::Event::Ime(egui::ImeEvent::Preedit { text: "a".into(), active_range_chars: None }));
+        h.event(egui::Event::Ime(egui::ImeEvent::Commit("a".into())));
+        h.step();
+        h.event(surrounding(1, 0));
+        h.event(egui::Event::Ime(egui::ImeEvent::Preedit { text: "á".into(), active_range_chars: None }));
+        h.step();
+        assert_eq!(body(&h), "", "the composed letter is only shown until it is committed");
+        h.event(egui::Event::Ime(egui::ImeEvent::Commit("á".into())));
+        h.step();
+        assert_eq!(body(&h), "á");
+        assert_eq!(h.state().session.undo_depth(), 1);
+        // A deletion alone (an empty replacement) deletes.
+        h.event(surrounding(1, 0));
+        h.event(egui::Event::Text(String::new()));
+        h.step();
+        assert_eq!(body(&h), "");
+    }
+
+    /// The same in an equation being edited, which takes keys itself.
+    #[test]
+    fn an_input_method_replacing_what_it_typed_replaces_it_in_an_equation() {
+        let mut h = harness();
+        h.state_mut().run("insert.equation", json!({})).unwrap();
+        h.step();
+        h.event(egui::Event::Text("a".into()));
+        h.step();
+        h.event(surrounding(1, 0));
+        h.event(egui::Event::Text("á".into()));
+        h.step();
+        let a = h.state();
+        let m = a.session.math.as_ref().expect("still editing the equation");
+        let text = a.session.doc.para_at(&m.at).and_then(|p| p.object_at(m.at.off)).map(|o| o.plain_text().to_string());
+        assert_eq!(text.as_deref(), Some("á"));
+    }
 
     #[test]
     fn shift_backspace_still_erases() {

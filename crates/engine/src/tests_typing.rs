@@ -919,3 +919,43 @@ fn typing_rtl_letters_into_an_empty_paragraph_makes_it_rtl() {
     let x = doc.layout().caret(&doc.sel.focus).map(|c| c.x).unwrap_or(f32::MAX);
     assert!(x < 300.0, "left-to-right paragraph: caret at {x}");
 }
+
+/// Input methods take back characters they already typed and type the replacement (Vietnamese
+/// Telex "Vieetj" → "Việt", phone corrections): `deleteBefore`/`deleteAfter` remove that many
+/// characters (Unicode scalar values) around the caret first, and it all stays one Typing step.
+#[test]
+fn input_method_replacements_delete_around_the_caret() {
+    let mut s = typed("Vie");
+    let depth = s.undo_depth();
+    run(&mut s, "text.insert", json!({"text": "ê", "deleteBefore": 1}));
+    typ(&mut s, "t");
+    run(&mut s, "text.insert", json!({"text": "ệt", "deleteBefore": 2}));
+    assert_eq!(paras(&s)[0].0, "Việt");
+    assert_eq!(s.undo_depth(), depth, "the replacements join the word's Typing step");
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(paras(&s)[0].0, "", "one Undo takes the whole word back");
+
+    // Characters, not bytes: "ệ" is one.
+    let mut s = typed("Việt");
+    run(&mut s, "text.insert", json!({"text": "x", "deleteBefore": 2}));
+    assert_eq!(paras(&s)[0].0, "Vix");
+
+    // After the caret.
+    let mut s = typed("abcd");
+    run(&mut s, "caret.left", json!({}));
+    run(&mut s, "caret.left", json!({}));
+    run(&mut s, "text.insert", json!({"text": "X", "deleteAfter": 1}));
+    assert_eq!(paras(&s)[0].0, "abXd");
+
+    // Only the deletion (empty text), and never past the paragraph's start or end.
+    let mut s = typed("Ab\ncd");
+    run(&mut s, "text.insert", json!({"text": "", "deleteBefore": 5, "deleteAfter": 3}));
+    assert_eq!(paras(&s).iter().map(|p| p.0.as_str()).collect::<Vec<_>>(), ["Ab", ""]);
+
+    // A selection isn't a caret: nothing around it is deleted, and an empty text leaves it.
+    let mut s = typed("abcd");
+    run(&mut s, "select.text", json!({"text": "cd"}));
+    run(&mut s, "text.insert", json!({"text": "", "deleteBefore": 1}));
+    assert_eq!(paras(&s)[0].0, "abcd");
+    assert!(!s.sel.is_collapsed());
+}

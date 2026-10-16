@@ -10,7 +10,8 @@ use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        CommandSpec::new("text.insert", "Type Text", "Editing", insert).params(r#"{"text": string}"#),
+        CommandSpec::new("text.insert", "Type Text", "Editing", insert)
+            .params(r#"{"text": string, "deleteBefore"?: n, "deleteAfter"?: n}  (an input method's replacement: first deletes that many characters before / after the caret, within its paragraph)"#),
         CommandSpec::new("text.newParagraph", "New Paragraph", "Editing", new_paragraph).key("Enter"),
         CommandSpec::new("text.lineBreak", "Line Break", "Editing", |s, _| ins_char(s, '\n')).key("Shift+Enter"),
         CommandSpec::new("text.pageBreak", "Page Break", "Insert › Pages", |s, _| ins_char(s, PAGE_BREAK)).key("Mod+Enter"),
@@ -88,6 +89,12 @@ fn typing_options(s: &mut Session, text: &str) {
 fn insert(s: &mut Session, v: &Value) -> CmdResult {
     let text = p::req_str(v, "text")?;
     let raw = p::bool(v, "raw").unwrap_or(false);
+    let (before, after) = (p::u64(v, "deleteBefore").unwrap_or(0), p::u64(v, "deleteAfter").unwrap_or(0));
+    delete_surrounding(s, before, after)?;
+    // A deletion alone keeps any selection: empty text would otherwise delete it.
+    if text.is_empty() && (before > 0 || after > 0) {
+        return sel_result(s);
+    }
     typing_options(s, text);
     let t = if raw { None } else { autoformat(s, text) };
     type_text(s, t.as_deref().unwrap_or(text))?;
@@ -117,6 +124,23 @@ fn insert(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     sel_result(s)
+}
+
+/// Input methods rewrite what they typed (Telex "a" + "s" → "á", phone corrections), counting
+/// Unicode scalar values: deleted around a caret only, never past its paragraph's start or end.
+fn delete_surrounding(s: &mut Session, before: u64, after: u64) -> Result<(), CmdError> {
+    if (before == 0 && after == 0) || !s.sel.is_collapsed() {
+        return Ok(());
+    }
+    let f = s.sel.focus.clone();
+    let Some(para) = s.doc.para_at(&f) else { return Ok(()) };
+    let (Some(head), Some(tail)) = (para.text.get(..f.off), para.text.get(f.off..)) else { return Ok(()) };
+    let count = |n: u64| usize::try_from(n).unwrap_or(usize::MAX);
+    let back: usize = head.chars().rev().take(count(before)).map(char::len_utf8).sum();
+    let ahead: usize = tail.chars().take(count(after)).map(char::len_utf8).sum();
+    s.sel = Selection { anchor: Pos { off: f.off.saturating_sub(back), ..f.clone() }, focus: Pos { off: f.off.saturating_add(ahead), ..f } };
+    delete_selection(s)?;
+    Ok(())
 }
 
 /// "* " / "- " / "> " → bullets, "1. " / "a) " → numbering, typed at the start of a paragraph.

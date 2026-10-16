@@ -71,6 +71,7 @@ Windows/Linux keys are given first, macOS second.
 | Outline view: Alt+Shift+Plus / Minus, Alt+Shift+1–9, Alt+Shift+A | Expand / Collapse the heading (one level at a time); Show Level 1–9; show all levels. The caret never stays in hidden text: it moves on to the next shown paragraph | `outline_show_level_filters_paragraphs` |
 | Shift+F5 | Go Back: the caret cycles through the last four places edited, most recent first | `shift_f5_goes_back_through_the_last_edits` |
 | Alt+X (no macOS default) | the hex code before the caret (up to six digits, `U+` optional) or the selected code becomes its character; otherwise the character before the caret becomes its code (`é` ↔ `00E9`); one undo step | `alt_x_toggles_between_a_character_and_its_code` |
+| An input method rewriting what it typed (Vietnamese Telex / VNI "a" + "s" → "á", phone corrections) | the characters it takes back are deleted around the caret, never past the paragraph's start or end, then the replacement is typed; it joins the word's Typing undo step | `input_method_replacements_delete_around_the_caret` |
 
 ## AutoCorrect and AutoFormat as you type
 

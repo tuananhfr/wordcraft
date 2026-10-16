@@ -1,12 +1,12 @@
 //! The browser shell: web `Services`, drag-and-drop, the unsaved-changes guard and the eframe
 //! web runner.
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::rc::Rc;
 
 use wasm_bindgen::JsCast as _;
 use wordcraft_engine::Session;
-use wordcraft_ui_egui::{Inbox, Services, WordApp};
+use wordcraft_ui_egui::{Download, Inbox, PickerAnswer, Services, WordApp};
 
 const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
 const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
@@ -58,13 +58,13 @@ pub fn start() {
                     let doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_engine::blank_document(&region) };
                     let mut session = Session::new(doc);
                     session.system_region = region;
-                    let mut app = WordApp::new(session, services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves.clone()));
+                    let mut app = WordApp::new(session, services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves));
                     app.autosave = false;
                     // No document to show: start on File › Home, as the desktop app does (#766).
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox, saves }))
+                    Ok(Box::new(WebShell { app, inbox }))
                 }),
             )
             .await;
@@ -86,38 +86,15 @@ fn query() -> String {
 struct WebShell {
     app: WordApp,
     inbox: Inbox,
-    saves: Rc<PickerSaves>,
 }
 
-/// Saves the browser's save picker finishes after `download` has returned (#728). The app marks
-/// the document saved as soon as `download` returns, so a cancelled or failed picker save must
-/// mark it unsaved again, and the `beforeunload` guard keeps warning while one is in flight.
+/// Saves the browser's save picker finishes after `download` has returned (#728). Each one's
+/// answer goes back to the app ([`Download::Pending`]), which marks the document it saved unsaved
+/// again when it didn't happen; the `beforeunload` guard keeps warning while one is in flight.
 #[derive(Default)]
 struct PickerSaves {
     /// Picker saves started and not yet written and closed.
     pending: Cell<u32>,
-    /// Picker saves that didn't write the file: (name, error, or `None` when cancelled).
-    unsaved: RefCell<Vec<(String, Option<String>)>>,
-}
-
-impl WebShell {
-    /// A picker save that didn't happen leaves the document with unsaved changes.
-    fn settle_picker_saves(&mut self) {
-        let unsaved = std::mem::take(&mut *self.saves.unsaved.borrow_mut());
-        for (name, error) in unsaved {
-            // Only a save in a format that keeps everything marked the document saved.
-            if wordcraft_ui_egui::keeps_everything(&name) {
-                self.app.session.dirty = true;
-            }
-            if let Some(error) = error {
-                let msg = wordcraft_ui_egui::i18n::fmt(
-                    wordcraft_ui_egui::i18n::t("Couldn't download {name}: {error}"),
-                    &[("name", &name), ("error", &error)],
-                );
-                self.app.status(msg);
-            }
-        }
-    }
 }
 
 impl eframe::App for WebShell {
@@ -137,7 +114,6 @@ impl eframe::App for WebShell {
                 }
             });
         }
-        self.settle_picker_saves();
         self.app.logic(ctx);
     }
 
@@ -262,7 +238,7 @@ fn guard_unload(dirty: Rc<Cell<bool>>, saves: Rc<PickerSaves>) -> Result<(), Str
 }
 
 /// Trigger a browser save dialog or download of `bytes` named after the last component of `path`.
-fn download(saves: &Rc<PickerSaves>, ctx: &egui::Context, path: &str, bytes: &[u8]) -> Result<(), String> {
+fn download(saves: &Rc<PickerSaves>, ctx: &egui::Context, path: &str, bytes: &[u8]) -> Result<Download, String> {
     let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "document".into());
     let window = web_sys::window().ok_or("no window")?;
 
@@ -272,7 +248,7 @@ fn download(saves: &Rc<PickerSaves>, ctx: &egui::Context, path: &str, bytes: &[u
         && let Ok(picker_fn) = picker_val.dyn_into::<js_sys::Function>()
     {
         match trigger_save_file_picker(saves, ctx, &window, &picker_fn, &name, bytes) {
-            Ok(()) => return Ok(()),
+            Ok(answer) => return Ok(Download::Pending(answer)),
             Err(e) => {
                 log::warn!("showSaveFilePicker failed: {e}; falling back to anchor download");
             }
@@ -280,7 +256,7 @@ fn download(saves: &Rc<PickerSaves>, ctx: &egui::Context, path: &str, bytes: &[u
     }
 
     // Fallback for browsers without showSaveFilePicker (e.g. Firefox, Safari):
-    trigger_anchor_download(&window, &name, bytes)
+    trigger_anchor_download(&window, &name, bytes).map(|()| Download::Done)
 }
 
 fn trigger_save_file_picker(
@@ -290,7 +266,7 @@ fn trigger_save_file_picker(
     picker_fn: &js_sys::Function,
     name: &str,
     bytes: &[u8],
-) -> Result<(), String> {
+) -> Result<std::sync::mpsc::Receiver<PickerAnswer>, String> {
     let js = |e: wasm_bindgen::JsValue| format!("{e:?}");
     let ext = std::path::Path::new(name).extension().and_then(|e| e.to_str()).unwrap_or("docx").to_ascii_lowercase();
     let dot_ext = format!(".{ext}");
@@ -328,18 +304,19 @@ fn trigger_save_file_picker(
     let saves = saves.clone();
     let ctx = ctx.clone();
     let name = name.to_string();
+    let (tx, rx) = std::sync::mpsc::channel();
     saves.pending.set(saves.pending.get().saturating_add(1));
     wasm_bindgen_futures::spawn_local(async move {
         // The document counts as saved only once the file is written and closed.
-        let unsaved = match wasm_bindgen_futures::JsFuture::from(prom).await {
+        let answer = match wasm_bindgen_futures::JsFuture::from(prom).await {
             Ok(handle_val) => match write_file_handle(&handle_val, &bytes_vec).await {
                 Ok(()) => {
                     log::info!("saved {name} through the save picker");
-                    None
+                    Ok(())
                 }
                 Err(e) => {
                     log::error!("couldn't write {name}: {e}");
-                    Some(Some(e))
+                    Err(Some(e))
                 }
             },
             Err(e) => {
@@ -347,20 +324,19 @@ fn trigger_save_file_picker(
                     js_sys::Reflect::get(&e, &wasm_bindgen::JsValue::from_str("name")).ok().and_then(|v| v.as_string()).unwrap_or_default();
                 if err_name == "AbortError" {
                     log::debug!("save picker cancelled");
-                    Some(None)
+                    Err(None)
                 } else {
                     log::error!("showSaveFilePicker error: {e:?}");
-                    Some(Some(format!("{e:?}")))
+                    Err(Some(format!("{e:?}")))
                 }
             }
         };
-        if let Some(error) = unsaved {
-            saves.unsaved.borrow_mut().push((name, error));
-        }
+        // The app may be gone (page closing); nothing is left to tell then.
+        let _ = tx.send(answer);
         saves.pending.set(saves.pending.get().saturating_sub(1));
         ctx.request_repaint();
     });
-    Ok(())
+    Ok(rx)
 }
 
 async fn write_file_handle(handle: &wasm_bindgen::JsValue, bytes: &[u8]) -> Result<(), String> {
