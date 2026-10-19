@@ -197,23 +197,28 @@ impl WordApp {
         }
     }
 
-    /// The answer is about the document that was saved: another one opened since is left alone.
+    /// The answer is about the document that was saved, shown or not: the others are left alone.
     fn finish_picker_save(&mut self, save: PickerSave, answer: PickerAnswer) {
-        let same_document = save.document == self.session.document_id();
         match answer {
             Ok(()) => {
                 // Unsaved again (changed since, or a format that doesn't keep everything):
-                // carrying on would lose the changes.
-                if let Some((then, params)) = save.then
-                    && same_document
-                    && !self.session.dirty
-                {
-                    let _ = self.execute_user(&then, params);
+                // carrying on would lose the changes. Closing goes by document; the mailings act
+                // on the shown document, so only while that is still the one saved.
+                if let Some((then, params)) = save.then {
+                    let clean = self.find_document(save.document).is_some_and(|(s, _)| !s.dirty);
+                    if clean && (then == "ui.closeDocument" || save.document == self.session.document_id()) {
+                        let _ = self.execute_user(&then, params);
+                    } else {
+                        self.closing_all = false;
+                    }
                 }
             }
             Err(error) => {
-                if save.marked_saved && same_document {
-                    self.session.dirty = true;
+                if save.then.is_some() {
+                    self.closing_all = false;
+                }
+                if save.marked_saved {
+                    self.mark_document_unsaved(save.document);
                 }
                 if let Some(error) = error {
                     self.status(crate::i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &save.name), ("error", &error)]));
@@ -323,9 +328,17 @@ impl WordApp {
                 r
             }
             AfterPick::SaveAs(after) => {
+                // "Save changes?" about a document in the background saves that one.
+                let target = match &after {
+                    AfterSave::Continue { document, .. } => *document,
+                    _ => self.session.document_id(),
+                };
                 let saved = picked.is_some_and(|path| {
-                    self.run("file.save", json!({"path": path}))
-                        .is_ok_and(|v| v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some())
+                    self.in_document(target, |app| {
+                        app.run("file.save", json!({"path": path}))
+                            .is_ok_and(|v| v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some())
+                    })
+                    .unwrap_or(false)
                 });
                 if saved {
                     self.ui.backstage = false;
@@ -340,7 +353,8 @@ impl WordApp {
                         Ok(json!({"saved": saved}))
                     }
                     AfterSave::Continue { then, params, document } => {
-                        if !self.safely_saved(saved) || document != self.session.document_id() {
+                        if !self.in_document(document, |app| app.safely_saved(saved)).unwrap_or(false) {
+                            self.closing_all = false;
                             return Ok(json!({"done": false}));
                         }
                         self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))
@@ -535,12 +549,12 @@ mod tests {
         let path = dir.join("novel.docx");
         let (mut a, shown) = async_app();
         typed(&mut a);
-        a.run("file.new", json!({})).unwrap();
+        a.run("file.close", json!({})).unwrap();
         a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();
         answer(&shown, None);
         a.poll_file_dialog();
         assert!(body_text(&a).contains(UNSAVED), "cancelled Save As keeps the document");
-        assert!(a.session.dirty);
+        assert!(a.session.dirty && !a.quit_requested);
 
         a.run("file.close", json!({})).unwrap();
         let r = a.run("ui.saveChanges", json!({"answer": "save"})).unwrap();

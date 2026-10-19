@@ -11,6 +11,14 @@ pub fn set_system_locale(tag: &str) {
     let _ = SYSTEM_LOCALE.set(tag.to_string());
 }
 
+/// One counter for every session in the process: documents open side by side in one app (and
+/// the draft keys made from their ids) never share an id.
+static NEXT_DOCUMENT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
+fn next_document_id() -> u64 {
+    NEXT_DOCUMENT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+}
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use wordcraft_doc::edit::Fragment;
@@ -369,7 +377,7 @@ pub struct Session {
     join_next: bool,
     rev: u64,
     /// Which document this is: changes when [`Session::set_document`] replaces it (open, new,
-    /// mail merge, recover), never on an edit.
+    /// mail merge, recover), never on an edit. Unique among all sessions in the process.
     document_id: u64,
     cache: LayoutCache,
     /// (revision, width, read height, view, read line spacing, layout, proofing, outline,
@@ -593,7 +601,7 @@ impl Session {
             typing_open: false,
             join_next: false,
             rev: 1,
-            document_id: 1,
+            document_id: next_document_id(),
             cache: LayoutCache::new(),
             layout: None,
             originals: Default::default(),
@@ -799,8 +807,7 @@ impl Session {
             return;
         }
         self.editing_lang = tag;
-        let untouched = self.path.is_none() && !self.dirty && self.history.is_empty() && self.redo.is_empty();
-        if untouched && self.doc.plain_text(StoryRef::Body).trim().is_empty() && self.doc.paragraph_count() <= 1 {
+        if self.is_untouched_blank() {
             self.doc.styles.default_chr.lang = Some(self.editing_lang.clone().unwrap_or_else(|| "en-US".into()));
             self.rev = self.rev.wrapping_add(1);
             self.relayout();
@@ -959,7 +966,7 @@ impl Session {
 
     /// Replace the document (open/new).
     pub fn set_document(&mut self, doc: Document) {
-        self.document_id = self.document_id.wrapping_add(1);
+        self.document_id = next_document_id();
         self.bib_style = doc_bib_style(&doc);
         self.doc = doc;
         self.doc.ensure_nonempty();
@@ -977,6 +984,128 @@ impl Session {
         self.touch();
         self.dirty = false;
         self.relayout();
+    }
+
+    /// A blank document nobody has touched: untitled, unchanged, no undo steps, no text. Opening
+    /// another document may replace it instead of opening beside it.
+    pub fn is_untouched_blank(&self) -> bool {
+        self.path.is_none()
+            && !self.dirty
+            && self.history.is_empty()
+            && self.redo.is_empty()
+            && self.doc.plain_text(StoryRef::Body).trim().is_empty()
+            && self.doc.paragraph_count() <= 1
+    }
+
+    /// A session for another document opened beside this one: a blank document shown as this one
+    /// is (zoom, view, panes), with none of this document's state. [`Session::swap_document`]
+    /// brings it in.
+    pub fn sibling(&self) -> Session {
+        let mut s = Session::new(self.blank_document());
+        s.view = self.view.clone();
+        s.view.outline.collapsed.clear();
+        s.view.draw.lasso = None;
+        s.view.draw.replay = false;
+        s
+    }
+
+    /// Show `other`'s document here and park this one's in `other`, for apps that keep several
+    /// documents open with one session each. Everything that is the user's rather than a
+    /// document's (name, preferences, keys, ribbon, clipboard, macros, AutoText, Read Aloud…)
+    /// stays here; `other` keeps a stale copy of it that the next swap ignores.
+    ///
+    /// The destructuring lists every field, so a new field does not build until someone decides
+    /// whether it belongs to the document.
+    pub fn swap_document(&mut self, other: &mut Session) {
+        std::mem::swap(self, other);
+        let Session {
+            doc: _,
+            sel: _,
+            view,
+            pending: _,
+            path: _,
+            dirty: _,
+            user_dict_path,
+            clipboard,
+            // A tracked cut becomes a move only in the document it was cut from.
+            pending_move: _,
+            clipboard_text,
+            clipboard_html,
+            clip_history,
+            find: _,
+            goal_x: _,
+            page_hint: _,
+            registry,
+            author,
+            initials,
+            painter,
+            status,
+            history: _,
+            undo_evicted: _,
+            redo: _,
+            typing_open: _,
+            join_next: _,
+            rev: _,
+            document_id: _,
+            cache: _,
+            layout: _,
+            originals: _,
+            last_command,
+            recording,
+            macros,
+            versions: _,
+            building_blocks,
+            autosave,
+            bib_style: _,
+            merge: _,
+            ui_requests,
+            read_aloud,
+            prefs,
+            system_region,
+            keymap,
+            ribbon,
+            editing_lang,
+            math: _,
+            math_latex,
+            math_normal_text,
+            password: _,
+            also_selected: _,
+            column: _,
+            column_mode: _,
+            widened: _,
+            edit_marks: _,
+            go_back_step: _,
+        } = other;
+        std::mem::swap(&mut self.user_dict_path, user_dict_path);
+        std::mem::swap(&mut self.clipboard, clipboard);
+        std::mem::swap(&mut self.clipboard_text, clipboard_text);
+        std::mem::swap(&mut self.clipboard_html, clipboard_html);
+        std::mem::swap(&mut self.clip_history, clip_history);
+        std::mem::swap(&mut self.registry, registry);
+        std::mem::swap(&mut self.author, author);
+        std::mem::swap(&mut self.initials, initials);
+        std::mem::swap(&mut self.painter, painter);
+        std::mem::swap(&mut self.status, status);
+        std::mem::swap(&mut self.last_command, last_command);
+        std::mem::swap(&mut self.recording, recording);
+        std::mem::swap(&mut self.macros, macros);
+        std::mem::swap(&mut self.building_blocks, building_blocks);
+        std::mem::swap(&mut self.autosave, autosave);
+        std::mem::swap(&mut self.ui_requests, ui_requests);
+        std::mem::swap(&mut self.read_aloud, read_aloud);
+        std::mem::swap(&mut self.prefs, prefs);
+        std::mem::swap(&mut self.system_region, system_region);
+        std::mem::swap(&mut self.keymap, keymap);
+        std::mem::swap(&mut self.ribbon, ribbon);
+        std::mem::swap(&mut self.editing_lang, editing_lang);
+        std::mem::swap(&mut self.math_latex, math_latex);
+        std::mem::swap(&mut self.math_normal_text, math_normal_text);
+        // Dark page and the Draw tab's tools and pens are the user's; a lasso and an Ink Replay
+        // are on this document's ink.
+        std::mem::swap(&mut self.view.dark_mode, &mut view.dark_mode);
+        std::mem::swap(&mut self.view.draw, &mut view.draw);
+        std::mem::swap(&mut self.view.draw.lasso, &mut view.draw.lasso);
+        std::mem::swap(&mut self.view.draw.replay, &mut view.draw.replay);
     }
 
     /// A snapshot to put back with [`Session::restore`], for a caller that runs a command and

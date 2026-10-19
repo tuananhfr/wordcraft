@@ -5250,3 +5250,51 @@ fn exported_page_images_draw_headers_at_full_strength() {
     assert!(darkest < 60, "header drawn dimmed: darkest pixel {darkest}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn document_ids_are_unique_across_sessions_and_new_documents() {
+    let mut a = s();
+    let b = s();
+    let first = a.document_id();
+    run(&mut a, "file.new", json!({}));
+    let mut ids = vec![first, a.document_id(), b.document_id(), a.sibling().document_id()];
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), 4, "{ids:?}");
+}
+
+#[test]
+fn swapping_documents_moves_the_document_and_keeps_the_users_settings() {
+    let mut a = s();
+    a.author = "Ada".into();
+    a.view.dark_mode = true;
+    run(&mut a, "text.insert", json!({"text": "Alpha"}));
+    run(&mut a, "select.all", json!({}));
+    run(&mut a, "edit.copy", json!({}));
+    run(&mut a, "view.zoom", json!({"value": 150}));
+    let alpha = a.document_id();
+
+    let mut b = a.sibling();
+    assert!(b.is_untouched_blank() && !a.is_untouched_blank());
+    assert_eq!(b.view.zoom, a.view.zoom, "a new document opens at the zoom the user has");
+    b.author = "Someone else".into();
+    b.view.dark_mode = false;
+    b.view.zoom = 0.8;
+    a.swap_document(&mut b);
+
+    assert_ne!(a.document_id(), alpha);
+    assert!(text(&a).trim().is_empty());
+    assert!((a.view.zoom - 0.8).abs() < 1e-4, "zoom is the document's");
+    assert_eq!(a.author, "Ada", "the author is the user's");
+    assert!(a.view.dark_mode, "so is dark mode");
+    run(&mut a, "edit.paste", json!({}));
+    assert!(text(&a).contains("Alpha"), "the clipboard is the user's");
+
+    a.swap_document(&mut b);
+    assert_eq!(a.document_id(), alpha);
+    assert!((a.view.zoom - 1.5).abs() < 1e-4);
+    assert_eq!(a.selected_text(), "Alpha");
+    run(&mut a, "edit.undo", json!({}));
+    assert!(!text(&a).contains("Alpha"), "undo takes back this document's own typing");
+    assert!(text(&b).contains("Alpha"), "the other one keeps its paste");
+}

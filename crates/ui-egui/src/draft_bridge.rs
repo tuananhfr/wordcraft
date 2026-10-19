@@ -1,6 +1,6 @@
-//! Web: the open document's draft in the page's draft storage (the ERPCons office shell's
+//! Web: the open documents' drafts in the page's draft storage (the ERPCons office shell's
 //! `window.erpDrafts`). The host hands in a [`DraftBridge`]; [`drafts::Planner`] decides when to
-//! put and remove; this module serializes, adopts restored drafts and keeps the snapshot the
+//! put and remove; this module serializes, adopts restored drafts and keeps the snapshots the
 //! page's hide/pagehide flush ([`flush_hidden`]) serializes without reaching into the app.
 
 use std::cell::RefCell;
@@ -8,9 +8,11 @@ use std::hash::{Hash as _, Hasher as _};
 use std::rc::Rc;
 
 use serde_json::json;
+use wordcraft_engine::Session;
 
 use crate::WordApp;
 use crate::drafts::{Observed, Planner, Version};
+use crate::open_documents::save_name_of;
 
 /// What a draft's bytes are: the same Word package Ctrl+S writes.
 pub const FORMAT: &str = "docx";
@@ -42,12 +44,12 @@ pub struct RestoredDraft {
 }
 
 /// What a flush when the page is hidden needs, refreshed by the app at the end of every frame:
-/// the unsaved document's latest undrafted state (a cheap clone: blocks are shared), and what the
+/// each unsaved document's latest undrafted state (a cheap clone: blocks are shared), and what the
 /// last flush put, for the app to pick up.
 #[derive(Default)]
 pub struct HiddenFlush {
-    snapshot: Option<Snapshot>,
-    flushed: Option<Flushed>,
+    snapshots: Vec<Snapshot>,
+    flushed: Vec<Flushed>,
 }
 
 struct Snapshot {
@@ -66,19 +68,20 @@ struct Flushed {
     serialize_ms: f64,
 }
 
-/// The page is being hidden or left: put the unsaved document now, without waiting for a pause.
+/// The page is being hidden or left: put the unsaved documents now, without waiting for a pause.
 /// Called by the host outside any frame.
 pub fn flush_hidden(cell: &RefCell<HiddenFlush>, put: &dyn Fn(&str, &str, &str, &[u8]) -> Result<(), String>) {
     let Ok(mut cell) = cell.try_borrow_mut() else { return };
-    let Some(s) = cell.snapshot.take() else { return };
-    let t0 = crate::now_ms();
-    let password = s.password.as_ref().map(wordcraft_engine::Password::as_str);
-    match wordcraft_engine::io::save_bytes_with(&s.name, &s.doc, password, &s.opts).and_then(|bytes| put(&s.key, &s.name, FORMAT, &bytes)) {
-        Ok(()) => {
-            let at = crate::now_ms();
-            cell.flushed = Some(Flushed { key: s.key, version: s.version, at, serialize_ms: at - t0 });
+    for s in std::mem::take(&mut cell.snapshots) {
+        let t0 = crate::now_ms();
+        let password = s.password.as_ref().map(wordcraft_engine::Password::as_str);
+        match wordcraft_engine::io::save_bytes_with(&s.name, &s.doc, password, &s.opts).and_then(|bytes| put(&s.key, &s.name, FORMAT, &bytes)) {
+            Ok(()) => {
+                let at = crate::now_ms();
+                cell.flushed.push(Flushed { key: s.key, version: s.version, at, serialize_ms: at - t0 });
+            }
+            Err(e) => log::warn!("couldn't keep a draft of {}: {e}", s.name),
         }
-        Err(e) => log::warn!("couldn't keep a draft of {}: {e}", s.name),
     }
 }
 
@@ -94,24 +97,33 @@ pub(crate) struct DraftState {
 struct PendingRestore {
     key: String,
     name: String,
-    /// The document open when the restore began; another one open means the restore's.
+    /// The document shown when the restore began; another one shown means the restore's.
     document: u64,
 }
 
+/// A draft's version of `session`'s document: its id and revision, and what its name and bytes
+/// depend on besides.
+fn draft_version(session: &Session, untitled: u32) -> Version {
+    let mut meta = std::collections::hash_map::DefaultHasher::new();
+    save_name_of(session, untitled).hash(&mut meta);
+    session.password.is_some().hash(&mut meta);
+    Version { document: session.document_id(), rev: session.rev(), meta: meta.finish() }
+}
+
 impl WordApp {
-    /// Draft the open document when it is due, remove drafts no longer needed and open restored
-    /// ones (every frame, from `logic`).
+    /// Draft the open documents when they are due, remove drafts no longer needed and open
+    /// restored ones (every frame, from `logic`).
     pub(crate) fn drafts_tick(&mut self, ctx: &egui::Context, now: f64) {
         let Some(bridge) = &self.services.drafts else { return };
         if !(bridge.available)() {
             return;
         }
-        let flushed = bridge.hidden.try_borrow_mut().ok().and_then(|mut c| c.flushed.take());
-        if let Some(f) = flushed {
+        let flushed = bridge.hidden.try_borrow_mut().map(|mut c| std::mem::take(&mut c.flushed)).unwrap_or_default();
+        for f in flushed {
             self.drafts.planner.put_done(&f.key, f.version, f.at, f.serialize_ms);
         }
         self.open_restored_draft(ctx, now);
-        let plan = self.drafts.planner.plan(now, self.draft_observed());
+        let plan = self.drafts.planner.plan(now, &self.draft_observed());
         if let Some(bridge) = &self.services.drafts {
             for key in &plan.remove {
                 if let Err(e) = (bridge.remove)(key) {
@@ -119,8 +131,8 @@ impl WordApp {
                 }
             }
         }
-        if let Some(key) = plan.put {
-            self.put_draft(&key, now);
+        for put in &plan.put {
+            self.put_draft(put.document, &put.key, now);
         }
         if plan.wait {
             ctx.request_repaint_after(WAIT_TICK);
@@ -130,56 +142,60 @@ impl WordApp {
     /// Keep what a flush when the page is hidden would put up to date (end of every frame).
     pub(crate) fn refresh_draft_snapshot(&self) {
         let Some(bridge) = &self.services.drafts else { return };
-        let due = if (bridge.available)() {
-            self.draft_observed().and_then(|o| self.drafts.planner.flush_due(o).map(|key| (key, o.version)))
+        let due: Vec<(String, Version)> = if (bridge.available)() {
+            self.draft_observed().into_iter().filter_map(|o| self.drafts.planner.flush_due(o).map(|key| (key, o.version))).collect()
         } else {
-            None
+            Vec::new()
         };
         let Ok(mut cell) = bridge.hidden.try_borrow_mut() else { return };
-        match due {
-            None => cell.snapshot = None,
-            Some((key, version)) => {
-                if cell.snapshot.as_ref().is_none_or(|s| s.version != version || s.key != key) {
-                    cell.snapshot = Some(Snapshot {
-                        key,
-                        name: self.default_save_name(),
-                        version,
-                        doc: self.session.doc.clone(),
-                        password: self.session.password.clone(),
-                        opts: wordcraft_engine::cmd::file::export_options(&self.session, &json!({})),
-                    });
-                }
+        let mut kept = std::mem::take(&mut cell.snapshots);
+        for (key, version) in due {
+            if let Some(i) = kept.iter().position(|s| s.version == version && s.key == key) {
+                cell.snapshots.push(kept.swap_remove(i));
+            } else if let Some((session, untitled)) = self.find_document(version.document) {
+                cell.snapshots.push(Snapshot {
+                    key,
+                    name: save_name_of(session, untitled),
+                    version,
+                    doc: session.doc.clone(),
+                    password: session.password.clone(),
+                    opts: wordcraft_engine::cmd::file::export_options(&self.session, &json!({})),
+                });
             }
         }
     }
 
-    /// Unsaved: dirty, or a save of it still in the browser's save picker.
-    fn draft_observed(&self) -> Option<Observed> {
-        self.has_document().then(|| Observed {
-            version: self.draft_version(),
-            unsaved: self.session.dirty || self.picker_save_pending(self.session.document_id()),
-            transient: !self.canvas.ime_preedit.is_empty(),
-        })
+    /// Every open document, shown or not. Unsaved: dirty, or a save of it still in the browser's
+    /// save picker.
+    fn draft_observed(&self) -> Vec<Observed> {
+        if !self.has_document() {
+            return Vec::new();
+        }
+        let shown = self.session.document_id();
+        self.document_tabs()
+            .iter()
+            .filter_map(|t| self.find_document(t.document))
+            .map(|(session, untitled)| Observed {
+                version: draft_version(session, untitled),
+                unsaved: session.dirty || self.picker_save_pending(session.document_id()),
+                transient: session.document_id() == shown && !self.canvas.ime_preedit.is_empty(),
+            })
+            .collect()
     }
 
-    fn draft_version(&self) -> Version {
-        let mut meta = std::collections::hash_map::DefaultHasher::new();
-        self.default_save_name().hash(&mut meta);
-        self.session.password.is_some().hash(&mut meta);
-        Version { document: self.session.document_id(), rev: self.session.rev(), meta: meta.finish() }
-    }
-
-    /// Serialize as Ctrl+S does, minus `stamp_save` (a draft must not change the document), and
-    /// encrypted with the document's password when it has one. Whether the draft was kept.
-    fn put_draft(&mut self, key: &str, now: f64) -> bool {
+    /// Serialize document `document` as Ctrl+S does, minus `stamp_save` (a draft must not change
+    /// the document), and encrypted with its password when it has one. Whether the draft was kept.
+    fn put_draft(&mut self, document: u64, key: &str, now: f64) -> bool {
         let Some(bridge) = &self.services.drafts else { return false };
-        let name = self.default_save_name();
-        let version = self.draft_version();
-        let password = self.session.password.as_ref().map(wordcraft_engine::Password::as_str);
+        let Some((session, untitled)) = self.find_document(document) else { return false };
+        let name = save_name_of(session, untitled);
+        let version = draft_version(session, untitled);
+        let password = session.password.as_ref().map(wordcraft_engine::Password::as_str);
+        // Print Markup and the markup options are the user's, so the shown session has them.
         let opts = wordcraft_engine::cmd::file::export_options(&self.session, &json!({}));
         let t0 = crate::now_ms();
-        let put = wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts)
-            .and_then(|bytes| (bridge.put)(key, &name, FORMAT, &bytes));
+        let put =
+            wordcraft_engine::io::save_bytes_with(&name, &session.doc, password, &opts).and_then(|bytes| (bridge.put)(key, &name, FORMAT, &bytes));
         let serialize_ms = crate::now_ms() - t0;
         match put {
             Ok(()) => {
@@ -188,7 +204,7 @@ impl WordApp {
             }
             Err(e) => {
                 log::warn!("couldn't keep a draft of {name}: {e}");
-                self.drafts.planner.put_failed(now);
+                self.drafts.planner.put_failed(document, now);
                 false
             }
         }
@@ -199,13 +215,11 @@ impl WordApp {
         if let Some(p) = self.drafts.restoring.take() {
             if self.session.document_id() != p.document {
                 self.adopt_restored(p.key, p.name, now);
-            } else if matches!(self.dialog, Some(crate::dialogs::Dialog::Password { .. } | crate::dialogs::Dialog::SaveChanges { .. }))
-                || self.picker_save_pending(p.document)
-            {
+            } else if matches!(self.dialog, Some(crate::dialogs::Dialog::Password { .. })) {
                 self.drafts.restoring = Some(p);
                 return;
             }
-            // Otherwise the password or the Save Changes prompt was cancelled: the draft stays with the page.
+            // Otherwise the password was cancelled: the draft stays with the page.
         }
         let Some(bridge) = &self.services.drafts else { return };
         let (next, more) = match bridge.restores.try_borrow_mut() {
@@ -221,25 +235,20 @@ impl WordApp {
         self.restore_draft(next, now);
     }
 
-    /// Open a restored draft as a file drop would, but without asking to save the open document:
-    /// that one's draft is put now and left with the page instead (adopting doesn't remove it).
-    /// If that draft can't be kept, the usual Save Changes prompt asks first.
+    /// Open a restored draft as a file drop would: beside the open documents, which keep their
+    /// own drafts (an untouched blank start document is replaced). Refused past the open
+    /// documents limit, when the draft stays with the page.
     fn restore_draft(&mut self, draft: RestoredDraft, now: f64) {
         if draft.format != FORMAT {
             log::warn!("the draft {} is {}, not a Word document; not restored", draft.key, draft.format);
             return;
         }
-        let kept = match self.draft_observed().and_then(|o| self.drafts.planner.flush_due(o)) {
-            Some(key) => self.put_draft(&key, now),
-            None => true,
-        };
         // The bytes are a Word package whatever the name says; the engine reads the name's format.
         let ext = std::path::Path::new(&draft.name).extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
         let path = if wordcraft_engine::io::is_word_package(&ext) { draft.name.clone() } else { format!("{}.{FORMAT}", draft.name) };
         let document = self.session.document_id();
         let params = json!({"path": path, "data": wordcraft_engine::cmd::insert::base64_encode(&draft.bytes)});
-        let opened = if kept { self.execute_user("file.open", params) } else { self.run("file.open", params) };
-        match opened {
+        match self.execute_user("file.open", params) {
             Ok(v) if v.get("pending").is_some_and(|p| !p.is_null()) => {
                 self.drafts.restoring = Some(PendingRestore { key: draft.key, name: draft.name, document });
             }
@@ -253,7 +262,7 @@ impl WordApp {
         self.session.path = Some(name.into());
         self.session.dirty = true;
         self.ui.backstage = false;
-        let version = self.draft_version();
+        let version = draft_version(&self.session, self.untitled);
         self.drafts.planner.adopt(key, version, now);
     }
 }
@@ -408,53 +417,6 @@ mod tests {
     }
 
     #[test]
-    fn restoring_over_an_unsaved_document_keeps_that_ones_draft() {
-        let ctx = egui::Context::default();
-        let (mut app, page) = app_with_page();
-        app.drafts_tick(&ctx, 0.0);
-        type_text(&mut app, "Mine");
-        let mine = format!("doc-{}", app.session.document_id());
-        page.restores.borrow_mut().push(RestoredDraft {
-            key: "tab-b/1".into(),
-            name: "Old.docx".into(),
-            format: "docx".into(),
-            bytes: docx("Theirs"),
-        });
-        app.drafts_tick(&ctx, 500.0);
-        assert_eq!(page.puts.borrow().first().map(|p| p.0.clone()), Some(mine));
-        app.drafts_tick(&ctx, 1_000.0);
-        assert!(page.removes.borrow().is_empty(), "the replaced document's draft stays with the page");
-    }
-
-    #[test]
-    fn restoring_over_an_unsaved_document_whose_draft_failed_asks_first() {
-        let ctx = egui::Context::default();
-        let (mut app, page) = app_with_page();
-        if let Some(b) = app.services.drafts.as_mut() {
-            b.put = Box::new(|_, _, _, _| Err("quota".into()));
-        }
-        app.drafts_tick(&ctx, 0.0);
-        type_text(&mut app, "Mine");
-        let mine = app.session.document_id();
-        page.restores.borrow_mut().push(RestoredDraft {
-            key: "tab-b/1".into(),
-            name: "Old.docx".into(),
-            format: "docx".into(),
-            bytes: docx("Theirs"),
-        });
-        app.drafts_tick(&ctx, 500.0);
-        assert_eq!(app.session.document_id(), mine, "not replaced while its only copy is in memory");
-        assert!(matches!(app.dialog, Some(crate::dialogs::Dialog::SaveChanges { .. })));
-        app.drafts_tick(&ctx, 1_000.0);
-        assert!(matches!(app.dialog, Some(crate::dialogs::Dialog::SaveChanges { .. })), "the restore waits for the answer");
-        assert!(app.answer_save_changes(crate::SaveChoice::DontSave).is_ok());
-        app.drafts_tick(&ctx, 1_500.0);
-        assert!(app.session.doc.plain_text(wordcraft_doc::StoryRef::Body).contains("Theirs"));
-        assert!(app.session.dirty, "the restored draft opens unsaved");
-        assert_eq!(app.session.path.as_deref(), Some(std::path::Path::new("Old.docx")));
-    }
-
-    #[test]
     fn other_formats_are_not_restored() {
         let ctx = egui::Context::default();
         let (mut app, page) = app_with_page();
@@ -477,5 +439,182 @@ mod tests {
         app.refresh_draft_snapshot();
         flush_hidden(&page.hidden, &|_, _, _, _| Err("must not be called".into()));
         assert!(page.puts.borrow().is_empty());
+    }
+
+    #[test]
+    fn restoring_next_to_an_unsaved_document_opens_a_tab_and_keeps_its_draft() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        app.drafts_tick(&ctx, 0.0);
+        type_text(&mut app, "Mine");
+        let mine = app.session.document_id();
+        page.restores.borrow_mut().push(RestoredDraft {
+            key: "tab-b/1".into(),
+            name: "Old.docx".into(),
+            format: "docx".into(),
+            bytes: docx("Theirs"),
+        });
+        app.drafts_tick(&ctx, 500.0);
+        assert!(app.dialog.is_none(), "nothing to ask: the unsaved document stays open");
+        assert_eq!(app.document_count(), 2);
+        assert!(app.session.doc.plain_text(wordcraft_doc::StoryRef::Body).contains("Theirs"));
+        assert!(app.session.dirty, "the restored draft opens unsaved");
+        assert_ne!(app.session.document_id(), mine, "a document id of its own");
+        assert!(app.find_document(mine).is_some_and(|(s, _)| s.dirty && s.doc.plain_text(wordcraft_doc::StoryRef::Body).contains("Mine")));
+        app.drafts_tick(&ctx, 3_000.0);
+        assert_eq!(
+            page.puts.borrow().iter().map(|p| p.0.clone()).collect::<Vec<_>>(),
+            [format!("doc-{mine}")],
+            "the one in the background is drafted too"
+        );
+        assert!(page.removes.borrow().is_empty());
+    }
+
+    /// Restored untitled drafts keep their names, so a new document counts on past them rather
+    /// than taking "Document2" a second time; like Word, a closed one's number isn't reused.
+    #[test]
+    fn a_new_document_is_never_titled_like_an_open_one() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        for (key, name) in [("t|doc-10", "Document2.docx"), ("t|doc-12", "Document1.docx")] {
+            page.restores.borrow_mut().push(RestoredDraft { key: key.into(), name: name.into(), format: "docx".into(), bytes: docx(name) });
+        }
+        app.drafts_tick(&ctx, 0.0);
+        app.drafts_tick(&ctx, 100.0);
+        let titles = |app: &WordApp| app.document_tabs().iter().map(|t| t.title.clone()).collect::<Vec<_>>();
+        assert_eq!(titles(&app), ["Document2", "Document1"]);
+        app.run("file.new", json!({})).unwrap();
+        assert_eq!(titles(&app), ["Document2", "Document1", "Document3"]);
+        type_text(&mut app, "New");
+        app.drafts_tick(&ctx, 1_000.0);
+        app.drafts_tick(&ctx, 4_000.0);
+        assert!(page.puts.borrow().iter().any(|p| p.1 == "Document3.docx"), "drafted under its own name too");
+
+        app.execute("ui.closeDocument", json!({"index": 1})).unwrap();
+        app.run("file.new", json!({})).unwrap();
+        assert_eq!(titles(&app), ["Document2", "Document3", "Document4"], "Document1's number isn't reused");
+    }
+
+    /// QA repro: "Khôi phục tất cả" of Tài liệu1 and Tài liệu2, then File › New.
+    #[test]
+    fn a_new_document_counts_past_restored_vietnamese_titles() {
+        crate::i18n::set_current(crate::i18n::Lang::from_code("vi").unwrap());
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        for (key, name) in [("t|doc-12", "Tài liệu2.docx"), ("t|doc-10", "Tài liệu1.docx")] {
+            page.restores.borrow_mut().push(RestoredDraft { key: key.into(), name: name.into(), format: "docx".into(), bytes: docx(name) });
+        }
+        app.drafts_tick(&ctx, 0.0);
+        app.drafts_tick(&ctx, 100.0);
+        app.run("file.new", json!({})).unwrap();
+        let titles: Vec<String> = app.document_tabs().iter().map(|t| t.title.clone()).collect();
+        crate::i18n::set_current(crate::i18n::Lang::EN);
+        assert_eq!(titles, ["Tài liệu2", "Tài liệu1", "Tài liệu3"]);
+    }
+
+    #[test]
+    fn restoring_several_drafts_opens_a_tab_for_each() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        assert!(app.start_screen());
+        for (key, name) in [("t|doc-1", "A.docx"), ("t|doc-2", "B.docx"), ("t|doc-3", "C.docx")] {
+            page.restores.borrow_mut().push(RestoredDraft { key: key.into(), name: name.into(), format: "docx".into(), bytes: docx(name) });
+        }
+        for t in 0..3 {
+            app.drafts_tick(&ctx, f64::from(t) * 100.0);
+        }
+        let tabs = app.document_tabs();
+        assert_eq!(tabs.iter().map(|t| t.title.as_str()).collect::<Vec<_>>(), ["A", "B", "C"], "the start screen's placeholder was replaced");
+        assert!(tabs.iter().all(|t| t.dirty));
+        let mut ids: Vec<u64> = tabs.iter().map(|t| t.document).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), 3, "unique document ids");
+        // Each is drafted under the key it came back with, and only once edited again.
+        app.drafts_tick(&ctx, 60_000.0);
+        assert!(page.puts.borrow().is_empty());
+        assert!(app.execute("ui.activateDocument", json!({"index": 0})).is_ok());
+        type_text(&mut app, "More ");
+        app.drafts_tick(&ctx, 61_000.0);
+        app.drafts_tick(&ctx, 64_000.0);
+        assert_eq!(
+            page.puts.borrow().iter().map(|p| (p.0.clone(), p.1.clone())).collect::<Vec<_>>(),
+            [("t|doc-1".to_string(), "A.docx".to_string())]
+        );
+        // Closing one removes its draft only.
+        assert!(app.execute("ui.closeDocument", json!({"index": 1})).is_ok());
+        app.drafts_tick(&ctx, 65_000.0);
+        assert_eq!(*page.removes.borrow(), ["t|doc-2".to_string()]);
+    }
+
+    #[test]
+    fn every_open_document_is_drafted_under_its_own_key() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        app.drafts_tick(&ctx, 0.0);
+        type_text(&mut app, "First");
+        let first = app.session.document_id();
+        assert!(app.execute("file.new", json!({})).is_ok());
+        type_text(&mut app, "Second");
+        let second = app.session.document_id();
+        assert_ne!(first, second);
+        app.drafts_tick(&ctx, 500.0);
+        app.drafts_tick(&ctx, 3_000.0);
+        let mut keys: Vec<(String, String)> = page.puts.borrow().iter().map(|p| (p.0.clone(), p.1.clone())).collect();
+        keys.sort();
+        let mut want = vec![(format!("doc-{first}"), "Document1.docx".to_string()), (format!("doc-{second}"), "Document2.docx".to_string())];
+        want.sort();
+        assert_eq!(keys, want, "the document in the background is drafted, under its own name");
+        // Saving the background one (a picker that writes at once) removes only its draft.
+        assert!(app.execute("ui.activateDocument", json!({"document": first})).is_ok());
+        app.session.dirty = false;
+        app.drafts_tick(&ctx, 4_000.0);
+        assert_eq!(*page.removes.borrow(), [format!("doc-{first}")]);
+        // Closing the other one, unsaved, removes its draft too.
+        assert!(app.execute("ui.closeDocument", json!({"document": second})).is_ok());
+        app.drafts_tick(&ctx, 5_000.0);
+        assert_eq!(*page.removes.borrow(), [format!("doc-{first}"), format!("doc-{second}")]);
+    }
+
+    #[test]
+    fn hiding_the_page_puts_every_unsaved_document() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        app.drafts_tick(&ctx, 0.0);
+        type_text(&mut app, "One");
+        assert!(app.execute("file.new", json!({})).is_ok());
+        assert!(app.execute("file.new", json!({})).is_ok());
+        type_text(&mut app, "Three");
+        app.refresh_draft_snapshot();
+        flush_hidden(&page.hidden, &|key, name, format, bytes| {
+            page.puts.borrow_mut().push((key.into(), name.into(), format.into(), bytes.to_vec()));
+            Ok(())
+        });
+        let mut names: Vec<String> = page.puts.borrow().iter().map(|p| p.1.clone()).collect();
+        names.sort();
+        assert_eq!(names, ["Document1.docx", "Document3.docx"], "the untouched second one has nothing to keep");
+        app.drafts_tick(&ctx, 10_000.0);
+        assert_eq!(page.puts.borrow().len(), 2, "the flushed versions aren't put again");
+    }
+
+    #[test]
+    fn a_restore_past_the_limit_is_refused_and_the_draft_stays() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        type_text(&mut app, "x");
+        for _ in 1..crate::open_documents::MAX_DOCUMENTS {
+            assert!(app.execute("file.new", json!({})).is_ok());
+        }
+        page.restores.borrow_mut().push(RestoredDraft {
+            key: "t|doc-9".into(),
+            name: "Late.docx".into(),
+            format: "docx".into(),
+            bytes: docx("Late"),
+        });
+        app.drafts_tick(&ctx, 0.0);
+        assert_eq!(app.document_count(), crate::open_documents::MAX_DOCUMENTS);
+        assert!(app.document_tabs().iter().all(|t| t.title != "Late"));
+        assert!(app.status_msg.as_ref().is_some_and(|(m, _)| m.contains("up to 10 documents")), "{:?}", app.status_msg);
+        assert!(page.removes.borrow().is_empty(), "the shell keeps the draft");
     }
 }

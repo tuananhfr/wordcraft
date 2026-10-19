@@ -65,8 +65,8 @@ fn choice(ui: &mut Ui, salt: &str, current: &mut String, items: &[(&str, &str)])
 /// The output layout, kept while the document is unchanged (laying out every frame would be slow).
 fn layout_of(app: &WordApp, ctx: &egui::Context) -> Arc<DocLayout> {
     let id = egui::Id::new("print_page_layout");
-    let rev = app.session.rev();
-    if let Some((r, l)) = ctx.data(|d| d.get_temp::<(u64, Arc<DocLayout>)>(id))
+    let rev = (app.session.document_id(), app.session.rev());
+    if let Some((r, l)) = ctx.data(|d| d.get_temp::<((u64, u64), Arc<DocLayout>)>(id))
         && r == rev
     {
         return l;
@@ -79,8 +79,8 @@ fn layout_of(app: &WordApp, ctx: &egui::Context) -> Arc<DocLayout> {
 /// The texture of one page, re-rendered only when the document, page or size changes.
 fn page_texture(app: &WordApp, ctx: &egui::Context, lay: &DocLayout, page: usize, width: f32) -> Option<TextureHandle> {
     let id = egui::Id::new("print_page_texture");
-    let key = (app.session.rev(), page, width as u32, (ctx.pixels_per_point() * 100.0) as u32);
-    if let Some((k, t)) = ctx.data(|d| d.get_temp::<((u64, usize, u32, u32), TextureHandle)>(id))
+    let key = ((app.session.document_id(), app.session.rev()), page, width as u32, (ctx.pixels_per_point() * 100.0) as u32);
+    if let Some((k, t)) = ctx.data(|d| d.get_temp::<(((u64, u64), usize, u32, u32), TextureHandle)>(id))
         && k == key
     {
         return Some(t);

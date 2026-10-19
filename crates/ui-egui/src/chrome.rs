@@ -497,8 +497,9 @@ fn small_icon(ui: &mut Ui, icon: &str, tip: &str) -> bool {
 impl WordApp {
     /// Word count, recomputed only when the document changes.
     pub fn cached_word_count(&mut self) -> usize {
-        // The count option changes the count without a document change.
-        let key = self.session.rev().wrapping_mul(2) | u64::from(self.session.prefs.count_notes);
+        // The count option changes the count without a document change; revisions repeat
+        // between documents open side by side.
+        let key = (self.session.document_id(), self.session.rev().wrapping_mul(2) | u64::from(self.session.prefs.count_notes));
         if self.word_count.0 != key {
             self.word_count = (key, self.session.word_count());
         }

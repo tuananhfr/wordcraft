@@ -22,7 +22,7 @@ pub struct Previews {
     english_names: HashMap<String, String>,
     /// The Chinese, Japanese and Korean fonts of the font list (the Asian text font box).
     east_asian: Option<Vec<String>>,
-    styles_hash: (u64, u64),
+    styles_hash: ((u64, u64), u64),
     /// Previews rendered this frame (rendering is spread over frames).
     budget: std::cell::Cell<u32>,
     frame: u64,
@@ -292,7 +292,7 @@ impl Previews {
     }
 
     /// Hash of the style sheet (recomputed only when the document revision changes).
-    fn styles_key(&mut self, app_doc: &Document, rev: u64) -> u64 {
+    fn styles_key(&mut self, app_doc: &Document, rev: (u64, u64)) -> u64 {
         if self.styles_hash.0 != rev {
             let s = serde_json::to_string(&(&app_doc.styles, &app_doc.settings.theme_colors)).unwrap_or_default();
             use std::hash::{Hash, Hasher};
@@ -457,8 +457,7 @@ pub fn style_preview(app: &mut WordApp, ui: &mut Ui, id: &str, ty: &str, size: e
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(size, Sense::hover());
     ui.painter().rect(r, 3.0, preview_tint(&t, false), Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
-    let rev = app.session.rev();
-    let skey = app.previews.styles_key(&app.session.doc, rev);
+    let skey = app.previews.styles_key(&app.session.doc, (app.session.document_id(), app.session.rev()));
     let ppp = ui.ctx().pixels_per_point();
     let (w, h) = (size.x - 12.0, size.y - 8.0);
     let key = format!("manage:{id}:{ty}:{skey}:{ppp}:{w}x{h}");
@@ -505,8 +504,7 @@ pub fn style_gallery(app: &mut WordApp, ui: &mut Ui, state: &Value) {
     let t = Tokens::get(ui.ctx());
     let current = state.get("style").and_then(Value::as_str).unwrap_or("Normal").to_string();
     let styles: Vec<(String, String)> = app.session.doc.styles.gallery().iter().map(|s| (s.id.clone(), crate::i18n::style_name(s))).collect();
-    let rev = app.session.rev();
-    let skey = app.previews.styles_key(&app.session.doc, rev);
+    let skey = app.previews.styles_key(&app.session.doc, (app.session.document_id(), app.session.rev()));
     let ppp = ui.ctx().pixels_per_point();
     let start = ui.data(|d| d.get_temp::<usize>(egui::Id::new("gallery_start"))).unwrap_or(0).min(styles.len().saturating_sub(1));
     let visible = 6usize;
@@ -634,7 +632,7 @@ pub fn table_style_tile(ui: &mut Ui, app: &mut WordApp, style: &str) -> Response
         ui.painter().rect_filled(r, 3.0, t.hover);
     }
     // Keyed by the style sheet too, so a modified table style redraws.
-    let skey = app.previews.styles_key(&app.session.doc, app.session.rev());
+    let skey = app.previews.styles_key(&app.session.doc, (app.session.document_id(), app.session.rev()));
     let key = format!("tstyle:{style}:{skey}:{ppp}");
     let doc = &app.session.doc;
     let tex = app.previews.get_or(ui.ctx(), &key, || {

@@ -241,6 +241,69 @@ impl CanvasState {
     }
 }
 
+/// Where the user was in a document shown before another one: kept with it while it is parked
+/// ([`crate::open_documents`]). Its scroll area's own offset is egui's, by document id.
+#[derive(Default)]
+pub(crate) struct CanvasView {
+    scroll_offset: egui::Vec2,
+    scroll_max: egui::Vec2,
+    scale: f32,
+    cols: usize,
+    read_first_visible: Option<Pos>,
+    read_target_page: Option<usize>,
+    balloon: Option<u32>,
+}
+
+impl CanvasState {
+    /// Swap where the user is with `view`, another document's. Neither scroll offset is clamped
+    /// to the other's page geometry.
+    pub(crate) fn swap_view(&mut self, view: &mut CanvasView) {
+        std::mem::swap(&mut self.scroll_offset, &mut view.scroll_offset);
+        std::mem::swap(&mut self.scroll_max, &mut view.scroll_max);
+        std::mem::swap(&mut self.scale, &mut view.scale);
+        std::mem::swap(&mut self.cols, &mut view.cols);
+        std::mem::swap(&mut self.read_first_visible, &mut view.read_first_visible);
+        std::mem::swap(&mut self.read_target_page, &mut view.read_target_page);
+        std::mem::swap(&mut self.balloon, &mut view.balloon);
+    }
+
+    /// The view a document opened next to the others starts with: at the top, at the zoom's scale.
+    pub(crate) fn fresh_view(&self) -> CanvasView {
+        CanvasView { scale: self.scale, cols: 1, ..Default::default() }
+    }
+
+    /// Another document is shown: drop what the pointer, keyboard and menus were doing in the
+    /// last one, and stay where the shown document was rather than jump to its caret.
+    pub(crate) fn document_switched(&mut self) {
+        let keep = CanvasState {
+            textures: std::mem::take(&mut self.textures),
+            page_keys: std::mem::take(&mut self.page_keys),
+            caret_visible_since: crate::now_ms(),
+            last_highlight: std::mem::take(&mut self.last_highlight),
+            last_font_color: std::mem::take(&mut self.last_font_color),
+            last_shading: std::mem::take(&mut self.last_shading),
+            page_rects: std::mem::take(&mut self.page_rects),
+            scale: self.scale,
+            canvas_rect: self.canvas_rect,
+            focused: self.focused,
+            render_ms: self.render_ms,
+            ime_faces: std::mem::take(&mut self.ime_faces),
+            want_focus: true,
+            scroll_offset: self.scroll_offset,
+            scroll_max: self.scroll_max,
+            viewport: self.viewport,
+            cols: self.cols,
+            read_first_visible: self.read_first_visible.take(),
+            read_target_page: self.read_target_page,
+            balloon: self.balloon,
+            table_tool: self.table_tool.take(),
+            ..CanvasState::default()
+        };
+        *self = keep;
+        self.scroll_to_caret = false;
+    }
+}
+
 /// Page positions in content space (points), for the current zoom.
 pub struct Geometry {
     pub rects: Vec<Rect>,
@@ -881,7 +944,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     };
     let delta = wheel_delta + auto_delta + middle_delta;
     let mut scroll_area = egui::ScrollArea::both()
-        .id_salt("canvas_scroll")
+        // Each document keeps its own scroll position while another one is shown.
+        .id_salt(("canvas_scroll", app.session.document_id()))
         .auto_shrink([false, false])
         // Bringing the caret into view glides there, or jumps with animation effects off.
         .animated(animate)

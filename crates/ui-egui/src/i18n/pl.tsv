@@ -2471,3 +2471,7 @@ preview	Title	Tytuł
 	Leave out the date and time of comments and tracked changes when saving	Pomiń datę i godzinę komentarzy i śledzonych zmian przy zapisywaniu
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Edytowany dokument zachowuje nazwiska i daty; pomija je tylko zapisany plik.
 	Privacy Settings	Bieżące ustawienia prywatności
+	Close {name}	Zamknij {name}
+	Unsaved changes	Niezapisane zmiany
+	You can have up to 10 documents open. Close one to open another.	Można mieć otwartych najwyżej 10 dokumentów. Zamknij jeden, aby otworzyć kolejny.
+	Document{number}	Dokument{number}

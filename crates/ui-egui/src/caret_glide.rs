@@ -329,7 +329,7 @@ fn state_id() -> egui::Id {
 fn cause_key(app: &WordApp) -> u64 {
     let s = &app.session;
     let mut h = std::collections::hash_map::DefaultHasher::new();
-    (s.rev(), &s.sel.focus).hash(&mut h);
+    (s.document_id(), s.rev(), &s.sel.focus).hash(&mut h);
     if let Some(m) = &s.math {
         format!("{:?}", m.pos).hash(&mut h);
     }
