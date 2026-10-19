@@ -436,7 +436,12 @@ mod tests {
         app.drafts_tick(&ctx, 0.0);
         type_text(&mut app, "Mine");
         let mine = app.session.document_id();
-        page.restores.borrow_mut().push(RestoredDraft { key: "tab-b/1".into(), name: "Old.docx".into(), format: "docx".into(), bytes: docx("Theirs") });
+        page.restores.borrow_mut().push(RestoredDraft {
+            key: "tab-b/1".into(),
+            name: "Old.docx".into(),
+            format: "docx".into(),
+            bytes: docx("Theirs"),
+        });
         app.drafts_tick(&ctx, 500.0);
         assert_eq!(app.session.document_id(), mine, "not replaced while its only copy is in memory");
         assert!(matches!(app.dialog, Some(crate::dialogs::Dialog::SaveChanges { .. })));
