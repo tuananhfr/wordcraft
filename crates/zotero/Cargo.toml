@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "WordCraft Zotero integration: Zotero's word-processor wire protocol, answered against an engine Session"
+publish = false
 
 [lints]
 workspace = true
