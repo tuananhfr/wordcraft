@@ -1211,3 +1211,77 @@ fn bundled_interface_fonts_cover_bulgarian_without_system_fallbacks() {
     }
     assert!(!lang("bg").uses_cjk());
 }
+
+#[test]
+fn vietnamese_locales_and_saved_preference_work_without_changing_the_document() {
+    let vi = lang("vi");
+    for tag in ["vi", "vi-VN", "VI_vn.UTF-8", "vi-Latn-VN", "vi_VN.UTF-8@euro"] {
+        assert_eq!(lang_from_tag(tag), Some(vi), "{tag}");
+    }
+    assert_eq!(first_supported([UNSUPPORTED, "vi-VN", "en-US"]), Some(vi));
+    let mut app = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_engine::sample::sample_document()), Default::default());
+    let before = serde_json::to_value(&app.session.doc).unwrap();
+    let result = app.run("ui.language", serde_json::json!({"value": "VI"})).unwrap();
+    assert_eq!(result["effective"], "vi");
+    assert_eq!(app.ui.language, "vi");
+    assert_eq!(serde_json::to_value(&app.session.doc).unwrap(), before);
+    let saved = serde_json::to_string(&app.ui).unwrap();
+    let restored: crate::UiState = serde_json::from_str(&saved).unwrap();
+    assert_eq!(Lang::from_pref(&restored.language), vi);
+    assert_eq!(vi.name(), "Tiếng Việt");
+}
+
+#[test]
+fn vietnamese_covers_the_entire_existing_interface_catalog() {
+    use std::collections::HashSet;
+    let keys = |source| parse_entries(source).0.into_iter().map(|e| e.source).collect::<HashSet<_>>();
+    assert!(keys(lang("vi").0.source).is_superset(&keys(lang("es").0.source)));
+    assert!(parse_entries(lang("vi").0.source).1.is_empty());
+    let vi = lang("vi");
+    for (source, expected) in [
+        ("Home", "Trang đầu"),
+        ("Insert", "Chèn"),
+        ("Font", "Phông"),
+        ("Paragraph", "Đoạn văn"),
+        ("Review", "Xem lại"),
+        ("Save", "Lưu"),
+        ("Heading 1", "Đầu đề 1"),
+        ("Track Changes", "Theo dõi Thay đổi"),
+        ("WordCraft", "WordCraft"),
+        ("unknown future label", "unknown future label"),
+    ] {
+        assert_eq!(tr(vi, source), expected, "{source}");
+    }
+    // The search hint's example must find the command it names.
+    assert_eq!(tr(vi, "Insert Table"), "Chèn Bảng");
+    assert!(tr(vi, "Type a command, e.g. \"insert table\"").contains("chèn bảng"));
+    assert_eq!(fmt(tr(vi, "Page {page} of {pages}"), &[("page", "3"), ("pages", "9")]), "Trang 3 trên 9");
+    // Vietnamese nouns don't inflect for number, so one wording fits every count.
+    for count in [0, 1, 2, 5, 21, 100, 1000] {
+        let words = count.to_string();
+        assert_eq!(fmt(tr(vi, "{words} words"), &[("words", &words)]), format!("{count} từ"));
+        assert_eq!(fmt(tr(vi, "{selected} of {words} words"), &[("selected", "1"), ("words", &words)]), format!("1 trên {count} từ"));
+    }
+}
+
+#[test]
+fn bundled_interface_fonts_cover_vietnamese_without_system_fallbacks() {
+    let db = wordcraft_fonts::FontDb::with_font_dirs(Vec::new());
+    let (entries, errors) = parse_entries(lang("vi").0.source);
+    assert!(errors.is_empty());
+    let chars: std::collections::HashSet<char> = entries
+        .iter()
+        .flat_map(|e| e.translation.chars())
+        // Vietnamese stacks tone marks on Latin letters (Latin-1, Extended-A/B and Extended Additional).
+        .filter(|c| ('\u{00C0}'..='\u{01B0}').contains(c) || ('\u{1EA0}'..='\u{1EF9}').contains(c))
+        .chain("ĂăÂâĐđÊêÔôƠơƯưẠạẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặẸẹẺẻẼẽẾếỀềỂểỄễỆệỈỉỊịỌọỎỏỐốỒồỔổỖỗỘộỚớỜờỞởỠỡỢợỤụỦủỨứỪừỬửỮữỰựỲỳỴỵỶỷỸỹ".chars())
+        .collect();
+    for (family, style) in [("Inter", "Regular"), ("Inter", "Medium"), ("Inter", "SemiBold"), ("JetBrains Mono", "Regular")] {
+        let face = db.face(family, style);
+        assert_eq!(face.family, family, "must use the bundled interface face");
+        for ch in &chars {
+            assert_ne!(face.glyph_for(*ch), 0, "{family} {style} lacks {ch}");
+        }
+    }
+    assert!(!lang("vi").uses_cjk());
+}

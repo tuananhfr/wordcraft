@@ -13,6 +13,7 @@ const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf",
 const RECIPIENT_EXTS: &[&str] = &["csv", "tsv", "txt", "xlsx", "xlsm", "ods"];
 mod drafts;
 mod font_store;
+mod language;
 const CANVAS_ID: &str = "wordcraft_canvas";
 const LOADING_ID: &str = "wordcraft_loading";
 
@@ -64,11 +65,13 @@ pub fn start() {
                     services.drafts = bridge;
                     let mut app = WordApp::new(session, services);
                     app.autosave = false;
+                    app.ui.language = language::initial();
+                    let language = app.ui.language.clone();
                     // No document to show: start on File › Home, as the desktop app does (#766).
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox, drafts }))
+                    Ok(Box::new(WebShell { app, inbox, drafts, language }))
                 }),
             )
             .await;
@@ -92,6 +95,8 @@ struct WebShell {
     inbox: Inbox,
     /// The office shell's draft storage, unless the page is embedded.
     drafts: Option<drafts::Drafts>,
+    /// The language setting last remembered for the site.
+    language: String,
 }
 
 /// Saves the browser's save picker finishes after `download` has returned (#728). Each one's
@@ -124,6 +129,10 @@ impl eframe::App for WebShell {
             drafts.announce_ready(ctx);
         }
         self.app.logic(ctx);
+        if self.app.ui.language != self.language {
+            self.language.clone_from(&self.app.ui.language);
+            language::remember(&self.language);
+        }
     }
 
     fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {

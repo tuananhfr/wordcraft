@@ -1,0 +1,2460 @@
+# Vietnamese (vi) interface catalog. Columns, separated by a TAB:
+#   context <TAB> English source <TAB> translation
+#   context    usually empty. `preview` words sample text inside rendered previews.
+#   source     the English text exactly as in the code (tl!(...), ribbon labels, command labels)
+#   escapes    \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns, and a
+#              trailing "…" in one needs one in the other.
+#   Lines starting with # and blank lines are ignored. A missing entry shows in English.
+#
+# Vietnamese translations for ERPCons Văn phòng, written from the English source's meaning
+# (clean-room: no product's localization was copied). Tab, group and command names use the
+# vocabulary Vietnamese users know from office software (feature names only); terms follow
+# erpcons-office/docs/glossary-vi.md. License: MIT OR Apache-2.0.
+
+	(no style)	(không có kiểu)
+	(no suggestions)	(không có gợi ý)
+	1.5 Line Spacing	Giãn cách Dòng 1,5
+	About	Giới thiệu
+	About WordCraft	Giới thiệu WordCraft
+	Accept	Chấp nhận
+	Accept All Changes	Chấp nhận Tất cả Thay đổi
+	Accept This Change	Chấp nhận Thay đổi Này
+	Accessibility	Trợ năng
+	Add	Thêm
+	Add Object to Selection	Thêm Đối tượng vào Vùng chọn
+	Add Space Before Paragraph	Thêm Khoảng trống Trước Đoạn văn
+	Add space between Asian and Latin text	Thêm khoảng trắng giữa văn bản Châu Á và Latinh
+	Add space between Asian text and numbers	Thêm khoảng trắng giữa văn bản Châu Á và chữ số
+	Add tab stop at:	Thêm điểm dừng tab tại:
+	Add Text	Thêm Văn bản
+	Add a Table	Thêm Bảng
+	Add a comment	Thêm chú thích
+	Add to Dictionary	Thêm vào Từ điển
+	Add to Style Gallery	Thêm vào Bộ sưu tập Kiểu
+	Address Block	Khối Địa chỉ
+	Address:	Địa chỉ:
+	Address\nBlock	Khối\nĐịa chỉ
+	Adjust	Điều chỉnh
+	Advanced	Nâng cao
+	Advanced Find	Tìm Nâng cao
+	Advanced Find…	Tìm Nâng cao…
+	After:	Sau:
+	Agents	Tác nhân
+	Align	Căn chỉnh
+	Align Left	Căn trái
+	Align Right	Căn phải
+	Aligned at:	Căn tại:
+	Alignment	Căn chỉnh
+	All Borders	Tất cả Viền
+	All Caps	Tất cả Chữ hoa
+	All Markup	Tất cả Đánh dấu
+	All caps	Tất cả chữ hoa
+	Allow hanging punctuation	Cho phép dấu câu treo
+	Allow Latin text to wrap in the middle of a word	Cho phép ngắt văn bản Latinh ở giữa từ
+	Alt Text	Văn bản Thay thế
+	Apply Asian line-breaking rules (kinsoku)	Áp dụng quy tắc ngắt dòng Châu Á (kinsoku)
+	Apply Character Style	Áp dụng Kiểu Ký tự
+	Apply Style	Áp dụng Kiểu
+	Arrange	Sắp xếp
+	Arrange\nAll	Sắp xếp\nTất cả
+	Arrow	Mũi tên
+	Artistic Effects	Hiệu ứng Nghệ thuật
+	Asian Typography	Kiểu chữ Châu Á
+	Author	Tác giả
+	AutoCorrect Options	Tùy chọn Tự Sửa
+	AutoFit	Tự động Khớp
+	AutoFit Contents	Tự động Khớp Nội dung
+	AutoFit Window	Tự động Khớp Cửa sổ
+	AutoSave	Tự động Lưu
+	AutoSave saves every change to the file (needs a saved document)	Tự động Lưu sẽ lưu mọi thay đổi vào tệp (cần tài liệu đã được lưu)
+	AutoSave isn't available in the browser: it can't write to your files. Save downloads a copy.	Tự động Lưu không dùng được trên trình duyệt vì không thể ghi vào tệp của bạn. Lệnh Lưu sẽ tải xuống một bản sao.
+	AutoSave only keeps .docx, .odt and .rtf files; {name} can't keep all formatting. Save as .docx to turn on AutoSave.	Tự động Lưu chỉ hỗ trợ tệp .docx, .odt và .rtf; {name} không giữ được toàn bộ định dạng. Hãy lưu dưới dạng .docx để bật Tự động Lưu.
+	Balloons	Bóng chú thích
+	Bullet	Dấu đầu dòng
+	By author	Theo tác giả
+	Changed lines:	Dòng đã thay đổi:
+	Click level to modify:	Bấm vào mức cần sửa:
+	Color only	Chỉ màu
+	Define New Multilevel List	Xác định Danh sách Đa cấp Mới
+	Define New Multilevel List…	Xác định Danh sách Đa cấp Mới…
+	Deletions:	Nội dung xóa:
+	Enter formatting for number:	Nhập định dạng cho số:
+	Follow number with:	Sau số là:
+	Formatting	Định dạng
+	Include level number from:	Bao gồm số mức từ:
+	Ink	Nét mực
+	Insertions and Deletions	Nội dung Chèn và Xóa
+	Insertions:	Nội dung chèn:
+	Left border	Viền trái
+	Legal style numbering	Đánh số kiểu pháp lý
+	Link level to style:	Nối mức với kiểu:
+	List Definition	Định nghĩa Danh sách
+	No document is open. Create a document or open one first.	Chưa có tài liệu nào được mở. Hãy tạo hoặc mở một tài liệu trước.
+	Nothing	Không có
+	Number alignment:	Căn chỉnh số:
+	Number format	Định dạng số
+	Number style for this level:	Kiểu số cho mức này:
+	Outside border	Viền ngoài
+	Restart list after:	Bắt đầu lại danh sách sau:
+	Right border	Viền phải
+	Save the document to turn on AutoSave	Hãy lưu tài liệu để bật Tự động Lưu
+	Save the document to turn on AutoSave (a file you have only opened isn't rewritten until you save it)	Hãy lưu tài liệu để bật Tự động Lưu (tệp bạn chỉ mới mở sẽ không bị ghi đè cho đến khi bạn lưu)
+	AutoText	Văn bản Tự động
+	Automatic	Tự động
+	Automatic ({language})	Tự động ({language})
+	Automatic Table 1 (3 levels)	Bảng Tự động 1 (3 mức)
+	Automatic Table 2 (2 levels)	Bảng Tự động 2 (2 mức)
+	Automatic follows your system's language. Menus and commands change; your documents don't.	Tự động nghĩa là theo ngôn ngữ của hệ thống. Chỉ menu và lệnh thay đổi, tài liệu của bạn giữ nguyên.
+	Backspace	Backspace
+	Banded Columns	Cột Có dải
+	Banded Rows	Hàng Có dải
+	Base text:	Văn bản cơ sở:
+	Before:	Trước:
+	Bibliography	Thư mục
+	Binary assets added	Tệp nhị phân đã thêm
+	Binary assets removed	Tệp nhị phân đã xóa
+	Blank	Trống
+	Blank (Three Columns)	Trống (Ba Cột)
+	Blank Page	Trang Trống
+	Blank document	Tài liệu trống
+	Block\nAuthors	Chặn\nTác giả
+	Bold	Đậm
+	Bookmark	Dấu trang
+	Bookmark name:	Tên dấu trang:
+	Border Painter	Cọ Viền
+	Border\nPainter	Cọ\nViền
+	Borders	Viền
+	Tab stop position:	Vị trí điểm dừng tab:
+	Default tab stops:	Điểm dừng tab mặc định:
+	Tab stops to be cleared:	Điểm dừng tab cần xóa:
+	All	Tất cả
+	Decimal	Thập phân
+	Bar	Thanh
+	Leader	Đường dẫn
+	Set	Đặt
+	Page Border	Viền Trang
+	Apply to:	Áp dụng cho:
+	Whole document	Toàn bộ tài liệu
+	This section	Phần này
+	Fill	Tô màu
+	Setting:	Thiết đặt:
+	3-D	3-D
+	Custom	Tùy chỉnh
+	Style:	Kiểu:
+	Dot dash	Gạch chấm
+	Triple	Ba nét
+	Between	Giữa
+	Borders and Shading	Viền và Tô bóng
+	Tabs…	Tab…
+	Borders and Shading…	Viền và Tô bóng…
+	Bottom Border	Viền Dưới
+	Bottom Margin	Lề Dưới
+	Bottom of Page	Cuối Trang
+	Bottom:	Dưới:
+	Box	Hộp
+	Breaks	Ngắt
+	Bring Forward	Đưa Lên trên
+	Bullet Library	Thư viện Dấu đầu dòng
+	Bullets	Dấu đầu dòng
+	Calendar	Lịch
+	Cancel	Hủy
+	Capitalize Each Word	Viết Hoa Mỗi Từ
+	Captions	Chú thích Ảnh
+	Cell Margins	Lề Ô
+	Cell Size	Kích thước Ô
+	Cell\nMargins	Lề\nÔ
+	Center	Căn giữa
+	Change	Thay đổi
+	Change Case	Thay đổi Chữ hoa/thường
+	Change List Level	Thay đổi Mức Danh sách
+	Change Picture	Thay đổi Ảnh
+	Change Shape	Thay đổi Hình
+	Changes	Thay đổi
+	Character Position	Vị trí Ký tự
+	Character Scale	Tỷ lệ Ký tự
+	Character Shading	Tô bóng Ký tự
+	Character Spacing	Giãn cách Ký tự
+	Characters	Ký tự
+	Characters (no spaces)	Ký tự (không tính khoảng trắng)
+	Characters (with spaces)	Ký tự (tính cả khoảng trắng)
+	Chart	Biểu đồ
+	Check Accessibility	Kiểm tra Trợ năng
+	Check Compatibility	Kiểm tra Tương thích
+	Check Spelling as You Type	Kiểm tra Chính tả khi Nhập
+	Check for Errors	Kiểm tra Lỗi
+	Check\nAccessibility	Kiểm tra\nTrợ năng
+	Citation Style	Kiểu Trích dẫn
+	Citations & Bibliography	Trích dẫn & Thư mục
+	Clear	Xóa
+	Clear All	Xóa Tất cả
+	Clear All Formatting	Xóa Tất cả Định dạng
+	Clear Character Formatting	Xóa Định dạng Ký tự
+	Clear Character Style	Xóa Kiểu Ký tự
+	Clear Formatting Level	Xóa Mức Định dạng
+	Clear Paragraph Formatting	Xóa Định dạng Đoạn văn
+	Click a border between two cells to merge them. Esc stops.	Bấm vào đường viền giữa hai ô để phối chúng. Nhấn Esc để dừng.
+	Clipboard	Bảng tạm
+	Clipboard Pane	Ngăn Bảng tạm
+	Clipboard Items	Mục Bảng tạm
+	Paste Clipboard Item	Dán Mục Bảng tạm
+	Paste All	Dán Tất cả
+	Delete Clipboard Item	Xóa Mục Bảng tạm
+	Click an item to paste it.	Bấm vào một mục để dán.
+	Nothing collected yet. Items you copy or cut appear here.	Chưa có mục nào. Nội dung bạn sao chép hoặc cắt sẽ hiện ở đây.
+	(picture or object)	(ảnh hoặc đối tượng)
+	Close	Đóng
+	Close Header and Footer	Đóng Đầu trang và Chân trang
+	Collapse Selection	Thu gọn Vùng chọn
+	Color	Màu
+	Color:	Màu:
+	Colors	Màu sắc
+	Column	Cột
+	Column Break	Ngắt Cột
+	Columns	Cột
+	Combine	Kết hợp
+	Commands	Lệnh
+	Comment	Chú thích
+	Comments	Chú thích
+	Comments Pane	Ngăn Chú thích
+	Compact	Thu gọn
+	Compare	So sánh
+	Compress Pictures	Nén Ảnh
+	Compress punctuation at the start of a line	Nén dấu câu ở đầu dòng
+	Continuous	Liên tục
+	Convert	Chuyển đổi
+	Convert Text to Table	Chuyển Văn bản thành Bảng
+	Convert Text to Table…	Chuyển Văn bản thành Bảng…
+	Convert to Text	Chuyển thành Văn bản
+	Copy	Sao chép
+	Copy Formatting	Sao chép Định dạng
+	Corrections	Hiệu chỉnh
+	Count words in text boxes and notes	Đếm từ trong hộp văn bản và ghi chú
+	Cover Page	Trang Bìa
+	Create	Tạo
+	Create New Style	Tạo Kiểu Mới
+	Create a Style	Tạo Kiểu
+	Create an interactive outline of your document.\n\nIt's a great way to keep track of where you are or quickly move your content around.\n\nTo get started, go to the Home tab and apply Heading styles to the headings in your document.	Tạo dàn ý tương tác cho tài liệu của bạn.\n\nĐây là cách hay để biết mình đang ở đâu hoặc nhanh chóng di chuyển nội dung.\n\nĐể bắt đầu, hãy vào thẻ Trang đầu và áp dụng kiểu Đầu đề cho các đầu đề trong tài liệu.
+	Crop	Cắt xén
+	Cross-reference	Tham chiếu Chéo
+	Current Position	Vị trí Hiện tại
+	Current style: {style}	Kiểu hiện tại: {style}
+	Custom Margins…	Lề Tùy chỉnh…
+	Custom Watermark	Hình mờ Tùy chỉnh
+	Custom Watermark…	Hình mờ Tùy chỉnh…
+	Customize Quick Access Toolbar	Tùy chỉnh Thanh công cụ Truy nhập Nhanh
+	Cut	Cắt
+	Dark Mode	Chế độ Tối
+	Dashed	Nét đứt
+	Data	Dữ liệu
+	Date & Time	Ngày & Giờ
+	Decrease Font Size	Giảm Cỡ Phông
+	Decrease Indent	Giảm Thụt lề
+	Default	Mặc định
+	Define New Bullet	Xác định Dấu đầu dòng Mới
+	Define New Number Format	Xác định Định dạng Số Mới
+	Delete	Xóa
+	Delete Cells	Xóa Ô
+	Delete Columns	Xóa Cột
+	Delete Comment	Xóa Chú thích
+	Delete Next Word	Xóa Từ Tiếp theo
+	Delete Previous Word	Xóa Từ Trước đó
+	Delete Rows	Xóa Hàng
+	Delete Style	Xóa Kiểu
+	Delete Table	Xóa Bảng
+	Design	Thiết kế
+	Diagonal	Đường chéo
+	Diamond	Hình thoi
+	Dictate	Đọc chính tả
+	Different First Page	Trang Đầu Khác
+	Different Odd & Even Pages	Trang Chẵn & Lẻ Khác
+	Direct formatting	Định dạng trực tiếp
+	Display	Hiển thị
+	Display for Review	Hiển thị để Xem lại
+	Distribute Columns	Phân phối Cột
+	Distribute letters	Dàn đều chữ
+	Distribute Rows	Phân phối Hàng
+	Distribute spacing	Dàn đều khoảng cách
+	Distributed	Phân bố
+	Do Not Show in TOC	Không Hiện trong Mục lục
+	Document End	Cuối Tài liệu
+	Document Formatting	Định dạng Tài liệu
+	Document Property	Thuộc tính Tài liệu
+	Document Start	Đầu Tài liệu
+	Document Text	Văn bản Tài liệu
+	Document Title	Tiêu đề Tài liệu
+	Documents you open will show up here.	Tài liệu bạn mở sẽ hiện ở đây.
+	Dot-dash	Gạch chấm
+	Dotted	Chấm chấm
+	Double	Kép
+	Double Spacing	Giãn cách Dòng Kép
+	Double Strikethrough	Gạch ngang Kép
+	Double Underline	Gạch dưới Kép
+	Down	Xuống
+	Draft	Bản nháp
+	Drag a rectangle to draw a table, or a line across cells to split them. Esc stops.	Kéo một hình chữ nhật để vẽ bảng, hoặc kẻ một đường qua các ô để tách chúng. Nhấn Esc để dừng.
+	Draw	Vẽ
+	Draw Table	Vẽ Bảng
+	Drawing Tools	Công cụ Vẽ
+	Drawing\nCanvas	Khung\nVẽ
+	Drop Cap	Chữ Hoa Thả
+	Drops all formatting and pastes plain text.	Bỏ mọi định dạng và dán dưới dạng văn bản thuần.
+	Edit Comment	Sửa Chú thích
+	Edit Footer	Sửa Chân trang
+	Edit Header	Sửa Đầu trang
+	Edit Recipient List	Sửa Danh sách Người nhận
+	Edit\nRecipient List	Sửa Danh sách\nNgười nhận
+	Edited	Đã sửa
+	Editing	Chỉnh sửa
+	Editing header/footer	Đang sửa đầu trang/chân trang
+	Editing — edit the document directly	Chỉnh sửa — sửa trực tiếp trên tài liệu
+	Editor	Trình soạn thảo
+	Effects	Hiệu ứng
+	Emboss	Chạm nổi
+	Encrypt with Password	Mã hóa bằng Mật khẩu
+	English (United States)	Tiếng Anh (Hoa Kỳ)
+	Engrave	Chạm khắc
+	Enter page number:	Nhập số trang:
+	Envelopes	Phong bì
+	Eraser	Tẩy
+	Even Page	Trang Chẵn
+	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Mọi lệnh đều dùng được từ script và tác nhân AI: chạy `wordcraft-cli mcp` để có máy chủ MCP, hoặc khởi động ứng dụng với `--control <port>` để dùng kênh điều khiển JSON.
+	Export	Xuất
+	Export PDF	Xuất PDF
+	Export Page as PNG	Xuất Trang dạng PNG
+	Export a copy to share (PDF, Word document)	Xuất bản sao để chia sẻ (PDF, tài liệu Word)
+	Exported {path}	Đã xuất {path}
+	Extend Selection	Mở rộng Vùng chọn
+	Field	Trường
+	File	Tệp
+	Find	Tìm
+	Find Next	Tìm Tiếp
+	Find Previous	Tìm Trước
+	Find Recipient	Tìm Người nhận
+	Find and Replace	Tìm và Thay thế
+	Find what:	Tìm gì:
+	Finish	Hoàn tất
+	Finish & Merge	Hoàn tất & Phối
+	Finish &\nMerge	Hoàn tất &\nPhối
+	First Column	Cột Đầu tiên
+	First commit	Commit đầu tiên
+	First line:	Dòng đầu tiên:
+	Fixed Column Width	Độ rộng Cột Cố định
+	Focus	Tập trung
+	Font	Phông
+	Font Color	Màu Phông
+	Font Dialog	Hộp thoại Phông
+	Font Size	Cỡ Phông
+	Font color:	Màu phông:
+	Font:	Phông:
+	Fonts	Phông
+	Footer	Chân trang
+	Footnote and Endnote	Cước chú và Chú thích cuối
+	Footnotes	Cước chú
+	Format	Định dạng
+	Format Page Numbers	Định dạng Số Trang
+	Format Page Numbers…	Định dạng Số Trang…
+	Format Painter	Sao Định dạng
+	Formatted Text	Văn bản Có định dạng
+	Formatting at Selection	Định dạng tại Vùng chọn
+	Formula	Công thức
+	General	Chung
+	Go To	Đi tới
+	Go To (⌘⌥G)	Đi tới (⌘⌥G)
+	Go To…	Đi tới…
+	Go to	Đi tới
+	Grab bag	Tổng hợp
+	Greeting Line	Dòng Chào hỏi
+	Greeting\nLine	Dòng\nChào hỏi
+	Gridlines	Đường lưới
+	Group	Nhóm
+	Grow Font 1 Point	Tăng Phông 1 Điểm
+	HTML Format	Định dạng HTML
+	Hanging Indent	Thụt lề Treo
+	Header	Đầu trang
+	Header & Footer	Đầu trang & Chân trang
+	Header Row	Hàng Tiêu đề
+	Header/Footer Position	Vị trí Đầu trang/Chân trang
+	Heading 1	Đầu đề 1
+	Heading 2	Đầu đề 2
+	Heading 3	Đầu đề 3
+	Headings	Đầu đề
+	Heart	Trái tim
+	Help	Trợ giúp
+	Hidden	Ẩn
+	Highlight Merge Fields	Tô sáng Trường Phối
+	Highlight\nMerge Fields	Tô sáng\nTrường Phối
+	Highlighter	Bút Tô sáng
+	Home	Trang đầu
+	Horizontal	Ngang
+	Horizontal Line	Đường Ngang
+	Hyphenation	Gạch nối
+	Icons	Biểu tượng
+	Ignore All	Bỏ qua Tất cả
+	Illustrations	Hình minh họa
+	Immersive	Chân thực
+	Immersive Reader	Trình đọc Chân thực
+	Immersive\nReader	Trình đọc\nChân thực
+	Increase Font Size	Tăng Cỡ Phông
+	Increase Indent	Tăng Thụt lề
+	Indent	Thụt lề
+	Indentation	Thụt lề
+	Indents	Thụt lề
+	Indents and Spacing	Thụt lề và Giãn cách
+	Index	Chỉ mục
+	Info	Thông tin
+	Ink to\nMath	Viết tay\nthành Toán
+	Ink to\nShape	Viết tay\nthành Hình
+	Ink\nReplay	Phát lại\nNét mực
+	Insert	Chèn
+	Insert Above	Chèn Phía trên
+	Insert Below	Chèn Phía dưới
+	Insert Caption	Chèn Chú thích Ảnh
+	Insert Citation	Chèn Trích dẫn
+	Insert Endnote	Chèn Chú thích cuối
+	Insert Footnote	Chèn Cước chú
+	Insert Hyperlink	Chèn Nối kết
+	Insert Index	Chèn Chỉ mục
+	Insert Left	Chèn Bên trái
+	Insert Merge Field	Chèn Trường Phối
+	Insert Merge\nField	Chèn Trường\nPhối
+	Insert Right	Chèn Bên phải
+	Insert Shapes	Chèn Hình
+	Insert Table	Chèn Bảng
+	Insert Table of Authorities	Chèn Bảng Dẫn chứng
+	Insert Table of Figures	Chèn Bảng Hình ảnh
+	Insert Table…	Chèn Bảng…
+	Insert\nAbove	Chèn\nPhía trên
+	Insert\nCaption	Chèn Chú\nthích Ảnh
+	Insert\nCitation	Chèn\nTrích dẫn
+	Insert\nFootnote	Chèn\nCước chú
+	Inside Borders	Viền Trong
+	Inspect Document	Kiểm tra Tài liệu
+	Inspect Styles at Selection	Kiểm tra Kiểu tại Vùng chọn
+	Interface language:	Ngôn ngữ giao diện:
+	Italic	Nghiêng
+	Justify	Căn đều
+	Keep Lines Together	Giữ các Dòng cùng nhau
+	Keep Text Only	Chỉ Giữ Văn bản
+	Keep lines together	Giữ các dòng cùng nhau
+	Keep with Next	Giữ với Đoạn Tiếp theo
+	Keep with next	Giữ với đoạn tiếp theo
+	Keeps the fonts and formatting of the copied text.	Giữ phông và định dạng của văn bản đã sao chép.
+	Labels	Nhãn
+	Landscape	Hướng ngang
+	Language	Ngôn ngữ
+	Lasso	Thòng lọng
+	Last Column	Cột Cuối
+	Last commit	Commit gần nhất
+	Layout	Bố trí
+	Layout Summary	Tóm tắt Bố trí
+	Left	Trái
+	Left Border	Viền Trái
+	Left Margin	Lề Trái
+	Left:	Trái:
+	Letter	Thư
+	Line	Đường
+	Line Break	Ngắt Dòng
+	Line breaking	Ngắt dòng
+	Line End	Cuối Dòng
+	Line Numbers	Số Dòng
+	Line Spacing	Giãn cách Dòng
+	Line Spacing Options…	Tùy chọn Giãn cách Dòng…
+	Line Start	Đầu Dòng
+	Line and Page Breaks	Ngắt Dòng và Trang
+	Line and Paragraph Spacing	Giãn cách Dòng và Đoạn
+	Line delta	Chênh lệch dòng
+	Line spacing:	Giãn cách dòng:
+	Lines	Dòng
+	Lines added	Dòng đã thêm
+	Lines deleted	Dòng đã xóa
+	Link	Nối kết
+	Link to Previous	Nối kết đến Trước
+	Links	Nối kết
+	Location: {path}	Vị trí: {path}
+	Macros	Macro
+	Mailings	Gửi thư
+	Manage Sources	Quản lý Nguồn
+	Many pages	Nhiều trang
+	Margins	Lề
+	Mark Citation	Đánh dấu Trích dẫn
+	Mark Entry	Đánh dấu Mục nhập
+	Mark\nCitation	Đánh dấu\nTrích dẫn
+	Mark\nEntry	Đánh dấu\nMục nhập
+	Markdown (*.md)	Markdown (*.md)
+	Match Fields	Khớp Trường
+	Match case	Khớp chữ hoa/thường
+	Matrix	Ma trận
+	Merge	Phối
+	Merge Cells	Phối Ô
+	Merge Formatting	Phối Định dạng
+	Merged PRs	PR đã hợp nhất
+	Mirrored	Đối xứng
+	Moderate	Vừa phải
+	Modify Style	Sửa đổi Kiểu
+	Modify…	Sửa đổi…
+	More templates →	Thêm mẫu →
+	Move or Resize	Di chuyển hoặc Đổi kích thước
+	Multilevel List	Danh sách Đa cấp
+	Multiple Pages	Nhiều Trang
+	Name (A–Z)	Tên (A–Z)
+	Name:	Tên:
+	Narrow  0.5" all	Hẹp  0,5" mọi lề
+	Navigation	Dẫn hướng
+	Navigation Pane	Ngăn Dẫn hướng
+	New	Mới
+	New Comment	Chú thích Mới
+	New Paragraph	Đoạn văn Mới
+	New Style…	Kiểu Mới…
+	New Window	Cửa sổ Mới
+	New from Template	Mới từ Mẫu
+	New\nComment	Chú thích\nMới
+	New\nWindow	Cửa sổ\nMới
+	Next	Tiếp theo
+	Next Change	Thay đổi Tiếp theo
+	Next Comment	Chú thích Tiếp theo
+	Next Footnote	Cước chú Tiếp theo
+	Next Page	Trang Tiếp theo
+	Next Record	Bản ghi Tiếp theo
+	Next Section	Phần Tiếp theo
+	No Border	Không Viền
+	No Color	Không Màu
+	No Markup	Không Đánh dấu
+	No Paragraph Space	Không Giãn cách Đoạn
+	No contributor data was built into this copy.	Bản này không được tích hợp dữ liệu người đóng góp.
+	No model credits were built into this copy.	Bản này không được tích hợp thông tin ghi công mô hình.
+	No templates match your search.	Không có mẫu nào khớp với tìm kiếm của bạn.
+	Nonbreaking Hyphen	Gạch nối Không ngắt
+	Nonbreaking Space	Khoảng trắng Không ngắt
+	None	Không có
+	Normal  1" all	Thường  1" mọi lề
+	Normal Style	Kiểu Thường
+	Not available right now	Hiện chưa khả dụng
+	Not saved	Chưa lưu
+	Not saved yet	Chưa được lưu
+	Nudge	Dịch nhẹ
+	Number of columns:	Số cột:
+	Number of rows:	Số hàng:
+	Numbering	Đánh số
+	Offset (pt):	Độ lệch (pt):
+	OK	OK
+	Object	Đối tượng
+	Odd Page	Trang Lẻ
+	Office 2003 Default	Mặc định Office 2003
+	One	Một
+	One Page	Một Trang
+	Open	Mở
+	OpenDocument Text (*.odt)	Văn bản OpenDocument (*.odt)
+	Optional Hyphen	Gạch nối Tùy chọn
+	Copyright Sign	Ký hiệu Bản quyền
+	Ellipsis	Dấu Chấm lửng
+	Em Dash	Gạch ngang Dài
+	Insert Date Field	Chèn Trường Ngày
+	Insert Page Field	Chèn Trường Số trang
+	Insert Time Field	Chèn Trường Giờ
+	Registered Sign	Ký hiệu Đã đăng ký
+	Reset Character Formatting	Đặt lại Định dạng Ký tự
+	Reset Paragraph Formatting	Đặt lại Định dạng Đoạn văn
+	Trademark Sign	Ký hiệu Thương hiệu
+	Options	Tùy chọn
+	Orientation	Hướng
+	Outline	Dàn bài
+	Outline Level	Mức Dàn bài
+	Outside Borders	Viền Ngoài
+	Oval	Hình bầu dục
+	PDF document (*.pdf)	Tài liệu PDF (*.pdf)
+	Page	Trang
+	Page Background	Nền Trang
+	Page Borders	Viền Trang
+	Page Break	Ngắt Trang
+	Page Break Before	Ngắt Trang Trước
+	Page Breaks	Ngắt Trang
+	Page Color	Màu Trang
+	Page Down	Xuống một Trang
+	Page Movement	Di chuyển theo Trang
+	Page Number	Số Trang
+	Page Setup	Thiết lập Trang
+	Page Up	Lên một Trang
+	Page Width	Chiều rộng Trang
+	Page X of Y	Trang X trên Y
+	Page break before	Ngắt trang trước
+	Page image (*.png)	Ảnh trang (*.png)
+	Page width	Chiều rộng trang
+	Page {page}	Trang {page}
+	Page {page} of {pages}	Trang {page} trên {pages}
+	Page\nBorders	Viền\nTrang
+	Page\nColor	Màu\nTrang
+	Page\nNumber	Số\nTrang
+	Pages	Trang
+	Paragraph	Đoạn văn
+	Paragraph Details	Chi tiết Đoạn văn
+	Paragraph Down	Xuống một Đoạn
+	Paragraph Settings	Thiết đặt Đoạn văn
+	Paragraph Spacing	Giãn cách Đoạn
+	Paragraph Up	Lên một Đoạn
+	Paragraphs	Đoạn văn
+	Paste	Dán
+	Paste (⌘V)	Dán (⌘V)
+	Paste Formatting	Dán Định dạng
+	Paste Special	Dán Đặc biệt
+	Paste Special…	Dán Đặc biệt…
+	Paste as:	Dán dưới dạng:
+	Paste: Keep Text Only	Dán: Chỉ Giữ Văn bản
+	Paste: Merge Formatting	Dán: Hợp nhất Định dạng
+	Pen	Bút
+	Pencil	Bút chì
+	Phonetic Guide	Hướng dẫn Phát âm
+	Picture Border	Viền Ảnh
+	Picture Format	Định dạng Ảnh
+	Picture Styles	Kiểu Ảnh
+	Pictures	Ảnh
+	Plain text (*.txt)	Văn bản thuần (*.txt)
+	Portrait	Hướng dọc
+	Position	Vị trí
+	Preview Results	Xem trước Kết quả
+	Preview\nResults	Xem trước\nKết quả
+	Previous	Trước
+	Previous Change	Thay đổi Trước
+	Previous Comment	Chú thích Trước
+	Previous Record	Bản ghi Trước
+	Previous Section	Phần Trước
+	Print	In
+	Print Layout	Bố trí In
+	Print\nLayout	Bố trí\nIn
+	Proofing	Soát lỗi
+	Proofing Issues	Vấn đề Soát lỗi
+	Properties	Thuộc tính
+	Protect	Bảo vệ
+	Protect Document	Bảo vệ Tài liệu
+	Quick Access Toolbar	Thanh công cụ Truy nhập Nhanh
+	Quick Parts	Phần Nhanh
+	Quick Tables	Bảng Nhanh
+	Read Aloud	Đọc to
+	Read Mode	Chế độ Đọc
+	Read\nAloud	Đọc\nto
+	Read\nMode	Chế độ\nĐọc
+	Reads the clipboard's rich text and keeps its formatting.	Lấy văn bản có định dạng từ bảng tạm và giữ nguyên định dạng.
+	Reads the clipboard's web content and keeps its formatting.	Lấy nội dung web từ bảng tạm và giữ nguyên định dạng.
+	Reading Highlight	Tô sáng khi Đọc
+	Recent	Gần đây
+	Record Macro	Ghi Macro
+	Recover Unsaved Documents	Khôi phục Tài liệu Chưa lưu
+	Rectangle	Hình chữ nhật
+	Redo	Làm lại
+	Reduce Hanging Indent	Giảm Thụt lề Treo
+	References	Tham chiếu
+	Reject	Từ chối
+	Reject All Changes	Từ chối Tất cả Thay đổi
+	Reject Change	Từ chối Thay đổi
+	Relaxed	Thoáng
+	Remove	Loại bỏ
+	Remove Background	Loại bỏ Nền
+	Remove Footer	Loại bỏ Chân trang
+	Remove Header	Loại bỏ Đầu trang
+	Remove Hyperlink	Loại bỏ Siêu kết nối
+	Remove Space After Paragraph	Loại bỏ Khoảng cách Sau Đoạn văn
+	Remove Table of Contents	Loại bỏ Mục lục
+	Remove Watermark	Loại bỏ Hình mờ
+	Reopen	Mở lại
+	Repeat	Lặp lại
+	Repeat Header Rows	Lặp lại Hàng Tiêu đề
+	Replace	Thay thế
+	Replace All	Thay thế Tất cả
+	Replace Document Text	Thay thế Văn bản Tài liệu
+	Replace with:	Thay thế bằng:
+	Replay	Phát lại
+	Reply	Trả lời
+	Report	Báo cáo
+	Research	Nghiên cứu
+	Researcher	Nhà nghiên cứu
+	Reset Picture	Đặt lại Ảnh
+	Reset to Normal	Đặt lại về Thường
+	Resolve	Giải quyết
+	Resolved	Đã giải quyết
+	Restart Each Page	Bắt đầu lại Mỗi Trang
+	Restart Each Section	Bắt đầu lại Mỗi Phần
+	Restart at 1	Bắt đầu lại từ 1
+	Restrict Editing	Hạn chế Chỉnh sửa
+	Restrict\nEditing	Hạn chế\nChỉnh sửa
+	Result	Kết quả
+	Results	Kết quả
+	Reverse the order	Đảo ngược thứ tự
+	Reviewing	Xem lại
+	Reviewing Pane	Ngăn Xem lại
+	Reviewing — edits become suggestions	Xem lại — nội dung sửa sẽ thành đề xuất
+	Rich Text Format (*.rtf)	Định dạng Văn bản Phong phú (*.rtf)
+	Rich Text Format (RTF)	Định dạng Văn bản Phong phú (RTF)
+	Right	Phải
+	Right (vertical)	Phải (dọc)
+	Right Border	Viền Phải
+	Right Margin	Lề Phải
+	Right-to-Left Text Direction	Hướng Văn bản Phải sang Trái
+	Left-to-Right Text Direction	Hướng Văn bản Trái sang Phải
+	Right:	Phải:
+	Rotate	Xoay
+	Rounded Rectangle	Hình chữ nhật Bo góc
+	Rows & Columns	Hàng & Cột
+	Ruby text:	Văn bản ruby:
+	Ruler	Thước
+	Rules	Quy tắc
+	Résumé	Sơ yếu lý lịch
+	Save	Lưu
+	Save As	Lưu Như
+	Save a copy in another format. Printing goes through a PDF you can print from any viewer.	Lưu một bản sao ở định dạng khác. Khi in, ứng dụng tạo một tệp PDF để bạn in từ bất kỳ trình xem nào.
+	Save as Template	Lưu thành Mẫu
+	Saved	Đã lưu
+	Search Commands	Tìm kiếm Lệnh
+	Search commands and help	Tìm kiếm lệnh và trợ giúp
+	Search document	Tìm kiếm trong tài liệu
+	Search for templates	Tìm kiếm mẫu
+	Section Breaks	Ngắt Phần
+	Section Properties	Thuộc tính Phần
+	Sections	Phần
+	Select	Chọn
+	Select All	Chọn Tất cả
+	Select Cell	Chọn Ô
+	Select Line	Chọn Dòng
+	Select Objects	Chọn Đối tượng
+	Select Paragraph	Chọn Đoạn văn
+	Select Range	Chọn Phạm vi
+	Select Recipients	Chọn Người nhận
+	Select Row	Chọn Hàng
+	Select Sentence	Chọn Câu
+	Select Table	Chọn Bảng
+	Select Text	Chọn Văn bản
+	Select Text with Similar Formatting	Chọn Văn bản có Định dạng Tương tự
+	Select Word	Chọn Từ
+	Select\nRecipients	Chọn\nNgười nhận
+	Selection	Vùng chọn
+	Selection Pane	Ngăn Vùng chọn
+	Send Backward	Đưa Xuống dưới
+	Sentence case.	Viết hoa đầu câu.
+	Set Caret	Đặt Con trỏ
+	Set Character Formatting	Đặt Định dạng Ký tự
+	Set Numbering Value	Đặt Giá trị Đánh số
+	Set Paragraph Formatting	Đặt Định dạng Đoạn văn
+	Set as Default	Đặt làm Mặc định
+	Shading	Tô bóng
+	Shadow	Đổ bóng
+	Shape Fill	Tô Hình
+	Shape Format	Định dạng Hình
+	Shape Outline	Viền Hình
+	Shape Styles	Kiểu Hình
+	Shapes	Hình
+	Share	Chia sẻ
+	Shift+Tab	Shift+Tab
+	Show	Hiện
+	Show all revisions inline	Hiện mọi bản sửa ngay trong văn bản
+	Show Comments	Hiện Chú thích
+	Show Markup	Hiện Đánh dấu
+	Show Notes	Hiện Ghi chú
+	Show all formatting marks	Hiện tất cả dấu định dạng
+	Show only comments and formatting in balloons	Chỉ hiện chú thích và định dạng trong bóng chú thích
+	Show revisions in balloons	Hiện bản sửa trong bóng chú thích
+	Show rulers	Hiện thước
+	Show/Hide ¶	Hiện/Ẩn ¶
+	Show\nComments	Hiện\nChú thích
+	Shrink Font 1 Point	Giảm Phông 1 Điểm
+	Side to Side	Cạnh nhau
+	Side\nto Side	Cạnh\nnhau
+	Signature Line	Dòng Chữ ký
+	Single	Đơn
+	Single Spacing	Giãn cách Đơn
+	Size	Kích thước
+	Size (pt):	Cỡ (pt):
+	Size:	Kích thước:
+	Small Caps	Chữ hoa Nhỏ
+	Small caps	Chữ hoa nhỏ
+	SmartArt	SmartArt
+	Sort	Sắp xếp
+	Space	Khoảng trắng
+	Space before/after:	Giãn cách trước/sau:
+	Spacing	Giãn cách
+	Spacing (pt):	Giãn cách (pt):
+	Speech	Giọng nói
+	Spelling & Grammar	Chính tả & Ngữ pháp
+	Spelling &\nGrammar	Chính tả &\nNgữ pháp
+	Spelling Suggestions	Gợi ý Chính tả
+	Split	Tách
+	Split Cells	Tách Ô
+	Split Table	Tách Bảng
+	Spreadsheet Table	Bảng Trang tính
+	Standard Colors	Màu Chuẩn
+	Star	Ngôi sao
+	Start at:	Bắt đầu từ:
+	Start Mail Merge	Bắt đầu Phối Thư
+	Start Mail\nMerge	Bắt đầu\nPhối Thư
+	Statistics	Thống kê
+	Status Bar	Thanh Trạng thái
+	Strikethrough	Gạch ngang chữ
+	Studio cover	Bìa studio
+	Studio handbook (sample)	Sổ tay studio (mẫu)
+	Style	Kiểu
+	Style Inspector	Trình kiểm tra Kiểu
+	Style Set	Bộ Kiểu
+	Style based on:	Kiểu dựa trên:
+	Style: {style}	Kiểu: {style}
+	Styles	Kiểu
+	Styles Pane	Ngăn Kiểu
+	Subscript	Chỉ số dưới
+	Superscript	Chỉ số trên
+	Switch Modes	Chuyển Chế độ
+	Switch\nModes	Chuyển\nChế độ
+	Symbol	Ký hiệu
+	Symbols	Ký hiệu
+	Synonyms	Từ đồng nghĩa
+	Tab	Tab
+	Tab character	Ký tự tab
+	Table	Bảng
+	Table Column Width	Độ rộng Cột Bảng
+	Table Design	Thiết kế Bảng
+	Table Layout	Bố trí Bảng
+	Table Properties	Thuộc tính Bảng
+	Table Row Height	Chiều cao Hàng Bảng
+	Table Style Options	Tùy chọn Kiểu Bảng
+	Table Styles	Kiểu Bảng
+	Table of Authorities	Bảng Dẫn chứng
+	Table of Contents	Mục lục
+	Table of\nContents	Mục\nlục
+	Tables	Bảng
+	Tabs	Tab
+	Tabular List	Danh sách Dạng bảng
+	Text	Văn bản
+	Text Box	Hộp Văn bản
+	Text Direction	Hướng Văn bản
+	Text Effects	Hiệu ứng Văn bản
+	Text Effects and Typography	Hiệu ứng Văn bản và Kiểu chữ
+	Text Highlight Color	Màu Tô sáng Văn bản
+	Text indent at:	Thụt lề văn bản tại:
+	Text Wrapping	Bao quanh Văn bản
+	Text from File	Văn bản từ Tệp
+	Text to display:	Văn bản hiển thị:
+	Text:	Văn bản:
+	Text\nBox	Hộp\nVăn bản
+	Text\nDirection	Hướng\nVăn bản
+	The clipboard is empty.	Bảng tạm đang trống.
+	The new style takes the formatting of the current paragraph.	Kiểu mới sẽ lấy định dạng của đoạn văn hiện tại.
+	Theme Colors	Màu Chủ đề
+	Theme Fonts	Phông Chủ đề
+	Theme List	Danh sách Chủ đề
+	Themes	Chủ đề
+	Thesaurus	Từ điển Đồng nghĩa
+	Thick	Dày
+	Three	Ba
+	Tight	Sát
+	Top Border	Viền Trên
+	Top Margin	Lề Trên
+	Top of Page	Đầu Trang
+	Top:	Trên:
+	Total Row	Hàng Tổng
+	Track Changes	Theo dõi Thay đổi
+	Track Changes Options	Tùy chọn Theo dõi Thay đổi
+	Track Changes: On	Theo dõi Thay đổi: Bật
+	Track formatting	Theo dõi định dạng
+	Tracking	Theo dõi
+	Translate	Dịch
+	Transparency	Độ trong suốt
+	Triangle	Tam giác
+	Two	Hai
+	Type Text	Nhập Văn bản
+	Type a command, e.g. "insert table"	Nhập lệnh, ví dụ "chèn bảng"
+	Ungroup	Bỏ nhóm
+	UPPERCASE	CHỮ HOA
+	Underline	Gạch dưới
+	Underline Words Only	Chỉ Gạch dưới Từ
+	Undo	Hoàn tác
+	Undo {action}	Hoàn tác {action}
+	Unformatted Text	Văn bản Không định dạng
+	Up	Lên
+	Update Field	Cập nhật Trường
+	Update Index	Cập nhật Chỉ mục
+	Update Style to Match Selection	Cập nhật Kiểu khớp với Vùng chọn
+	Update Table	Cập nhật Bảng
+	Update Table of Figures	Cập nhật Bảng Hình
+	Update to Match	Cập nhật cho Khớp
+	Update to Match Selection	Cập nhật cho Khớp Vùng chọn
+	User Name	Tên Người dùng
+	User name:	Tên người dùng:
+	Version History	Lịch sử Phiên bản
+	Version {version} ({build})	Phiên bản {version} ({build})
+	Vertical	Dọc
+	Vertical Alignment	Căn chỉnh Dọc
+	View	Xem
+	View Gridlines	Xem Đường lưới
+	View State	Trạng thái Xem
+	Views	Dạng xem
+	Voice	Giọng đọc
+	Watermark	Hình mờ
+	Wave	Sóng
+	Web Layout	Bố trí Web
+	Web\nLayout	Bố trí\nWeb
+	Web page (*.html)	Trang web (*.html)
+	Whole page	Toàn trang
+	Whole words	Toàn bộ từ
+	Wide	Rộng
+	Widow/Orphan Control	Kiểm soát Dòng Mồ côi
+	Widow/Orphan control	Kiểm soát dòng mồ côi
+	Wildcards (regex)	Ký tự đại diện (regex)
+	Window	Cửa sổ
+	Word Count	Đếm Từ
+	Word Left	Sang trái một Từ
+	Word Right	Sang phải một Từ
+	Word document (*.docx)	Tài liệu Word (*.docx)
+	WordArt	WordArt
+	WordCraft	WordCraft
+	Words	Từ
+	Words only	Chỉ từ
+	Wrap Text	Bao quanh Văn bản
+	Wrap\nText	Bao quanh\nVăn bản
+	Write & Insert Fields	Viết & Chèn Trường
+	Write a reply	Viết trả lời
+	Zoom	Thu phóng
+	Zoom In	Phóng to
+	Zoom Out	Thu nhỏ
+	development build	bản dựng phát triển
+	lowercase	chữ thường
+	{group} settings	Thiết đặt {group}
+	{key}+Click to follow link	{key}+Bấm để mở nối kết
+	{selected} of {words} words	{selected} trên {words} từ
+	{words} words	{words} từ
+	Browse…	Duyệt…
+	Equation	Phương trình
+	Review	Xem lại
+	Track\nChanges	Theo dõi\nThay đổi
+	Track\nChanges ✓	Theo dõi\nThay đổi ✓
+	Scroll ribbon left	Cuộn dải băng sang trái
+	Scroll ribbon right	Cuộn dải băng sang phải
+	Apply Styles	Áp dụng Kiểu
+	Dark page (white text on black)	Trang tối (chữ trắng trên nền đen)
+	Show documents with their colours inverted, like View › Switch Modes. Saving, printing and PDFs are unchanged.	Hiển thị tài liệu với màu đảo ngược, giống Xem › Chuyển Chế độ. Việc lưu, in và tệp PDF không bị ảnh hưởng.
+	Only web (http, https) and email (mailto) links can be followed	Chỉ có thể mở nối kết web (http, https) và email (mailto)
+	Character Border	Viền Ký tự
+	Direction:	Hướng:
+	Right-to-left	Phải sang trái
+	Left-to-right	Trái sang phải
+	Zotero	Zotero
+	Citations	Trích dẫn
+	Document	Tài liệu
+	Add/Edit\nCitation	Thêm/Sửa\nTrích dẫn
+	Add\nNote	Thêm\nGhi chú
+	Add/Edit\nBibliography	Thêm/Sửa\nThư mục
+	Refresh	Làm mới
+	Document\nPreferences	Tùy chọn\nTài liệu
+	Unlink\nCitations	Bỏ nối kết\nTrích dẫn
+	Waiting for Zotero…	Đang chờ Zotero…
+	Zotero: done	Zotero: đã xong
+	Zotero: cancelled	Zotero: đã hủy
+	Yes	Có
+	No	Không
+	Move Past Citation	Đi qua Trích dẫn
+	Move Past\nCitation	Đi qua\nTrích dẫn
+	Next Sentence	Câu Tiếp theo
+	Previous Sentence	Câu Trước
+	Next sentence	Câu tiếp theo
+	Previous sentence	Câu trước
+	Play/Pause	Phát/Tạm dừng
+	Read Aloud Status	Trạng thái Đọc to
+	Reading Speed	Tốc độ Đọc
+	Skip Citations and Bibliography	Bỏ qua Trích dẫn và Thư mục
+	Skip citations & bibliography	Bỏ qua trích dẫn & thư mục
+	Stop Reading	Dừng Đọc
+	Don't read Zotero, Mendeley or EndNote citations and bibliographies	Không đọc trích dẫn và thư mục của Zotero, Mendeley hoặc EndNote
+	Play	Phát
+	Pause	Tạm dừng
+	Stop	Dừng
+	Sentence	Câu
+	Paused	Đã tạm dừng
+	Finished	Đã xong
+	Stopped	Đã dừng
+	Speed	Tốc độ
+	Normal speed	Tốc độ bình thường
+	AutoSave documents you have saved in WordCraft	Tự động lưu các tài liệu bạn đã lưu trong WordCraft
+	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Tự động Lưu không thành công: {error}. Hãy lưu tài liệu để bật lại Tự động Lưu.
+	Couldn't download {name}: {error}	Không tải xuống được {name}: {error}
+	Do you want to save changes to {name}?	Bạn có muốn lưu các thay đổi trong {name} không?
+	Don't Save	Không Lưu
+	That format doesn't keep everything, so the document is still open. Save it as a Word document (.docx) to go on.	Định dạng đó không giữ được toàn bộ nội dung nên tài liệu vẫn đang mở. Hãy lưu dưới dạng tài liệu Word (.docx) để tiếp tục.
+	Your changes will be lost if you don't save them.	Nếu không lưu, các thay đổi của bạn sẽ bị mất.
+	Change Structure	Thay đổi Cấu trúc
+	Change to Display	Chuyển sang Dạng Hiển thị
+	Change to Inline	Chuyển sang Cùng dòng
+	Conversions	Chuyển đổi
+	Delete Back in Equation	Xóa Lùi trong Phương trình
+	Delete in Equation	Xóa trong Phương trình
+	Edit Equation	Sửa Phương trình
+	Enter in Equation	Enter trong Phương trình
+	Equation Gallery	Bộ sưu tập Phương trình
+	Equation Info	Thông tin Phương trình
+	Equation Number	Số Phương trình
+	Input Format	Định dạng Nhập
+	Insert Structure	Chèn Cấu trúc
+	Insert Symbol	Chèn Ký hiệu
+	Justification	Căn lề
+	Leave Equation	Rời Phương trình
+	Move in Equation	Di chuyển trong Phương trình
+	Normal Text	Văn bản Thường
+	Set Equation	Đặt Phương trình
+	Structure Actions	Thao tác Cấu trúc
+	Structures	Cấu trúc
+	Tools	Công cụ
+	Type in Equation	Nhập trong Phương trình
+	Inline	Cùng dòng
+	Number	Số
+	Close Equation	Đóng Phương trình
+	Insert New Equation	Chèn Phương trình Mới
+	Built-In	Dựng sẵn
+	Professional	Chuyên nghiệp
+	Linear	Tuyến tính
+	Fraction	Phân số
+	Script	Chỉ số
+	Radical	Căn thức
+	Integral	Tích phân
+	Large\nOperator	Toán tử\nLớn
+	Bracket	Dấu ngoặc
+	Function	Hàm
+	Accent	Dấu phụ
+	Limit and\nLog	Giới hạn\nvà Log
+	Operator	Toán tử
+	Equation Options	Tùy chọn Phương trình
+	All symbol sets	Tất cả bộ ký hiệu
+	Send the document straight to the system print dialog, or save a copy in another format below.	Gửi tài liệu thẳng tới hộp thoại in của hệ thống, hoặc lưu bản sao ở một định dạng khác bên dưới.
+	Or save a copy in another format:	Hoặc lưu bản sao ở định dạng khác:
+	Opening print dialog…	Đang mở hộp thoại in…
+	Print failed: {error}	In không thành công: {error}
+	Couldn't open {path}: {error}	Không mở được {path}: {error}
+	Column Selection	Chọn Cột
+	New Table Style	Kiểu Bảng Mới
+	Modify Table Style	Sửa đổi Kiểu Bảng
+	New Table Style…	Kiểu Bảng Mới…
+	Modify Table Style…	Sửa đổi Kiểu Bảng…
+	Apply formatting to:	Áp dụng định dạng cho:
+	Whole Table	Toàn bộ Bảng
+	Fill color:	Màu tô:
+	{count} items highlighted	Đã tô sáng {count} mục
+	{n} pt	{n} pt
+	Not {name}	Không {name}
+	Level {n}	Mức {n}
+	Body Text	Văn bản Thân
+	{n} lines	{n} dòng
+	At least {n}	Ít nhất {n}
+	Exactly {n}	Chính xác {n}
+	Centered	Căn giữa
+	Character spacing	Giãn cách ký tự
+	Don't add space between paragraphs of the same style	Không thêm khoảng cách giữa các đoạn văn cùng kiểu
+	Don't hyphenate	Không gạch nối từ
+	Double strikethrough	Gạch ngang kép
+	Drop cap	Chữ hoa thả
+	First line	Dòng đầu tiên
+	Font color	Màu phông
+	Highlight	Tô sáng
+	Justified	Căn đều
+	Left indent	Thụt lề trái
+	Line spacing	Giãn cách dòng
+	Outline level	Mức dàn bài
+	Raised/lowered	Nâng/hạ
+	Right indent	Thụt lề phải
+	Scale	Tỷ lệ
+	Space after	Khoảng cách sau
+	Space before	Khoảng cách trước
+	Suppress line numbers	Ẩn số dòng
+	Underline color	Màu gạch dưới
+	Letters	Thư
+	E-mail Messages	Thư Email
+	Directory	Danh bạ
+	Normal Word Document	Tài liệu Word Thông thường
+	If…Then…Else…	Nếu…Thì…Ngược lại…
+	If…Then…Else	Nếu…Thì…Ngược lại
+	Merge Record #	Số Bản ghi Phối
+	Skip Record If…	Bỏ qua Bản ghi Nếu…
+	Skip Record If	Bỏ qua Bản ghi Nếu
+	Equals:	Bằng:
+	Then insert:	Thì chèn:
+	Otherwise insert:	Ngược lại thì chèn:
+	Courtesy Title	Danh xưng
+	First Name	Tên
+	Last Name	Họ
+	Company	Công ty
+	Address	Địa chỉ
+	City	Thành phố
+	State	Tỉnh/Bang
+	Postal Code	Mã bưu chính
+	Country	Quốc gia
+	(not matched)	(không khớp)
+	Leave a recipient out of the merge when a field has this value.	Loại người nhận khỏi phối thư khi một trường có giá trị này.
+	Insert one text or another, depending on a field's value.	Chèn một trong hai đoạn văn bản, tùy theo giá trị của một trường.
+	Select recipients first to match their fields.	Hãy chọn người nhận trước để khớp các trường của họ.
+	The recipient-list field that fills each part of an address block and greeting line.	Trường trong danh sách người nhận dùng để điền từng phần của khối địa chỉ và dòng chào.
+	No errors found: every merge field is in the recipient list.	Không có lỗi: mọi trường phối đều có trong danh sách người nhận.
+	These merge fields aren't in the recipient list:	Các trường phối sau không có trong danh sách người nhận:
+	Add at least one field.	Hãy thêm ít nhất một trường.
+	Add Field	Thêm Trường
+	Every field needs a name.	Trường nào cũng cần có tên.
+	Field name	Tên trường
+	Field names must be different.	Tên các trường không được trùng nhau.
+	Fields:	Trường:
+	Field:	Trường:
+	Find:	Tìm:
+	New Entry	Mục Mới
+	Recipient List	Danh sách Người nhận
+	Recipients: {count}	Người nhận: {count}
+	Remove field	Loại bỏ trường
+	Remove recipient	Loại bỏ người nhận
+	Select recipients first to choose from their fields.	Hãy chọn người nhận trước để chọn trong các trường của họ.
+	Type a New List…	Nhập Danh sách Mới…
+	Type at least one recipient.	Hãy nhập ít nhất một người nhận.
+	Type the recipients, or load them from a file.	Nhập người nhận, hoặc tải họ từ một tệp.
+	Use an Existing List…	Dùng Danh sách Hiện có…
+	Choose the sheet that holds the recipients.	Chọn trang tính chứa danh sách người nhận.
+	First row of data contains column headers	Hàng dữ liệu đầu tiên chứa tiêu đề cột
+	Interface theme:	Chủ đề giao diện:
+	Interface\nTheme	Chủ đề\nGiao diện
+	Interface Theme	Chủ đề Giao diện
+	Light	Sáng
+	Dark	Tối
+	Use system setting	Theo thiết đặt hệ thống
+	A file dialog is already open.	Đã có một hộp thoại tệp đang mở.
+	Height:	Chiều cao:
+	Width:	Chiều rộng:
+	Row	Hàng
+	Cell	Ô
+	Preferred width:	Chiều rộng ưu tiên:
+	Alignment:	Căn chỉnh:
+	Indent from left:	Thụt lề từ trái:
+	Specify height:	Chỉ định chiều cao:
+	Exactly	Chính xác
+	At least	Ít nhất
+	Allow row to break across pages	Cho phép ngắt hàng sang trang khác
+	Repeat as header row on each page	Lặp lại làm hàng tiêu đề trên mỗi trang
+	Vertical alignment:	Căn chỉnh dọc:
+	Top	Trên
+	Bottom	Dưới
+	Alt text	Văn bản thay thế
+	Alt:	Thay thế:
+	W:	R:
+	H:	C:
+	Reset	Đặt lại
+	Reset Crop	Đặt lại Cắt xén
+	Insert a new equation (Alt+=)	Chèn phương trình mới (Alt+=)
+	Leave the equation (Esc)	Rời khỏi phương trình (Esc)
+	Preview	Xem trước
+	Draw Ink	Vẽ bằng Mực
+	Erase Ink	Xóa Mực
+	Hide Ink	Ẩn Mực
+	Hide\nInk	Ẩn\nMực
+	Pens	Bút
+	Thickness	Độ dày
+	(All)	(Tất cả)
+	(none)	(không có)
+	(normal text)	(văn bản thường)
+	1/4 Em Space	Khoảng trắng 1/4 Em
+	A mail merge field	Một trường phối thư
+	A numbered sequence (figures, tables…)	Dãy đánh số (hình, bảng…)
+	A table of contents	Mục lục
+	Categories:	Thể loại:
+	Character	Ký tự
+	Character code:	Mã ký tự:
+	Col #:	Cột số:
+	Copyright	Bản quyền
+	Date and Time	Ngày và Giờ
+	Date formats:	Định dạng ngày:
+	Description:	Mô tả:
+	Document Information	Thông tin Tài liệu
+	Double Closing Quote	Dấu Ngoặc kép Đóng
+	Double Opening Quote	Dấu Ngoặc kép Mở
+	En Dash	Gạch En
+	Em Space	Khoảng trắng Em
+	En Space	Khoảng trắng En
+	Equal column width	Độ rộng cột bằng nhau
+	Field Codes	Mã Trường
+	Field code:	Mã trường:
+	Field codes:	Mã trường:
+	Field name:	Tên trường:
+	Field names:	Tên trường:
+	Field properties	Thuộc tính trường
+	Field…	Trường…
+	Format:	Định dạng:
+	Hide Codes	Ẩn Mã
+	Index and Tables	Chỉ mục và Bảng
+	Line between	Đường kẻ giữa
+	Links and References	Nối kết và Tham chiếu
+	Mail Merge	Phối Thư
+	More Columns…	Thêm Cột…
+	More Symbols…	Thêm Ký hiệu…
+	No-Width Non Break	Không ngắt, Không độ rộng
+	No-Width Optional Break	Ngắt Tùy chọn, Không độ rộng
+	Paragraph Mark	Dấu Đoạn văn
+	Pick a field from the list	Chọn một trường trong danh sách
+	Preserve formatting during updates	Giữ định dạng khi cập nhật
+	Presets	Thiết lập sẵn
+	Recently used symbols:	Ký hiệu dùng gần đây:
+	Registered	Đã đăng ký
+	Section Mark	Dấu Phần
+	Sequence name:	Tên dãy:
+	Shortcut key:	Phím tắt:
+	Single Closing Quote	Dấu Nháy đơn Đóng
+	Single Opening Quote	Dấu Nháy đơn Mở
+	Spacing:	Giãn cách:
+	Special Characters	Ký tự Đặc biệt
+	Subset:	Tập con:
+	The time right now	Thời gian hiện tại
+	When this document was first created	Thời điểm tài liệu được tạo lần đầu
+	When this document was most recently printed	Thời điểm tài liệu được in gần nhất
+	When this document was most recently saved	Thời điểm tài liệu được lưu gần nhất
+	The document has no bookmarks yet.	Tài liệu chưa có dấu trang nào.
+	Who the document properties name as author	Người được ghi là tác giả trong thuộc tính tài liệu
+	Name of the file this document is saved as	Tên tệp mà tài liệu này được lưu thành
+	Title from the document properties	Tiêu đề lấy từ thuộc tính tài liệu
+	How many pages the whole document has	Tổng số trang của tài liệu
+	How many pages this section has	Số trang của phần này
+	Number of the page the field sits on	Số của trang chứa trường
+	Number of the section the field sits in	Số của phần chứa trường
+	How many words the document holds	Số từ trong tài liệu
+	Page on which a bookmarked passage falls	Trang chứa đoạn được đánh dấu trang
+	Copy of the text a bookmark marks	Bản sao đoạn văn bản mà dấu trang đánh dấu
+	This field has no options.	Trường này không có tùy chọn.
+	This font has no characters to show.	Phông này không có ký tự nào để hiển thị.
+	This point forward	Từ điểm này trở đi
+	The date it is today	Ngày hôm nay
+	Trademark	Nhãn hiệu
+	Type the field's name and its switches, for example PAGE \\* roman.	Nhập tên trường và các khóa chuyển, ví dụ PAGE \\* roman.
+	Width and spacing	Độ rộng và giãn cách
+	from Unicode (hex)	từ Unicode (hex)
+	Shape Effects	Hiệu ứng Hình
+	Glow	Phát sáng
+	Soft Edges	Cạnh Mềm
+	No Shadow	Không Bóng
+	No Glow	Không Phát sáng
+	No Soft Edges	Không Cạnh Mềm
+	Glow Colors	Màu Phát sáng
+	Weight	Độ dày
+	Shadow, glow and soft edges	Bóng, phát sáng và cạnh mềm
+	Offset: Bottom Right	Lệch: Dưới Phải
+	Offset: Bottom	Lệch: Dưới
+	Offset: Bottom Left	Lệch: Dưới Trái
+	Offset: Right	Lệch: Phải
+	Offset: Center	Lệch: Giữa
+	Offset: Left	Lệch: Trái
+	Offset: Top Right	Lệch: Trên Phải
+	Offset: Top	Lệch: Trên
+	Offset: Top Left	Lệch: Trên Trái
+	Manage Styles	Quản lý Kiểu
+	Show or Hide Style	Hiện hoặc Ẩn Kiểu
+	Manage Styles…	Quản lý Kiểu…
+	Sort order:	Thứ tự sắp xếp:
+	As Recommended	Theo Khuyến nghị
+	Alphabetical	Theo bảng chữ cái
+	Font: {font}	Phông: {font}
+	{size} pt	{size} pt
+	Color: {color}	Màu: {color}
+	Space before: {pt} pt	Khoảng cách trước: {pt} pt
+	Space after: {pt} pt	Khoảng cách sau: {pt} pt
+	Based on: {style}	Dựa trên: {style}
+	Paragraph style	Kiểu đoạn văn
+	Character style	Kiểu ký tự
+	Linked style (paragraph and character)	Kiểu liên kết (đoạn văn và ký tự)
+	Table style	Kiểu bảng
+	Built-in style	Kiểu dựng sẵn
+	Show in the Styles gallery	Hiện trong bộ sưu tập Kiểu
+	Hide from style lists	Ẩn khỏi danh sách kiểu
+	Built-in styles can't be deleted.	Không thể xóa kiểu dựng sẵn.
+	Delete Table Style	Xóa Kiểu Bảng
+	Password	Mật khẩu
+	Password:	Mật khẩu:
+	Confirm password:	Xác nhận mật khẩu:
+	Encrypt with Password…	Mã hóa bằng Mật khẩu…
+	Change Password…	Đổi Mật khẩu…
+	Remove Password	Gỡ Mật khẩu
+	A password is required to open this document.	Cần có mật khẩu để mở tài liệu này.
+	Anyone can open this document. Encrypt it with a password to keep it private.	Ai cũng có thể mở tài liệu này. Hãy mã hóa bằng mật khẩu để giữ riêng tư.
+	Anyone who opens the document will need this password.	Bất kỳ ai mở tài liệu đều sẽ cần mật khẩu này.
+	{name} is protected with a password.	{name} được bảo vệ bằng mật khẩu.
+	That password isn't right. Check it (passwords are case-sensitive) and try again.	Mật khẩu không đúng. Hãy kiểm tra lại (mật khẩu phân biệt chữ hoa/thường) rồi thử lại.
+	The document will be saved with a password. Save it to protect it.	Tài liệu sẽ được lưu kèm mật khẩu. Hãy lưu để bảo vệ tài liệu.
+	The password is removed. Save the document to keep the change.	Đã gỡ mật khẩu. Hãy lưu tài liệu để giữ thay đổi này.
+	The passwords don't match.	Mật khẩu không khớp.
+	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Hãy cất giữ mật khẩu ở nơi an toàn: thiếu nó thì không ai, kể cả WordCraft, mở được tài liệu. Để trống cả hai ô nếu muốn gỡ mật khẩu.
+	Align Top Left	Căn Trên Trái
+	Align Top Center	Căn Trên Giữa
+	Align Top Right	Căn Trên Phải
+	Align Center Left	Căn Giữa Trái
+	Align Center	Căn Giữa
+	Align Center Right	Căn Giữa Phải
+	Align Bottom Left	Căn Dưới Trái
+	Align Bottom Center	Căn Dưới Giữa
+	Align Bottom Right	Căn Dưới Phải
+	{contributors} contributors · {commits} commits	{contributors} người đóng góp · {commits} commit
+	{cols}×{rows} Table	Bảng {cols}×{rows}
+	AaBbYyZz	AaBbYyZz
+	pt	pt
+	Document1	Tài liệu1
+	Username	Tên người dùng
+	Display name	Tên hiển thị
+	Real name	Tên thật
+	Name	Tên
+	PRs	PR
+	Commits	Commit
+	First	Đầu tiên
+	Last	Cuối cùng
+	Model	Mô hình
+	Version	Phiên bản
+	% of all commits	% tổng số commit
+	Lines +/−	Dòng +/−
+	Craft	Thủ công
+	Studio	Studio
+	Atelier	Xưởng vẽ
+	Darkroom	Phòng tối
+	Gallery	Phòng trưng bày
+	Sketchbook	Sổ phác thảo
+	Change Picture…	Thay đổi Ảnh…
+	Font…	Phông…
+	Paragraph…	Đoạn văn…
+	Link…	Nối kết…
+	Size and Crop…	Kích thước và Cắt xén…
+	Insert Columns to the Left	Chèn Cột vào Bên trái
+	Insert Columns to the Right	Chèn Cột vào Bên phải
+	Insert Rows Above	Chèn Hàng ở Trên
+	Insert Rows Below	Chèn Hàng ở Dưới
+	Mon	T2
+	Tue	T3
+	Wed	T4
+	Sum	Tổng
+	North	Bắc
+	South	Nam
+	West	Tây
+	Total	Tổng cộng
+	Draw\nTable	Vẽ\nBảng
+	Rotation	Xoay
+	Rotation:	Xoay:
+	Rotate Right 90°	Xoay Phải 90°
+	Rotate Left 90°	Xoay Trái 90°
+	Flip Vertical	Lật Dọc
+	Flip Horizontal	Lật Ngang
+	Move Paragraph Up	Di chuyển Đoạn văn Lên
+	Move Paragraph Down	Di chuyển Đoạn văn Xuống
+	Promote	Nâng cấp
+	Demote	Hạ cấp
+	Go Back	Quay lại
+	Toggle Unicode Character	Bật/tắt Ký tự Unicode
+	Toggle Field Codes	Bật/tắt Mã Trường
+	Edit Field Code	Sửa Mã Trường
+	Unlink Fields	Hủy Nối kết Trường
+	Lock Fields	Khóa Trường
+	Unlock Fields	Mở khóa Trường
+	Next Field	Trường Tiếp theo
+	Previous Field	Trường Trước
+	Selected Fields	Trường đã Chọn
+	Edit Field…	Sửa Trường…
+	Formatted	Có định dạng
+	Interface size:	Kích thước giao diện:
+	Auto ({percent}%)	Tự động ({percent}%)
+	Makes the ribbon, menus and dialogs larger or smaller. Auto follows your system's display scaling; 100% is one screen pixel per point. Document zoom is separate.	Phóng to hoặc thu nhỏ dải băng, menu và hộp thoại. Tự động sẽ theo tỷ lệ hiển thị của hệ thống; 100% nghĩa là mỗi point bằng một điểm ảnh màn hình. Thu phóng tài liệu được chỉnh riêng.
+	In Line with Text	Cùng dòng với Văn bản
+	Square	Hình vuông
+	Through	Xuyên qua
+	Top and Bottom	Trên và Dưới
+	Behind Text	Sau Văn bản
+	In Front of Text	Trước Văn bản
+	Wrap Text Sides	Phía Bao quanh
+	Both Sides	Cả hai Phía
+	Left Only	Chỉ Bên trái
+	Right Only	Chỉ Bên phải
+	Largest Only	Chỉ Phía Rộng nhất
+	Customize Keyboard	Tùy chỉnh Bàn phím
+	Choose a command	Chọn lệnh
+	Choose a shortcut	Chọn phím tắt
+	All Commands	Tất cả Lệnh
+	Commands:	Lệnh:
+	Keys for this command:	Phím cho lệnh này:
+	New shortcut:	Phím tắt mới:
+	Now used by {command}	Đang được dùng cho {command}
+	Not used by any command	Chưa được lệnh nào dùng
+	Remove every custom shortcut and restore the built-in keys?	Xóa mọi phím tắt tùy chỉnh và khôi phục phím mặc định?
+	Assign	Gán
+	Reset All…	Đặt lại Tất cả…
+	Press a key combination	Nhấn tổ hợp phím
+	Customize	Tùy chỉnh
+	Keyboard shortcuts:	Phím tắt:
+	Customize…	Tùy chỉnh…
+	Customize Ribbon	Tùy chỉnh Dải băng
+	Add to Quick Access Toolbar	Thêm vào Thanh công cụ Truy nhập Nhanh
+	Remove from Quick Access Toolbar	Loại bỏ khỏi Thanh công cụ Truy nhập Nhanh
+	Customize the Ribbon…	Tùy chỉnh Dải băng…
+	Customize Quick Access Toolbar…	Tùy chỉnh Thanh công cụ Truy nhập Nhanh…
+	More Commands…	Lệnh Khác…
+	Ribbon	Dải băng
+	(Custom)	(Tùy chỉnh)
+	Remove every custom tab and group and show all tabs again?	Xóa mọi thẻ và nhóm tùy chỉnh, rồi hiện lại tất cả các thẻ?
+	Put the default commands back on the Quick Access Toolbar?	Đưa các lệnh mặc định trở lại Thanh công cụ Truy nhập Nhanh?
+	Reset…	Đặt lại…
+	Add >>	Thêm >>
+	<< Remove	<< Loại bỏ
+	Pick a custom group (New Group makes one)	Chọn một nhóm tùy chỉnh (dùng Nhóm Mới để tạo)
+	Ribbon tabs	Các thẻ dải băng
+	New Tab	Thẻ Mới
+	New Group	Nhóm Mới
+	Rename…	Đổi tên…
+	Ribbon and Quick Access Toolbar:	Dải băng và Thanh công cụ Truy nhập Nhanh:
+	Accessibility Pane	Ngăn Trợ năng
+	Alt Text Pane	Ngăn Văn bản Thay thế
+	Alt\nText	Văn bản\nThay thế
+	View Alt Text…	Xem Văn bản Thay thế…
+	Mark as decorative	Đánh dấu là trang trí
+	Title:	Tiêu đề:
+	Errors ({n})	Lỗi ({n})
+	Warnings ({n})	Cảnh báo ({n})
+	Tips ({n})	Mẹo ({n})
+	No accessibility issues found.	Không tìm thấy vấn đề trợ năng nào.
+	Describe what this object shows, for people who can't see it.	Mô tả nội dung đối tượng này cho người không nhìn thấy được.
+	Decorative objects only add visual interest: screen readers skip them.	Đối tượng trang trí chỉ tăng tính thẩm mỹ: trình đọc màn hình sẽ bỏ qua chúng.
+	Describe what this table shows, for people who can't see it.	Mô tả nội dung bảng này cho người không nhìn thấy được.
+	Select a picture, shape, chart or table to describe it.	Chọn ảnh, hình, biểu đồ hoặc bảng để mô tả.
+	Document Grid	Lưới Tài liệu
+	No grid	Không có lưới
+	Lines only	Chỉ dòng
+	Lines and characters	Dòng và ký tự
+	Text snaps to characters	Văn bản bám theo ký tự
+	Characters per line:	Số ký tự mỗi dòng:
+	Lines per page:	Số dòng mỗi trang:
+	Moved from	Đã di chuyển từ
+	Moved to	Đã di chuyển đến
+	Developer	Nhà phát triển
+	Controls	Điều khiển
+	Rich Text Content Control	Điều khiển Nội dung Văn bản Có định dạng
+	Plain Text Content Control	Điều khiển Nội dung Văn bản Thuần
+	Picture Content Control	Điều khiển Nội dung Ảnh
+	Building Block Gallery Content Control	Điều khiển Nội dung Bộ sưu tập Khối Dựng sẵn
+	Check Box Content Control	Điều khiển Nội dung Hộp kiểm
+	Combo Box Content Control	Điều khiển Nội dung Hộp Tổ hợp
+	Drop-Down List Content Control	Điều khiển Nội dung Danh sách Thả xuống
+	Date Picker Content Control	Điều khiển Nội dung Bộ chọn Ngày
+	Repeating Section Content Control	Điều khiển Nội dung Phần Lặp lại
+	Design Mode	Chế độ Thiết kế
+	Content Control at Selection	Điều khiển Nội dung tại Vùng chọn
+	Toggle Check Box	Bật/tắt Hộp kiểm
+	Choose List Item	Chọn Mục Danh sách
+	Set Date	Đặt Ngày
+	Remove Content Control	Loại bỏ Điều khiển Nội dung
+	Content Control Properties	Thuộc tính Điều khiển Nội dung
+	Title	Tiêu đề
+	Tag	Thẻ
+	Placeholder text	Văn bản chỗ dành sẵn
+	Can't be deleted	Không thể xóa
+	Contents can't be edited	Không thể sửa nội dung
+	Remove the control once edited	Loại bỏ điều khiển sau khi sửa
+	Allow line breaks	Cho phép ngắt dòng
+	Date format	Định dạng ngày
+	Checked symbol	Ký hiệu khi chọn
+	Unchecked symbol	Ký hiệu khi bỏ chọn
+	List entries	Mục danh sách
+	Display text	Văn bản hiển thị
+	Value	Giá trị
+	Today	Hôm nay
+	Put the caret in a content control first.	Hãy đặt con trỏ vào một điều khiển nội dung trước.
+	Right-to-Left Table	Bảng Phải sang Trái
+	Right-to-Left Section	Phần Phải sang Trái
+	Table direction:	Hướng bảng:
+	Section direction:	Hướng phần:
+	Drawing Canvas	Khung vẽ
+	New Drawing Canvas	Khung vẽ Mới
+	Fit	Vừa khít
+	Expand	Mở rộng
+	Scale Drawing	Co giãn Bản vẽ
+	Canvas Member	Thành phần Khung vẽ
+	Arrows	Mũi tên
+	Communication	Giao tiếp
+	Office	Văn phòng
+	People	Con người
+	Nature	Thiên nhiên
+	Weather	Thời tiết
+	Technology	Công nghệ
+	Transport	Giao thông
+	Icon Color	Màu Biểu tượng
+	Search icons	Tìm kiếm biểu tượng
+	No icons match your search.	Không có biểu tượng nào khớp với tìm kiếm của bạn.
+	Recolor a one-color picture, such as an icon	Tô màu lại ảnh một màu, chẳng hạn như biểu tượng
+	Enclose Characters	Bao quanh Ký tự
+	Shrink text	Thu nhỏ văn bản
+	Enlarge symbol	Phóng to ký hiệu
+	Enclosure	Khung bao
+	Circle	Hình tròn
+	Change Chart Type	Thay đổi Loại Biểu đồ
+	Chart Design	Thiết kế Biểu đồ
+	Type	Loại
+	Edit Data	Sửa Dữ liệu
+	Chart Title	Tiêu đề Biểu đồ
+	Chart Layouts	Bố trí Biểu đồ
+	Add Chart Element	Thêm Thành phần Biểu đồ
+	Legend	Chú giải
+	Data Labels	Nhãn Dữ liệu
+	Above Chart	Phía trên Biểu đồ
+	Insert Chart	Chèn Biểu đồ
+	Clustered Column	Cột Nhóm
+	Stacked Column	Cột Xếp chồng
+	Clustered Bar	Thanh Nhóm
+	Stacked Bar	Thanh Xếp chồng
+	Area	Vùng
+	Pie	Hình tròn
+	Doughnut	Vành khuyên
+	Scatter	Phân tán
+	“{text}” ({row}, {series}) isn't a number.	“{text}” ({row}, {series}) không phải là số.
+	Category {n}	Thể loại {n}
+	Series {n}	Chuỗi {n}
+	Type the categories down the side and a column of values per series.	Nhập các thể loại dọc theo cột bên trái, mỗi chuỗi một cột giá trị.
+	Categories	Thể loại
+	Series name	Tên chuỗi
+	Remove series	Xóa chuỗi
+	Remove row	Xóa hàng
+	Add Row	Thêm Hàng
+	Add Series	Thêm Chuỗi
+	Edit\nData	Sửa\nDữ liệu
+	Change\nChart Type	Đổi Loại\nBiểu đồ
+	Align Text	Căn chỉnh Văn bản
+	Create Link	Tạo Nối kết
+	Break Link	Ngắt Nối kết
+	Rotate all text 90°	Xoay toàn bộ văn bản 90°
+	Rotate all text 270°	Xoay toàn bộ văn bản 270°
+	Stacked	Xếp chồng
+	Middle	Giữa
+	Click the empty text box the text should continue in (Esc cancels)	Bấm vào hộp văn bản trống mà văn bản sẽ chảy tiếp sang (Esc để hủy)
+	Not linked: click a text box	Chưa nối kết: bấm vào một hộp văn bản
+	Location	Vị trí
+	Endnotes	Chú thích cuối
+	Below text	Bên dưới văn bản
+	End of section	Cuối phần
+	End of document	Cuối tài liệu
+	Footnotes to endnotes	Cước chú thành chú thích cuối
+	Endnotes to footnotes	Chú thích cuối thành cước chú
+	Swap footnotes and endnotes	Hoán đổi cước chú và chú thích cuối
+	Custom mark:	Dấu tùy chỉnh:
+	Continuous numbering	Đánh số liên tục
+	Apply	Áp dụng
+	Convert Notes	Chuyển đổi Ghi chú
+	A, B, C, …	A, B, C, …
+	Above the item	Phía trên mục
+	Accessed on	Ngày truy cập
+	Add New Source…	Thêm Nguồn Mới…
+	Add the chapter number	Thêm số chương
+	Atmosphere	Khí quyển
+	Below the item	Phía dưới mục
+	Book	Sách
+	Book title	Tên sách
+	Caption	Chú thích Ảnh
+	Caption Numbering	Đánh số Chú thích Ảnh
+	Caption text	Văn bản chú thích ảnh
+	Caption:	Chú thích ảnh:
+	Chapter in a book	Chương sách
+	Chapters begin at:	Chương bắt đầu tại:
+	Collect entries from:	Thu thập các mục từ:
+	Columns:	Cột:
+	Conference	Hội nghị
+	Conference paper	Bài báo hội nghị
+	Container Title	Tiêu đề Ấn phẩm
+	Create Source	Tạo Nguồn
+	Cross-reference:	Tham chiếu chéo:
+	Custom Table of Contents…	Mục lục Tùy chỉnh…
+	DOI	DOI
+	Day	Ngày
+	Delete Label	Xóa Nhãn
+	Edit Source	Sửa Nguồn
+	Edition	Lần xuất bản
+	Edit…	Sửa…
+	Entry marked.	Đã đánh dấu mục.
+	Example: {sample}	Ví dụ: {sample}
+	Figure	Hình
+	Film	Phim
+	Heading styles (levels 1–{n})	Kiểu đầu đề (cấp 1–{n})
+	Heading {n}	Đầu đề {n}
+	I, II, III, …	I, II, III, …
+	Include page numbers	Bao gồm số trang
+	Indented	Thụt lề
+	Institution	Tổ chức
+	Ionosphere	Tầng điện ly
+	Issue	Số phát hành
+	Journal	Tạp chí khoa học
+	Label:	Nhãn:
+	Last, First; Last, First	Họ, Tên; Họ, Tên
+	Leave the label out of the caption	Không đưa nhãn vào chú thích ảnh
+	Letter headings	Đầu đề theo chữ cái
+	Levels:	Cấp:
+	Link entries to their headings	Nối kết các mục với đầu đề tương ứng
+	Made from the author and year when empty	Tự tạo từ tác giả và năm nếu để trống
+	Magazine or newspaper article	Bài báo hoặc bài tạp chí
+	Main entry:	Mục chính:
+	Mark	Đánh dấu
+	Mark All	Đánh dấu Tất cả
+	Mark Entry…	Đánh dấu Mục…
+	Mark Index Entry	Đánh dấu Mục Chỉ mục
+	Mesosphere	Tầng trung lưu
+	Month	Tháng
+	New Label	Nhãn Mới
+	New Label…	Nhãn Mới…
+	New…	Mới…
+	No sources yet.	Chưa có nguồn nào.
+	Numbering…	Đánh số…
+	Options…	Tùy chọn…
+	Other	Khác
+	Other styles and their TOC level:	Các kiểu khác và cấp mục lục của chúng:
+	Outline levels	Cấp dàn bài
+	Page number style	Kiểu số trang
+	Page numbers at the right margin	Số trang ở lề phải
+	Page title	Tiêu đề trang
+	Pages of bookmark:	Các trang của dấu trang:
+	Periodical	Ấn phẩm định kỳ
+	Position:	Vị trí:
+	Publisher	Nhà xuất bản
+	Run-in	Liền dòng
+	See	Xem
+	Separator:	Dấu phân cách:
+	Show every bibliography field	Hiện mọi trường thư mục
+	Site name	Tên trang web
+	Source Manager	Trình quản lý Nguồn
+	Source type:	Loại nguồn:
+	Sources in this document:	Nguồn trong tài liệu này:
+	Styles:	Kiểu:
+	Subentry:	Mục phụ:
+	TC entry fields	Trường mục TC
+	Tab leader:	Ký tự dẫn Tab:
+	Table of Contents Options	Tùy chọn Mục lục
+	Table of Contents Styles	Kiểu Mục lục
+	This page	Trang này
+	Type:	Loại:
+	URL	URL
+	Volume	Tập
+	Website	Trang web
+	Year	Năm
+	a, b, c, …	a, b, c, …
+	i, ii, iii, …	i, ii, iii, …
+	{n} entries marked.	Đã đánh dấu {n} mục.
+	Lasso Select	Chọn Lasso
+	Move Selected Ink	Di chuyển Nét mực Đã chọn
+	Delete Selected Ink	Xóa Nét mực Đã chọn
+	Recolor Selected Ink	Tô màu lại Nét mực Đã chọn
+	Add Pen	Thêm Bút
+	Remove Pen	Xóa Bút
+	Ink to Shape	Mực thành Hình
+	Convert to Shapes	Chuyển thành Hình
+	Ink Replay	Phát lại Nét mực
+	Add\nPen	Thêm\nBút
+	Rewind	Tua lại
+	Forward	Tua tới
+	Stroke {n} of {total}	Nét {n}/{total}
+	WordArt Styles	Kiểu WordArt
+	Text Fill	Tô Văn bản
+	Text Outline	Viền Văn bản
+	Transform	Biến đổi
+	No Fill	Không Tô
+	No Outline	Không Viền
+	Reflection	Phản chiếu
+	No Reflection	Không Phản chiếu
+	No Transform	Không Biến đổi
+	Connect Shapes	Nối Hình
+	Straight Connector	Đường nối Thẳng
+	Straight Arrow Connector	Đường nối Mũi tên Thẳng
+	Elbow Connector	Đường nối Gấp khúc
+	Elbow Arrow Connector	Đường nối Mũi tên Gấp khúc
+	Curved Connector	Đường nối Cong
+	Curved Arrow Connector	Đường nối Mũi tên Cong
+	Arch Up	Vòm Lên
+	Arch Down	Vòm Xuống
+	Slant Up	Nghiêng Lên
+	Slant Down	Nghiêng Xuống
+	Inflate	Phồng
+	Deflate	Xẹp
+	Chevron Up	Chữ V Lên
+	Chevron Down	Chữ V Xuống
+	Triangle Up	Tam giác Lên
+	Triangle Down	Tam giác Xuống
+	Solid Accent	Nhấn Đặc
+	Light with Outline	Sáng có Viền
+	Hollow	Rỗng
+	Accent Gradient	Chuyển màu Nhấn
+	Dark with Shadow	Tối có Bóng
+	Soft Glow	Phát sáng Mềm
+	Accent with Reflection	Nhấn có Phản chiếu
+	Warm Gradient with Outline	Chuyển màu Ấm có Viền
+	Add line numbering	Thêm đánh số dòng
+	Add to Document	Thêm vào Tài liệu
+	Address labels	Nhãn địa chỉ
+	Arabic	Tiếng Ả Rập
+	Auto	Tự động
+	Automatically hyphenate document	Tự động gạch nối tài liệu
+	Chinese (Simplified)	Tiếng Trung (Giản thể)
+	Chinese (Traditional)	Tiếng Trung (Phồn thể)
+	Column:	Cột:
+	Count by:	Bước đếm:
+	Czech	Tiếng Séc
+	Danish	Tiếng Đan Mạch
+	Delivery address:	Địa chỉ người nhận:
+	Detect language automatically	Tự động phát hiện ngôn ngữ
+	Do not check spelling or grammar	Không kiểm tra chính tả hoặc ngữ pháp
+	Dutch	Tiếng Hà Lan
+	English (United Kingdom)	Tiếng Anh (Vương quốc Anh)
+	Envelope size:	Kích thước phong bì:
+	Estonian	Tiếng Estonia
+	Finnish	Tiếng Phần Lan
+	French (France)	Tiếng Pháp (Pháp)
+	From text:	Cách văn bản:
+	Full page of the same label	Cả trang cùng một nhãn
+	German (Germany)	Tiếng Đức (Đức)
+	Greek	Tiếng Hy Lạp
+	Hebrew	Tiếng Do Thái
+	Hyphenate at:	Gạch nối tại:
+	Hyphenate words in CAPS	Gạch nối từ VIẾT HOA
+	Hyphenation Options…	Tùy chọn Gạch nối…
+	Hyphenation zone:	Vùng gạch nối:
+	Italian	Tiếng Ý
+	Japanese	Tiếng Nhật
+	Korean	Tiếng Hàn
+	Limit consecutive hyphens to:	Giới hạn số gạch nối liên tiếp:
+	Line Numbering Options…	Tùy chọn Đánh số Dòng…
+	Manual Hyphenation	Gạch nối Thủ công
+	Manual hyphenation is complete.	Đã hoàn tất gạch nối thủ công.
+	Manual…	Thủ công…
+	Mark selected text as:	Đánh dấu văn bản đã chọn là:
+	New Document	Tài liệu Mới
+	No limit	Không giới hạn
+	Norwegian (Bokmål)	Tiếng Na Uy (Bokmål)
+	Numbering:	Đánh số:
+	Omit	Bỏ qua
+	One label per recipient	Mỗi người nhận một nhãn
+	Polish	Tiếng Ba Lan
+	Portuguese (Brazil)	Tiếng Bồ Đào Nha (Brazil)
+	Portuguese (Portugal)	Tiếng Bồ Đào Nha (Bồ Đào Nha)
+	Return address labels	Nhãn địa chỉ người gửi
+	Return address:	Địa chỉ người gửi:
+	Row:	Hàng:
+	Russian	Tiếng Nga
+	Serbian (Cyrillic)	Tiếng Serbia (Kirin)
+	Serbian (Latin)	Tiếng Serbia (Latinh)
+	Set As Default	Đặt làm Mặc định
+	Shipping labels	Nhãn vận chuyển
+	Single label	Một nhãn
+	Spanish (Mexico)	Tiếng Tây Ban Nha (Mexico)
+	Spanish (Spain)	Tiếng Tây Ban Nha (Tây Ban Nha)
+	Swedish	Tiếng Thụy Điển
+	Turkish	Tiếng Thổ Nhĩ Kỳ
+	Ukrainian	Tiếng Ukraina
+	{language} is now the document's default language.	{language} giờ là ngôn ngữ mặc định của tài liệu.
+	1×2 Empty Matrix	Ma trận Trống 1×2
+	1×3 Empty Matrix	Ma trận Trống 1×3
+	2×1 Empty Matrix	Ma trận Trống 2×1
+	2×2 Determinant	Định thức 2×2
+	2×2 Empty Matrix	Ma trận Trống 2×2
+	2×2 Identity Matrix	Ma trận Đơn vị 2×2
+	2×2 Identity Matrix (sparse)	Ma trận Đơn vị 2×2 (thưa)
+	2×2 Matrix in Brackets	Ma trận 2×2 trong Ngoặc vuông
+	2×2 Matrix in Double Bars	Ma trận 2×2 trong Thanh Kép
+	2×2 Matrix in Parentheses	Ma trận 2×2 trong Ngoặc đơn
+	2×3 Empty Matrix	Ma trận Trống 2×3
+	3×1 Empty Matrix	Ma trận Trống 3×1
+	3×2 Empty Matrix	Ma trận Trống 3×2
+	3×3 Empty Matrix	Ma trận Trống 3×3
+	3×3 Identity Matrix	Ma trận Đơn vị 3×3
+	3×3 Identity Matrix (sparse)	Ma trận Đơn vị 3×3 (thưa)
+	A xor B	A xor B
+	Absolute value cases	Các trường hợp giá trị tuyệt đối
+	Accents	Dấu phụ
+	Acute	Dấu sắc
+	Angle Brackets	Ngoặc góc
+	Angle Brackets with Separator	Ngoặc góc có Dấu phân cách
+	Angle Brackets with Two Separators	Ngoặc góc có Hai Dấu phân cách
+	Baseline Dots	Dấu chấm Đường cơ sở
+	Basic Math	Toán Cơ bản
+	Bayes' rule	Định lý Bayes
+	Binomial Coefficient	Hệ số Nhị thức
+	Binomial Coefficient (angle)	Hệ số Nhị thức (ngoặc góc)
+	Binomial Coefficient with Angle Brackets	Hệ số Nhị thức trong Ngoặc góc
+	Binomial expansion of (x+a)ⁿ	Khai triển nhị thức của (x+a)ⁿ
+	Boxed Formula	Công thức Đóng khung
+	Boxed Formula (example)	Công thức Đóng khung (ví dụ)
+	Boxed Formulas	Công thức Đóng khung
+	Braces	Ngoặc nhọn
+	Braces with Separator	Ngoặc nhọn có Dấu phân cách
+	Brackets	Ngoặc vuông
+	Brackets with Separators	Ngoặc vuông có Dấu phân cách
+	Breve	Dấu trăng
+	Cases (Three Conditions)	Trường hợp (Ba Điều kiện)
+	Cases (Two Conditions)	Trường hợp (Hai Điều kiện)
+	Cases and Stacks	Trường hợp và Xếp chồng
+	Ceiling	Trần
+	Change in y over change in x	Biến thiên của y trên biến thiên của x
+	Check	Dấu mũ ngược
+	Circle area from its radius	Diện tích hình tròn theo bán kính
+	Circled Dot	Chấm trong Vòng tròn
+	Circled Plus	Cộng trong Vòng tròn
+	Circled Times	Nhân trong Vòng tròn
+	Colon Equal	Hai chấm Bằng
+	Common Accent Objects	Đối tượng Dấu phụ Thông dụng
+	Common Brackets	Dấu ngoặc Thông dụng
+	Common Fractions	Phân số Thông dụng
+	Common Functions	Hàm Thông dụng
+	Common Large Operators	Toán tử Lớn Thông dụng
+	Common Operator Structures	Cấu trúc Toán tử Thông dụng
+	Common Operators	Toán tử Thông dụng
+	Common Radicals	Căn thức Thông dụng
+	Common Subscripts and Superscripts	Chỉ số dưới và Chỉ số trên Thông dụng
+	Contour Integral	Tích phân Đường
+	Contour Integral with Limits	Tích phân Đường có Cận
+	Contour Integral with Stacked Limits	Tích phân Đường có Cận Xếp chồng
+	Contour Integrals	Tích phân Đường
+	Coproduct	Đối tích
+	Coproduct with Limits	Đối tích có Cận
+	Coproduct with Lower Limit	Đối tích có Cận dưới
+	Coproduct with Subscript-Superscript Limits	Đối tích có Cận Chỉ số dưới-Chỉ số trên
+	Cosecant Function	Hàm Cosec
+	Cosine 2x	Cos 2x
+	Cosine Function	Hàm Cos
+	Cotangent Function	Hàm Cot
+	Cube Root	Căn bậc Ba
+	Delta Equal To	Delta Bằng
+	Delta over arrow	Delta trên mũi tên
+	Derivative as a limit	Đạo hàm dưới dạng giới hạn
+	Diagonal Dots	Dấu chấm Chéo
+	Differential	Vi phân
+	Differential theta	Vi phân theta
+	Differential x	Vi phân x
+	Differential y	Vi phân y
+	Differentials	Vi phân
+	Dot	Dấu chấm
+	Dots	Dấu chấm
+	Double Bar	Gạch trên Kép
+	Double Dot	Hai chấm
+	Double Integral	Tích phân Kép
+	Double Integral with Limits	Tích phân Kép có Cận
+	Double Integral with Stacked Limits	Tích phân Kép có Cận Xếp chồng
+	Double Left Arrow with Text Above	Mũi tên Kép Trái có Văn bản Trên
+	Double Left Arrow with Text Below	Mũi tên Kép Trái có Văn bản Dưới
+	Double Left Right Arrow with Text Above	Mũi tên Kép Hai chiều có Văn bản Trên
+	Double Left Right Arrow with Text Below	Mũi tên Kép Hai chiều có Văn bản Dưới
+	Double Right Arrow with Text Above	Mũi tên Kép Phải có Văn bản Trên
+	Double Right Arrow with Text Below	Mũi tên Kép Phải có Văn bản Dưới
+	Double Square Brackets	Ngoặc vuông Kép
+	Double Vertical Bars	Thanh Dọc Kép
+	Double summation	Tổng kép
+	Empty Matrices	Ma trận Trống
+	Equal Equal	Bằng Bằng
+	Equal by Definition	Bằng theo Định nghĩa
+	Euler's identity	Đẳng thức Euler
+	Exponential	Hàm mũ
+	Exponential series	Chuỗi hàm mũ
+	Floor	Sàn
+	Functions	Hàm
+	Geometry	Hình học
+	Grave	Dấu huyền
+	Greek Letters	Chữ cái Hy Lạp
+	Grouping Character Above	Ký tự Nhóm Phía trên
+	Grouping Character Below	Ký tự Nhóm Phía dưới
+	Hat	Dấu mũ
+	Hyperbolic Cosecant Function	Hàm Cosec Hyperbol
+	Hyperbolic Cosine Function	Hàm Cos Hyperbol
+	Hyperbolic Cotangent Function	Hàm Cot Hyperbol
+	Hyperbolic Functions	Hàm Hyperbol
+	Hyperbolic Secant Function	Hàm Sec Hyperbol
+	Hyperbolic Sine Function	Hàm Sin Hyperbol
+	Hyperbolic Tangent Function	Hàm Tan Hyperbol
+	Hypotenuse	Cạnh huyền
+	Identity Matrices	Ma trận Đơn vị
+	Integral of e^(−x²)	Tích phân của e^(−x²)
+	Integral with Limits	Tích phân có Cận
+	Integral with Stacked Limits	Tích phân có Cận Xếp chồng
+	Integrals	Tích phân
+	Intersection	Giao
+	Intersection with Limits	Giao có Cận
+	Intersection with Lower Limit	Giao có Cận dưới
+	Intersection with Subscript-Superscript Limits	Giao có Cận Chỉ số dưới-Chỉ số trên
+	Inverse Cosecant Function	Hàm Arccosec
+	Inverse Cosine Function	Hàm Arccos
+	Inverse Cotangent Function	Hàm Arccot
+	Inverse Functions	Hàm Ngược
+	Inverse Hyperbolic Cosecant Function	Hàm Cosec Hyperbol Ngược
+	Inverse Hyperbolic Cosine Function	Hàm Cos Hyperbol Ngược
+	Inverse Hyperbolic Cotangent Function	Hàm Cot Hyperbol Ngược
+	Inverse Hyperbolic Functions	Hàm Hyperbol Ngược
+	Inverse Hyperbolic Secant Function	Hàm Sec Hyperbol Ngược
+	Inverse Hyperbolic Sine Function	Hàm Sin Hyperbol Ngược
+	Inverse Hyperbolic Tangent Function	Hàm Tan Hyperbol Ngược
+	Inverse Secant Function	Hàm Arcsec
+	Inverse Sine Function	Hàm Arcsin
+	Inverse Tangent Function	Hàm Arctan
+	Left Arrow with Text Above	Mũi tên Trái có Văn bản Trên
+	Left Arrow with Text Below	Mũi tên Trái có Văn bản Dưới
+	Left Bracket Twice	Hai Ngoặc Trái
+	Left Right Arrow Above	Mũi tên Hai chiều Phía trên
+	Left Right Arrow with Text Above	Mũi tên Hai chiều có Văn bản Trên
+	Left Right Arrow with Text Below	Mũi tên Hai chiều có Văn bản Dưới
+	Left Subscript-Superscript	Chỉ số dưới-Chỉ số trên Bên trái
+	Leftwards Arrow Above	Mũi tên Sang trái Phía trên
+	Leftwards Harpoon Above	Mũi lao Sang trái Phía trên
+	Letter-Like Symbols	Ký hiệu Dạng chữ cái
+	Limit	Giới hạn
+	Limit Example	Ví dụ Giới hạn
+	Linear Fraction	Phân số Tuyến tính
+	Logarithm	Lôgarit
+	Logarithm with Base	Lôgarit có Cơ số
+	Logical AND	AND Lôgic
+	Logical AND with Limits	AND Lôgic có Cận
+	Logical OR	OR Lôgic
+	Logical OR with Limits	OR Lôgic có Cận
+	Matrices with Brackets	Ma trận có Dấu ngoặc
+	Maximum	Giá trị Lớn nhất
+	Maximum Example	Ví dụ Giá trị Lớn nhất
+	Measured By	Được đo bởi
+	Midline Dots	Dấu chấm Giữa dòng
+	Minimum	Giá trị Nhỏ nhất
+	Minus Equal	Trừ Bằng
+	Natural Logarithm	Lôgarit Tự nhiên
+	Negated Relations	Quan hệ Phủ định
+	Normal probability density	Mật độ xác suất chuẩn
+	One half	Một phần hai
+	Operator Structures	Cấu trúc Toán tử
+	Operators	Toán tử
+	Other Large Operators	Toán tử Lớn Khác
+	Outward Brackets	Ngoặc Hướng ra ngoài
+	Overbar	Gạch trên
+	Overbars and Underbars	Gạch trên và Gạch dưới
+	Overbrace	Ngoặc nhọn Phía trên
+	Parentheses	Ngoặc đơn
+	Parentheses with Separator	Ngoặc đơn có Dấu phân cách
+	Partial Differential	Vi phân Riêng phần
+	Pi Over 2	Pi Chia 2
+	Plus Equal	Cộng Bằng
+	Power series of (1+x)ⁿ	Chuỗi lũy thừa của (1+x)ⁿ
+	Product	Tích
+	Product of A	Tích của A
+	Product with Limits	Tích có Cận
+	Product with Lower Limit	Tích có Cận dưới
+	Product with Subscript-Superscript Limits	Tích có Cận Chỉ số dưới-Chỉ số trên
+	Products and Coproducts	Tích và Đối tích
+	Quadratic Root	Nghiệm Phương trình Bậc hai
+	Radical with Degree	Căn có Bậc
+	Radicals	Căn thức
+	Right Arrow with Text Above	Mũi tên Phải có Văn bản Trên
+	Right Arrow with Text Below	Mũi tên Phải có Văn bản Dưới
+	Right Bracket Twice	Hai Ngoặc Phải
+	Rightwards Arrow Above	Mũi tên Sang phải Phía trên
+	Rightwards Harpoon Above	Mũi lao Sang phải Phía trên
+	Roots of ax²+bx+c	Nghiệm của ax²+bx+c
+	Scripts	Chỉ số
+	Secant Function	Hàm Sec
+	Sides of a right triangle	Các cạnh của tam giác vuông
+	Sine Function	Hàm Sin
+	Sine and cosine series of f(x)	Chuỗi sin và cos của f(x)
+	Sine theta	Sin theta
+	Single Brackets	Ngoặc Một bên
+	Single Left Angle	Ngoặc góc trái đơn
+	Single Left Bar	Gạch đứng trái đơn
+	Single Left Brace	Ngoặc nhọn trái đơn
+	Single Left Bracket	Ngoặc vuông trái đơn
+	Single Left Parenthesis	Ngoặc tròn trái đơn
+	Single Right Brace	Ngoặc nhọn phải đơn
+	Single Right Bracket	Ngoặc vuông phải đơn
+	Single Right Parenthesis	Ngoặc tròn phải đơn
+	Skewed Fraction	Phân số dạng xiên
+	Small change	Biến thiên nhỏ
+	Sparse Matrices	Ma trận thưa
+	Square Root	Căn bậc hai
+	Square Root with Degree	Căn có chỉ số bậc
+	Square Union	Hợp vuông
+	Stack Object	Đối tượng xếp chồng
+	Stack Object (Three)	Đối tượng xếp chồng (ba)
+	Stacked Fraction	Phân số xếp chồng
+	Stacked, no bar	Xếp chồng, không có gạch
+	Subscript-Superscript	Chỉ số dưới-Chỉ số trên
+	Subscripts and Superscripts	Chỉ số dưới và chỉ số trên
+	Sum of cosines	Tổng các cosin
+	Sum or difference of sines	Tổng hoặc hiệu các sin
+	Summation	Tổng
+	Summation from 0 to n	Tổng từ 0 đến n
+	Summation over binomials	Tổng trên các hệ số nhị thức
+	Summation with Limits	Tổng có cận
+	Summation with Lower Limit	Tổng có cận dưới
+	Summation with Subscript Limit	Tổng có cận chỉ số dưới
+	Summation with Subscript-Superscript Limits	Tổng có cận chỉ số dưới-chỉ số trên
+	Summations	Các phép tổng
+	Surface Integral	Tích phân mặt
+	Surface Integral with Limits	Tích phân mặt có cận
+	Surface Integral with Stacked Limits	Tích phân mặt có cận xếp chồng
+	Tangent Function	Hàm tang
+	Tangent formula	Công thức tang
+	Text over Colon Equal	Văn bản trên dấu hai chấm bằng
+	Text over Equal	Văn bản trên dấu bằng
+	Tilde	Dấu ngã
+	Trigonometric Functions	Hàm lượng giác
+	Triple Dot	Ba dấu chấm
+	Triple Integral	Tích phân ba lớp
+	Triple Integral with Limits	Tích phân ba lớp có cận
+	Triple Integral with Stacked Limits	Tích phân ba lớp có cận xếp chồng
+	Underbar	Thanh dưới
+	Underbrace	Ngoặc nhọn dưới
+	Union	Hợp
+	Union of intersections	Hợp của các giao
+	Union with Limits	Hợp có cận
+	Union with Lower Limit	Hợp có cận dưới
+	Union with Plus	Hợp có dấu cộng
+	Union with Subscript-Superscript Limits	Hợp có cận chỉ số dưới-chỉ số trên
+	Unions and Intersections	Hợp và giao
+	Up Diagonal Dots	Dấu chấm chéo lên
+	Vector A	Vectơ A
+	Vector AB	Vectơ AB
+	Vertical Bars	Gạch đứng
+	Vertical Dots	Dấu chấm dọc
+	Volume Integral	Tích phân khối
+	Volume Integral with Limits	Tích phân khối có cận
+	Volume Integral with Stacked Limits	Tích phân khối có cận xếp chồng
+	Yields	Dẫn đến
+	n×n Identity Matrix	Ma trận đơn vị n×n
+	n×n Matrix	Ma trận n×n
+	x bar	x gạch trên
+	ASAP	XỬ LÝ NGAY
+	AaBbCcDd	AaBbCcDd
+	All - Linear	Tất cả - Tuyến tính
+	All - Professional	Tất cả - Chuyên nghiệp
+	B4 (JIS)   10.12" × 14.33"	B4 (JIS)   10.12" × 14.33"
+	B5 (JIS)   7.17" × 10.12"	B5 (JIS)   7.17" × 10.12"
+	Body text in a short paragraph to show spacing.	Văn bản thân bài trong một đoạn ngắn để minh họa giãn cách.
+	Book Title	Tiêu đề Sách
+	CONFIDENTIAL	MẬT
+	Category	Thể loại
+	Centered as Group	Căn giữa theo Nhóm
+	Change to Level 1	Chuyển thành Mức 1
+	Change to Level 2	Chuyển thành Mức 2
+	Change to Level 3	Chuyển thành Mức 3
+	Change to Level 4	Chuyển thành Mức 4
+	Change to Level 5	Chuyển thành Mức 5
+	Contributors	Người đóng góp
+	Convert between built-up and linear form	Chuyển đổi giữa dạng hai chiều và dạng tuyến tính
+	Current - Linear	Hiện tại - Tuyến tính
+	Current - Professional	Hiện tại - Chuyên nghiệp
+	DO NOT COPY	KHÔNG SAO CHÉP
+	DRAFT	BẢN NHÁP
+	Emphasis	Nhấn mạnh
+	Endnote Reference	Tham chiếu Chú thích cuối
+	Endnote Text	Văn bản Chú thích cuối
+	Envelope #10   4.12" × 9.50"	Phong bì #10   4.12" × 9.50"
+	Envelope DL   4.33" × 8.66"	Phong bì DL   4.33" × 8.66"
+	Executive   7.25" × 10.50"	Executive   7.25" × 10.50"
+	Footnote Reference	Tham chiếu Cước chú
+	Footnote Text	Văn bản Cước chú
+	Good evening	Chào buổi tối
+	Grid Table 1 Light	Bảng Lưới 1 Nhạt
+	Grid Table 4 – Blue	Bảng Lưới 4 – Xanh lam
+	Grid Table 4 – Green	Bảng Lưới 4 – Xanh lục
+	Grid Table 4 – Orange	Bảng Lưới 4 – Cam
+	Grid Table 4 – Purple	Bảng Lưới 4 – Tím
+	Hyperlink	Siêu nối kết
+	Intense Emphasis	Nhấn mạnh Đậm
+	Intense Quote	Trích dẫn Đậm
+	Intense Reference	Tham chiếu Đậm
+	Justification of a display equation	Căn lề cho phương trình hiển thị
+	Keywords	Từ khóa
+	Legal   8.50" × 14.00"	Legal   8.50" × 14.00"
+	Letter   8.50" × 11.00"	Letter   8.50" × 11.00"
+	Level 1	Mức 1
+	Level 2	Mức 2
+	Level 3	Mức 3
+	List Paragraph	Đoạn văn Danh sách
+	List Table 3 – Blue	Bảng Danh sách 3 – Xanh lam
+	List Table 3 – Green	Bảng Danh sách 3 – Xanh lục
+	List Table 3 – Orange	Bảng Danh sách 3 – Cam
+	List Table 3 – Purple	Bảng Danh sách 3 – Tím
+	Models	Mô hình
+	No Spacing	Không Giãn cách
+	Normal	Thường
+	Number the equation; the number sits at the right margin (or type # then the number)	Đánh số phương trình; số nằm ở lề phải (hoặc gõ # rồi đến số)
+	Plain Table 1	Bảng Thuần 1
+	Quote	Trích dẫn
+	SAMPLE	MẪU
+	Show the equation in the line of text	Hiển thị phương trình trong dòng văn bản
+	Show the equation on a line of its own	Hiển thị phương trình trên một dòng riêng
+	Statement   5.50" × 8.50"	Statement   5.50" × 8.50"
+	Strong	Đậm
+	Subject	Chủ đề
+	Subtitle	Tiêu đề phụ
+	Subtle Emphasis	Nhấn mạnh Nhẹ
+	Subtle Reference	Tham chiếu Nhẹ
+	TOC Heading	Đầu đề Mục lục
+	Table Grid	Lưới Bảng
+	Tabloid   11.00" × 17.00"	Tabloid   11.00" × 17.00"
+	Type equations in LaTeX	Nhập phương trình bằng LaTeX
+	Type equations in the linear format (UnicodeMath)	Nhập phương trình ở dạng tuyến tính (UnicodeMath)
+	Type normal (non-math) text in the equation	Nhập văn bản thường (không phải toán) trong phương trình
+	URGENT	KHẨN
+	tOGGLE cASE	đẢO cHỮ hOA
+	✓ None	✓ Không có
+	As you type	Khi nhập
+	Asian text font:	Phông văn bản châu Á:
+	AutoSave writes your changes to the file a moment after you stop typing.	Tự động Lưu ghi các thay đổi của bạn vào tệp ngay sau khi bạn ngừng gõ.
+	Centimeters	Centimet
+	Check spelling as you type	Kiểm tra chính tả khi nhập
+	Click to switch back to inserting	Bấm để chuyển lại chế độ chèn
+	Custom dictionary	Từ điển tùy chỉnh
+	Formatting marks	Dấu định dạng
+	Hidden text	Văn bản ẩn
+	Ignore web and file addresses	Bỏ qua địa chỉ web và đường dẫn tệp
+	Ignore words in capitals	Bỏ qua từ viết hoa toàn bộ
+	Ignore words with numbers	Bỏ qua từ có chứa số
+	Inches	Inch
+	Formatting exceptions	Ngoại lệ định dạng
+	Initials:	Tên viết tắt:
+	Interface	Giao diện
+	Interface language	Ngôn ngữ giao diện
+	Inside:	Bên trong:
+	Latin text font:	Phông văn bản Latinh:
+	Mark grammar errors as you type	Đánh dấu lỗi ngữ pháp khi nhập
+	Measurement units:	Đơn vị đo:
+	Millimeters	Milimét
+	New comments and tracked changes are recorded under this name and these initials.	Chú thích mới và thay đổi được theo dõi sẽ được ghi dưới tên và tên viết tắt này.
+	New word	Từ mới
+	No words yet. Add to Dictionary on a misspelled word puts it here.	Chưa có từ nào. Dùng Thêm vào Từ điển trên một từ sai chính tả để đưa từ đó vào đây.
+	Mirror indents	Thụt lề đối xứng
+	Overtype	Ghi đè
+	Overtype (typing replaces the characters after the caret)	Ghi đè (ký tự gõ vào sẽ thay thế ký tự sau con trỏ)
+	Page display	Hiển thị trang
+	Paragraph marks	Dấu đoạn văn
+	Personalize	Cá nhân hóa
+	Picas	Pica
+	Points	Điểm
+	Print the page color	In màu trang
+	Printing	In
+	Proofing language	Ngôn ngữ soát lỗi
+	Recent documents to show:	Số tài liệu gần đây hiển thị:
+	Outside:	Bên ngoài:
+	Save documents	Lưu tài liệu
+	Show the mini toolbar when text is selected	Hiện thanh công cụ mini khi chọn văn bản
+	Spaces	Dấu cách
+	Spelling	Chính tả
+	Spelling and grammar are checked in English (United States).	Chính tả và ngữ pháp được kiểm tra theo tiếng Anh (Hoa Kỳ).
+	Tab characters	Ký tự tab
+	These marks show even when Show/Hide ¶ is off.	Các dấu này vẫn hiển thị ngay cả khi tắt Hiện/Ẩn ¶.
+	Typing replaces selected text	Nội dung gõ vào sẽ thay thế văn bản đã chọn
+	Update fields before printing	Cập nhật trường trước khi in
+	Use the Insert key to switch overtype on and off	Dùng phím Insert để bật/tắt chế độ ghi đè
+	Extend Selection by Units	Mở rộng Vùng chọn theo Đơn vị
+	Word XML Document (*.xml)	Tài liệu XML Word (*.xml)
+	Word 2003 XML Document (*.xml)	Tài liệu XML Word 2003 (*.xml)
+	Deleted	Đã xóa
+	Print Markup	In Đánh dấu
+	Comments beside each page and tracked changes in PDFs, prints and images; a comment list at the end of web pages, Markdown and text.	Chú thích bên cạnh mỗi trang và thay đổi được theo dõi trong PDF, bản in và ảnh; danh sách chú thích ở cuối trang web, Markdown và văn bản thuần.
+	1. Formatting restrictions	1. Hạn chế định dạng
+	2. Editing restrictions	2. Hạn chế chỉnh sửa
+	3. Start enforcement	3. Bắt đầu áp dụng
+	<< Less	<< Bớt
+	Another file	Tệp khác
+	Apply as you type	Áp dụng khi nhập
+	AutoCorrect	Tự Sửa
+	AutoFormat As You Type	Tự Định dạng Khi Nhập
+	Automatic bulleted lists	Danh sách dấu đầu dòng tự động
+	Automatic numbered lists	Danh sách đánh số tự động
+	Border lines	Đường viền
+	Capitalize first letter of sentences	Viết hoa chữ cái đầu câu
+	Capitalize first letter of table cells	Viết hoa chữ cái đầu ô bảng
+	Capitalize names of days	Viết hoa tên các ngày
+	Case changes	Thay đổi chữ hoa/thường
+	Character level	Cấp ký tự
+	Checked styles are allowed:	Cho phép các kiểu đã chọn:
+	Combine Documents	Kết hợp Tài liệu
+	Compare Documents	So sánh Tài liệu
+	Compared: {changes} changes	Đã so sánh: {changes} thay đổi
+	Comparing with another file needs the desktop app.	Cần ứng dụng máy tính để so sánh với tệp khác.
+	Comparison settings	Thiết đặt so sánh
+	Don't capitalize after:	Không viết hoa sau:
+	Editing in this document is restricted.	Tài liệu này bị hạn chế chỉnh sửa.
+	Every change is recorded as a tracked change.	Mọi thay đổi đều được ghi lại dưới dạng thay đổi được theo dõi.
+	Everyone	Mọi người
+	Exceptions (optional)	Ngoại lệ (tùy chọn)
+	Exceptions…	Ngoại lệ…
+	Fields	Trường
+	Filling in forms	Điền biểu mẫu
+	Find Next Editable Region	Tìm Vùng Sửa được Tiếp theo
+	Footnotes and endnotes	Cước chú và chú thích cuối
+	Formatting, case changes, white space and tables are compared; the other settings are kept for later.	Định dạng, thay đổi chữ hoa/thường, khoảng trắng và bảng sẽ được so sánh; các thiết đặt khác được giữ lại để dùng sau.
+	Fractions (1/2) as fraction characters (½)	Phân số (1/2) thành ký tự phân số (½)
+	Headers and footers	Đầu trang và chân trang
+	Hyphens (--) as dashes (—)	Dấu gạch nối (--) thành gạch ngang (—)
+	In equations, typing a name after a backslash replaces it with its symbol.	Trong phương trình, tên gõ sau dấu gạch chéo ngược sẽ được thay bằng ký hiệu tương ứng.
+	Internet addresses as links	Địa chỉ Internet thành nối kết
+	Label changes with:	Gắn nhãn thay đổi bằng:
+	Limit formatting to a selection of styles	Giới hạn định dạng trong một số kiểu được chọn
+	Math AutoCorrect	Tự Sửa Toán học
+	More >>	Thêm >>
+	Moves	Di chuyển
+	New document	Tài liệu mới
+	No changes (read only)	Không thay đổi (chỉ đọc)
+	Only allow this kind of editing:	Chỉ cho phép kiểu chỉnh sửa này:
+	Only comments can be added, except in regions marked editable.	Chỉ có thể thêm chú thích, trừ các vùng được đánh dấu là sửa được.
+	Only form fields can be filled in.	Chỉ có thể điền vào trường biểu mẫu.
+	Only the allowed styles can be applied.	Chỉ có thể áp dụng các kiểu được cho phép.
+	Ordinals (1st) as superscript	Số thứ tự (1st) thành chỉ số trên
+	Original document	Tài liệu gốc
+	This password type isn't supported.	Loại mật khẩu này không được hỗ trợ.
+	Replace as you type	Thay thế khi nhập
+	Replace text as you type	Thay thế văn bản khi nhập
+	Replace:	Thay thế:
+	Revised document	Tài liệu đã sửa
+	Select text, then tick who can still edit it.	Chọn văn bản, rồi đánh dấu những ai vẫn được sửa phần đó.
+	Settings…	Thiết đặt…
+	Show changes at:	Hiện thay đổi ở cấp:
+	Show changes in:	Hiện thay đổi trong:
+	Smart quotes instead of straight quotes	Dấu ngoặc kép cong thay cho ngoặc kép thẳng
+	Start Enforcing Protection	Bắt đầu Áp dụng Bảo vệ
+	Stop Protection	Dừng Bảo vệ
+	Text boxes	Hộp văn bản
+	The document is read only, except for regions marked editable.	Tài liệu ở chế độ chỉ đọc, trừ các vùng được đánh dấu là sửa được.
+	The password is optional; without it anyone can stop the protection.	Mật khẩu là tùy chọn; nếu không đặt, ai cũng có thể dừng bảo vệ.
+	This document	Tài liệu này
+	Tracked changes	Thay đổi được theo dõi
+	Type the password to stop the protection.	Nhập mật khẩu để dừng bảo vệ.
+	White space	Khoảng trắng
+	With:	Bằng:
+	Word level	Cấp từ
+	Add Font…	Thêm Phông…
+	Added Fonts	Phông đã Thêm
+	Remove Added Font	Gỡ Phông đã Thêm
+	Recent Colors	Màu Gần đây
+	More Colors…	Màu Khác…
+	Standard	Chuẩn
+	Current	Hiện tại
+	Colors:	Màu:
+	Color model:	Mô hình màu:
+	Red:	Đỏ:
+	Green:	Lục:
+	Blue:	Lam:
+	Hue:	Sắc màu:
+	Sat:	Bão hòa:
+	Lum:	Độ sáng:
+	Hex:	Hex:
+	Templates	Mẫu
+	Templates and Add-ins	Mẫu và Phần bổ trợ
+	Attach Template	Đính kèm Mẫu
+	Detach Template	Gỡ Mẫu
+	Automatically Update Document Styles	Tự động Cập nhật Kiểu Tài liệu
+	Update Styles from Template	Cập nhật Kiểu từ Mẫu
+	Organizer	Bộ tổ chức
+	Copy Styles	Sao chép Kiểu
+	Rename Style	Đổi tên Kiểu
+	Document template:	Mẫu tài liệu:
+	Attach…	Đính kèm…
+	Automatically update document styles	Tự động cập nhật kiểu tài liệu
+	Organizer…	Bộ tổ chức…
+	Hide White Space	Ẩn Khoảng trắng
+	All pages	Tất cả các trang
+	Current page	Trang hiện tại
+	Selected pages	Các trang đã chọn
+	Custom range	Phạm vi tùy chỉnh
+	All pages in the range	Tất cả các trang trong phạm vi
+	Odd pages only	Chỉ trang lẻ
+	Even pages only	Chỉ trang chẵn
+	Copies	Số bản
+	Collate copies	Xếp theo bộ
+	Pages like 1-3, 5	Các trang, ví dụ 1-3, 5
+	{count} of {total} pages will print	Sẽ in {count} trên {total} trang
+	Save these pages as PDF…	Lưu các trang này thành PDF…
+	The printer, two-sided printing and pages per sheet are chosen in that dialog.	Máy in, in hai mặt và số trang mỗi tờ được chọn trong hộp thoại đó.
+	Previous Page	Trang Trước
+	Print to PDF	In ra PDF
+	Add Shape	Thêm Hình
+	Change Colors	Thay đổi Màu
+	Change Layout	Thay đổi Bố trí
+	Create Graphic	Tạo Đồ họa
+	Edit Items	Sửa Mục
+	Layouts	Bố trí
+	Reset Graphic	Đặt lại Đồ họa
+	SmartArt Design	Thiết kế SmartArt
+	SmartArt Styles	Kiểu SmartArt
+	Text Pane	Ngăn Văn bản
+	List	Danh sách
+	Process	Quy trình
+	Cycle	Chu trình
+	Hierarchy	Phân cấp
+	Relationship	Quan hệ
+	Pyramid	Kim tự tháp
+	Basic List	Danh sách Cơ bản
+	Basic Process	Quy trình Cơ bản
+	Basic Cycle	Chu trình Cơ bản
+	Basic Pyramid	Kim tự tháp Cơ bản
+	Basic Radial	Hình tia Cơ bản
+	Basic Matrix	Ma trận Cơ bản
+	Basic Venn	Venn Cơ bản
+	Shows items of equal weight as blocks in rows.	Hiển thị các mục ngang hàng dưới dạng khối xếp theo hàng.
+	Shows steps in order, left to right, with arrows between them.	Hiển thị các bước theo thứ tự từ trái sang phải, nối nhau bằng mũi tên.
+	Shows steps that repeat, around a circle.	Hiển thị các bước lặp lại quanh một vòng tròn.
+	Shows a tree: each item below the item it belongs to.	Hiển thị cấu trúc cây: mỗi mục nằm dưới mục mà nó thuộc về.
+	Shows parts that build on each other, largest at the bottom.	Hiển thị các phần xây chồng lên nhau, phần lớn nhất ở dưới cùng.
+	Shows items around a central idea: the first item is the centre.	Hiển thị các mục quanh một ý trung tâm: mục đầu tiên là tâm.
+	Shows parts of a whole as quadrants.	Hiển thị các phần của một tổng thể dưới dạng góc phần tư.
+	Shows overlapping ideas as overlapping circles.	Hiển thị các ý giao nhau dưới dạng các vòng tròn chồng lên nhau.
+	Accent {n}	Nhấn {n}
+	Colorful	Nhiều màu
+	Insert SmartArt	Chèn SmartArt
+	One line per item. Enter adds an item.	Mỗi dòng một mục. Enter để thêm mục.
+	Add\nShape	Thêm\nHình
+	Change\nColors	Thay đổi\nMàu
+	Reset\nGraphic	Đặt lại\nĐồ họa
+	Promote to Heading 1	Nâng lên Đầu đề 1
+	Demote to Body Text	Hạ xuống Văn bản Thân
+	Move Up	Di chuyển Lên
+	Move Down	Di chuyển Xuống
+	Collapse	Thu gọn
+	Expand or Collapse Heading	Bung rộng hoặc Thu gọn Đầu đề
+	Select Heading and Content	Chọn Đầu đề và Nội dung
+	Show Level	Hiện Mức
+	Show Level 1	Hiện Mức 1
+	Show Level 2	Hiện Mức 2
+	Show Level 3	Hiện Mức 3
+	Show Level 4	Hiện Mức 4
+	Show Level 5	Hiện Mức 5
+	Show Level 6	Hiện Mức 6
+	Show Level 7	Hiện Mức 7
+	Show Level 8	Hiện Mức 8
+	Show Level 9	Hiện Mức 9
+	Show All Levels	Hiện Tất cả Mức
+	All Levels	Tất cả Mức
+	Show First Line Only	Chỉ Hiện Dòng Đầu tiên
+	Show Text Formatting	Hiện Định dạng Văn bản
+	Close Outline View	Đóng Dạng xem Dàn bài
+	Outline State	Trạng thái Dàn bài
+	Outlining	Dàn bài
+	Outline Tools	Công cụ Dàn bài
+	Close Outline\nView	Đóng Dạng xem\nDàn bài
+	Use wildcards	Dùng ký tự đại diện
+	Special	Đặc biệt
+	Match prefix	Khớp tiền tố
+	Match suffix	Khớp hậu tố
+	Ignore punctuation characters	Bỏ qua dấu câu
+	Ignore white-space characters	Bỏ qua ký tự khoảng trắng
+	Regular expressions	Biểu thức chính quy
+	Search Options	Tùy chọn Tìm kiếm
+	Tab Character	Ký tự Tab
+	Any Character	Ký tự Bất kỳ
+	Any Digit	Chữ số Bất kỳ
+	Any Letter	Chữ cái Bất kỳ
+	Caret Character	Ký tự Dấu mũ
+	Section Character	Ký tự Mục
+	Paragraph Character	Ký tự Đoạn văn
+	Graphic	Đồ họa
+	Manual Line Break	Ngắt Dòng Thủ công
+	Manual Page Break	Ngắt Trang Thủ công
+	Section Break	Ngắt Phần
+	White Space	Khoảng trắng
+	Clipboard Contents	Nội dung Bảng tạm
+	Find What Text	Văn bản Cần tìm
+	Find What Expression	Biểu thức Cần tìm
+	Character in Range	Ký tự trong Phạm vi
+	Beginning of Word	Đầu Từ
+	End of Word	Cuối Từ
+	Expression	Biểu thức
+	Not	Không
+	Num Occurrences	Số lần Xuất hiện
+	Previous 1 or More	Ký tự trước 1 lần trở lên
+	0 or More Characters	0 Ký tự trở lên
+	Move with Text	Di chuyển theo Văn bản
+	Fix Position on Page	Cố định Vị trí trên Trang
+	Good morning	Chào buổi sáng
+	Animation	Hoạt hình
+	Animate the caret (it glides and fades)	Tạo hiệu ứng cho con trỏ (lướt và mờ dần)
+	On: the caret glides to its new place when you type or use the arrow keys, and its blink fades. Off: it jumps and blinks on and off.	Bật: con trỏ lướt đến vị trí mới khi bạn gõ hoặc dùng phím mũi tên, và nhấp nháy mờ dần. Tắt: con trỏ nhảy tới và nhấp nháy bật tắt.
+	Documents	Tài liệu
+	Word document	Tài liệu Word
+	All files	Tất cả tệp
+	Recipient lists	Danh sách người nhận
+	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Không có hộp thoại tệp của hệ thống nên WordCraft dùng hộp thoại riêng. Để dùng hộp thoại của hệ thống, hãy cài một portal chọn tệp (như xdg-desktop-portal-gtk) hoặc zenity.
+	Up one level	Lên một cấp
+	Home folder	Thư mục chính
+	{name} wasn't found.	Không tìm thấy {name}.
+	{name} already exists. Choose Save again to replace it.	{name} đã tồn tại. Chọn Lưu lần nữa để thay thế.
+	This folder can't be read: {error}	Không thể đọc thư mục này: {error}
+	Showing the first {count} items.	Đang hiển thị {count} mục đầu tiên.
+	File name:	Tên tệp:
+	Browse in WordCraft…	Duyệt trong WordCraft…
+	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Mở tệp bằng trình duyệt tệp riêng của WordCraft khi hộp thoại tệp của hệ thống không xuất hiện.
+	Resize Table by Dragging	Đổi kích thước Bảng bằng cách Kéo
+	Visual effects	Hiệu ứng hình ảnh
+	Animation effects:	Hiệu ứng hoạt hình:
+	On	Bật
+	Off	Tắt
+	Smooth scrolling and zooming, and menus and buttons that fade in. Off shows every change at once.	Cuộn và thu phóng mượt, menu và nút hiện dần. Khi tắt, mọi thay đổi hiển thị ngay lập tức.
+	Your system has animation effects turned on.	Hệ thống của bạn đang bật hiệu ứng hoạt hình.
+	Your system has animation effects turned off.	Hệ thống của bạn đang tắt hiệu ứng hoạt hình.
+	Your system doesn't report an animation setting, so animation effects stay on.	Hệ thống của bạn không cho biết thiết đặt hoạt hình, nên hiệu ứng hoạt hình vẫn bật.
+	Annotation Reference	Tham chiếu Chú thích
+	Annotation Subject	Chủ đề Chú thích
+	Annotation Text	Văn bản Chú thích
+	Default Paragraph Font	Phông Đoạn văn Mặc định
+	Envelope Address	Địa chỉ Phong bì
+	Envelope Return	Địa chỉ Người gửi
+	Index Heading	Đầu đề Chỉ mục
+	Index {n}	Chỉ mục {n}
+	Line Number	Số Dòng
+	Normal Indent	Thụt lề Thường
+	Normal Table	Bảng Thường
+	Table of Figures	Bảng Hình minh họa
+	TOA Heading	Đầu đề TOA
+	TOC {n}	Mục lục {n}
+	Good afternoon	Chào buổi chiều
+	Context	Ngữ cảnh
+	Couldn't make WordCraft the default: {error}	Không thể đặt WordCraft làm mặc định: {error}
+	Do Not Check Spelling or Grammar	Không Kiểm tra Chính tả hoặc Ngữ pháp
+	Hindi	Tiếng Hindi
+	In Default apps, choose WordCraft for the document types you want it to open.	Trong Ứng dụng mặc định, chọn WordCraft cho các loại tài liệu bạn muốn mở bằng nó.
+	Make WordCraft the default for Word documents…	Đặt WordCraft làm mặc định cho tài liệu Word…
+	Numerals	Chữ số
+	Numerals:	Chữ số:
+	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Từ giờ, tệp .docx, .doc, .rtf, .odt và mẫu Word sẽ mở bằng WordCraft.
+	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Mở Cài đặt › Ứng dụng mặc định, nơi bạn chọn WordCraft cho .docx và các loại tài liệu khác.
+	Reading	Đọc
+	Reading Column Width	Độ rộng Cột khi Đọc
+	Reading Line Spacing	Giãn cách Dòng khi Đọc
+	Reading Text Size	Cỡ Chữ khi Đọc
+	Show KeyTips (Alt or F10)	Hiện mẹo phím (Alt hoặc F10)
+	System	Hệ thống
+	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Để mở tài liệu Word bằng WordCraft theo mặc định: chọn một tài liệu trong Finder, chọn Tệp › Lấy thông tin, chọn WordCraft trong mục Mở bằng, rồi bấm Thay đổi tất cả.
+	WordCraft is now the default app for Word documents.	WordCraft hiện là ứng dụng mặc định cho tài liệu Word.
+	Correct TWo INitial CApitals	Sửa HAi CHữ HOa ĐẦu từ
+	Correct accidental usage of cAPS LOCK key	Sửa lỗi vô tình bật phím cAPS LOCK
+	Picture	Ảnh
+	Pastes the clipboard's picture.	Dán ảnh từ bảng tạm.
+	Region:	Vùng:
+	Automatic ({region})	Tự động ({region})
+	Undo 1 Action	Hoàn tác 1 Thao tác
+	Undo Actions	Hoàn tác Thao tác
+	Undo History	Lịch sử Hoàn tác
+	Undo {n} Actions	Hoàn tác {n} Thao tác
+	Start-up	Khởi động
+	Show the Start screen when WordCraft starts	Hiện màn hình Bắt đầu khi khởi động WordCraft
+	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Bật: WordCraft mở tại Tệp › Trang đầu, kèm tài liệu trống, các mẫu và tài liệu gần đây của bạn. Tắt: WordCraft mở một tài liệu trống.
+	Typing	Nhập liệu
+	Level 4	Mức 4
+	Level 5	Mức 5
+	Level 6	Mức 6
+	Level 7	Mức 7
+	Level 8	Mức 8
+	Level 9	Mức 9
+	Select Column	Chọn Cột
+	Select Table Cells by Clicking	Bấm để Chọn Ô Bảng
+	Insert Row or Column by Clicking	Bấm để Chèn Hàng hoặc Cột
+	Move Table by Dragging	Kéo để Di chuyển Bảng
+	AutoFit Column by Double-Clicking	Bấm đúp để Tự khớp Cột
+	Insert Caption…	Chèn Chú thích Ảnh…
+	Table Properties…	Thuộc tính Bảng…
+	Search	Tìm kiếm
+	Title Bar	Thanh Tiêu đề
+	Privacy Options	Tùy chọn Quyền riêng tư
+	Trust Center	Trung tâm Tin cậy
+	Privacy for this document	Quyền riêng tư của tài liệu này
+	Remove my name from comments, changes and file properties when saving	Xóa tên tôi khỏi chú thích, thay đổi và thuộc tính tệp khi lưu
+	Leave out the date and time of comments and tracked changes when saving	Bỏ ngày giờ của chú thích và thay đổi được theo dõi khi lưu
+	The document you are editing keeps the names and dates; only the saved file leaves them out.	Tài liệu bạn đang sửa vẫn giữ tên và ngày; chỉ tệp được lưu mới bỏ chúng đi.
+	Privacy Settings	Thiết đặt Quyền riêng tư
+preview	Title	Tiêu đề
+	➕ New comment	➕ Chú thích Mới
+	📂  Browse…	📂  Duyệt…
+	Possible spelling mistake	Có thể sai chính tả
+	Extra space	Thừa dấu cách
+	Capitalize the first word of a sentence	Viết hoa chữ đầu câu
+	Remove the space before the punctuation	Bỏ dấu cách trước dấu câu
+	Use "an" before a vowel sound	Dùng "an" trước âm nguyên âm
+	Use "a" before a consonant sound	Dùng "a" trước âm phụ âm
+	The spelling and grammar check is complete.	Đã kiểm tra xong chính tả và ngữ pháp.
+	Change to Level 6	Đổi thành Mức 6
+	Change to Level 7	Đổi thành Mức 7
+	Change to Level 8	Đổi thành Mức 8
+	Change to Level 9	Đổi thành Mức 9
