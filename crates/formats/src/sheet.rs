@@ -18,7 +18,9 @@
 //! what is left, and nothing recurses, so XML depth costs nothing.
 
 use std::collections::{BTreeMap, HashMap};
-use std::io::{Cursor, Read};
+use std::io::Cursor;
+
+use wordcraft_doc::inflate::{InflateError, Inflater, LIMITS, Limits, TOO_LARGE};
 
 use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
@@ -152,13 +154,15 @@ fn resolve(names: &[String], pick: Pick<'_>) -> Result<usize, String> {
 
 struct Package<'a> {
     zip: zip::ZipArchive<Cursor<&'a [u8]>>,
-    total: u64,
+    inflater: Inflater,
 }
 
 impl<'a> Package<'a> {
     fn open(bytes: &'a [u8]) -> Result<Self, String> {
         let zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("not a valid spreadsheet package ({e})"))?;
-        Ok(Package { zip, total: 0 })
+        let mut inflater = Inflater::new(Limits { entry: MAX_ENTRY.min(LIMITS.entry), total: MAX_TOTAL.min(LIMITS.total), ..LIMITS });
+        inflater.check_entries(zip.len()).map_err(|e| e.to_string())?;
+        Ok(Package { zip, inflater })
     }
 
     fn has(&self, name: &str) -> bool {
@@ -168,17 +172,11 @@ impl<'a> Package<'a> {
     /// Inflate an entry, refusing ones (or a workbook) larger than the caps.
     fn read(&mut self, name: &str) -> Result<Vec<u8>, String> {
         let f = self.zip.by_name(name).map_err(|_| format!("{name} is missing"))?;
-        if f.size() > MAX_ENTRY {
-            return Err(format!("{name} is too large"));
-        }
-        let mut out = Vec::new();
-        f.take(MAX_ENTRY + 1).read_to_end(&mut out).map_err(|e| format!("{name}: {e}"))?;
-        let len = out.len() as u64;
-        self.total = self.total.saturating_add(len);
-        if len > MAX_ENTRY || self.total > MAX_TOTAL {
-            return Err(format!("{name} is too large"));
-        }
-        Ok(out)
+        let (declared, compressed) = (f.size(), f.compressed_size());
+        self.inflater.read(name, f, declared, compressed, u64::MAX).map_err(|e| match e {
+            InflateError::Damaged(e) => e,
+            e => format!("{TOO_LARGE} ({e})"),
+        })
     }
 
     fn kind(&mut self) -> Option<Kind> {

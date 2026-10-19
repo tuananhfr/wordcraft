@@ -12,10 +12,11 @@
 //! tracked-change records.
 
 use std::collections::HashMap;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
 use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
+use wordcraft_doc::inflate::{InflateError, Inflater, LIMITS, Limits};
 use wordcraft_doc::{Align, Document, Rgb};
 
 use crate::model::{self, Cell, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, make_img, mime_of};
@@ -1292,14 +1293,16 @@ impl Body<'_> {
     }
 }
 
-fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str) -> Option<Vec<u8>> {
+fn limits() -> Limits {
+    Limits { entry: MAX_ENTRY.min(LIMITS.entry), ..LIMITS }
+}
+
+/// An entry's bytes; `None` when it is missing, damaged or too big. A package limit it breaks
+/// stays in `inf`, which refuses the whole document (see `parse`).
+fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, inf: &mut Inflater, name: &str) -> Option<Vec<u8>> {
     let f = z.by_name(name).ok()?;
-    if f.size() > MAX_ENTRY {
-        return None;
-    }
-    let mut out = Vec::new();
-    f.take(MAX_ENTRY).read_to_end(&mut out).ok()?;
-    Some(out)
+    let (declared, compressed) = (f.size(), f.compressed_size());
+    inf.read(name, f, declared, compressed, u64::MAX).ok()
 }
 
 fn read_meta(xml: &[u8]) -> Meta {
@@ -1331,22 +1334,27 @@ fn read_meta(xml: &[u8]) -> Meta {
 /// Parse an `.odt` package into the flow model.
 pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
     let mut z = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("ODT: not a valid package ({e})"))?;
-    if let Some(mt) = read_entry(&mut z, "mimetype") {
+    let mut inf = Inflater::new(limits());
+    let refused = |e: InflateError| format!("ODT: {e}");
+    inf.check_entries(z.len()).map_err(refused)?;
+    if let Some(mt) = read_entry(&mut z, &mut inf, "mimetype") {
         let mt = String::from_utf8_lossy(&mt);
         if !mt.trim().starts_with("application/vnd.oasis.opendocument.text") {
             return Err(format!("ODT: not a text document ({})", mt.trim()));
         }
     }
-    let content = read_entry(&mut z, "content.xml").ok_or("ODT: content.xml is missing")?;
+    let Some(content) = read_entry(&mut z, &mut inf, "content.xml") else {
+        return Err(inf.refusal().map_or_else(|| "ODT: content.xml is missing".to_string(), refused));
+    };
     let mut styles = Styles::default();
-    if let Some(s) = read_entry(&mut z, "styles.xml") {
+    if let Some(s) = read_entry(&mut z, &mut inf, "styles.xml") {
         styles.read(&s, false);
     }
     styles.read(&content, true);
-    let meta = read_entry(&mut z, "meta.xml").map(|m| read_meta(&m)).unwrap_or_default();
+    let meta = read_entry(&mut z, &mut inf, "meta.xml").map(|m| read_meta(&m)).unwrap_or_default();
     let mut total = 0u64;
     let mut fetch = |path: &str| -> Option<Vec<u8>> {
-        let d = read_entry(&mut z, path)?;
+        let d = read_entry(&mut z, &mut inf, path)?;
         total += d.len() as u64;
         (total <= MAX_ENTRY).then_some(d)
     };
@@ -1396,6 +1404,9 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
             blocks.push(FBlock::Table(FTable { rows: t.rows, widths: Vec::new(), borderless: false }));
         }
     }
+    if let Some(e) = inf.refusal() {
+        return Err(refused(e));
+    }
     if blocks.is_empty() {
         blocks.push(FBlock::Para(Para::default()));
     }
@@ -1406,7 +1417,7 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
 pub fn import(bytes: &[u8]) -> Result<Document, String> {
     let mut doc = model::to_doc(&parse(bytes)?);
     if let Ok(mut z) = zip::ZipArchive::new(Cursor::new(bytes))
-        && let Some(s) = read_entry(&mut z, "styles.xml")
+        && let Some(s) = read_entry(&mut z, &mut Inflater::new(limits()), "styles.xml")
     {
         apply_page_layout(&s, &mut doc.last_section);
     }

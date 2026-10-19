@@ -1,17 +1,19 @@
 //! OPC package access: bounded zip reading, relationships, part names.
 
 use std::collections::{BTreeMap, HashMap};
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Write};
 
 use crate::DocxError;
 use crate::xml::{self, El};
 
-/// Largest single part we decompress.
-pub const MAX_PART: u64 = 256 * 1024 * 1024;
+use wordcraft_doc::inflate::{InflateError, Inflater, LIMITS, Limits};
+
+/// Largest single part we decompress (see `wordcraft_doc::inflate`, smaller on the web).
+pub const MAX_PART: u64 = LIMITS.entry;
 /// Largest total of all decompressed parts.
-pub const MAX_TOTAL: u64 = 512 * 1024 * 1024;
+pub const MAX_TOTAL: u64 = LIMITS.total;
 /// Most zip entries we look at.
-pub const MAX_ENTRIES: usize = 20_000;
+pub const MAX_ENTRIES: usize = LIMITS.entries;
 
 /// Relationship type suffixes (after `.../relationships/`).
 pub mod rt {
@@ -135,6 +137,14 @@ pub fn rel_is(t: &str, full: &str) -> bool {
     t == full || tail(t) == tail(full)
 }
 
+/// A part over the limits refuses the whole document: every part is read up front.
+fn limit(e: InflateError) -> DocxError {
+    match e {
+        InflateError::Refused(_) => DocxError::Limit(e.to_string()),
+        e => DocxError::Limit(format!("{} ({e})", wordcraft_doc::inflate::TOO_LARGE)),
+    }
+}
+
 /// The decompressed parts of a package (bounded).
 pub struct Package {
     files: BTreeMap<String, Vec<u8>>,
@@ -147,13 +157,11 @@ impl Package {
 
     pub fn open_limited(bytes: &[u8], max_part: u64, max_total: u64) -> Result<Package, DocxError> {
         let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| DocxError::Zip(e.to_string()))?;
-        if zip.len() > MAX_ENTRIES {
-            return Err(DocxError::Limit(format!("{} zip entries", zip.len())));
-        }
+        let mut inflater = Inflater::new(Limits { entry: max_part.min(LIMITS.entry), total: max_total.min(LIMITS.total), ..LIMITS });
+        inflater.check_entries(zip.len()).map_err(limit)?;
         let mut files = BTreeMap::new();
-        let mut total: u64 = 0;
         for i in 0..zip.len() {
-            let mut f = match zip.by_index(i) {
+            let f = match zip.by_index(i) {
                 Ok(f) => f,
                 Err(e) => {
                     log::warn!("docx: skipping unreadable zip entry {i}: {e}");
@@ -164,22 +172,15 @@ impl Package {
                 continue;
             }
             let name = f.name().trim_start_matches('/').to_string();
-            if f.size() > max_part {
-                return Err(DocxError::Limit(format!("part {name} declares {} bytes", f.size())));
-            }
-            let room = max_part.min(max_total.saturating_sub(total));
-            let mut buf = Vec::with_capacity(f.size().min(16 * 1024 * 1024) as usize);
-            let read = (&mut f).take(room + 1).read_to_end(&mut buf);
-            if let Err(e) = read {
+            let (declared, compressed) = (f.size(), f.compressed_size());
+            match inflater.read(&name, f, declared, compressed, u64::MAX) {
+                Ok(buf) => {
+                    files.insert(name, buf);
+                }
                 // A corrupt entry: keep going unless it's a part we can't do without.
-                log::warn!("docx: zip entry {name} unreadable: {e}");
-                continue;
+                Err(InflateError::Damaged(e)) => log::warn!("docx: zip entry {e}"),
+                Err(e) => return Err(limit(e)),
             }
-            if buf.len() as u64 > room {
-                return Err(DocxError::Limit(format!("part {name} decompresses past the size limit")));
-            }
-            total = total.saturating_add(buf.len() as u64);
-            files.insert(name, buf);
         }
         Ok(Package { files })
     }
@@ -378,6 +379,28 @@ mod tests {
         match Package::open(&z) {
             Err(_) => {}
             Ok(p) => assert!(p.get("a.xml").is_none_or(|b| b.len() < 1024)),
+        }
+    }
+
+    #[test]
+    fn a_declared_small_part_is_cut_off_while_it_inflates() {
+        let mut x = 0x2545_F491_4F6C_DD1Du64;
+        let noise: Vec<u8> = (0..3_000_000)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                (x >> 24) as u8
+            })
+            .collect();
+        let mut z = zip_of(&[("word/media/a.bin", noise)]);
+        for (sig, off) in [([0x50u8, 0x4B, 0x01, 0x02], 24), ([0x50, 0x4B, 0x03, 0x04], 22)] {
+            let pos = z.windows(4).position(|w| w == sig).unwrap();
+            z[pos + off..pos + off + 4].copy_from_slice(&100u32.to_le_bytes());
+        }
+        match Package::open_limited(&z, 1_000_000, 10_000_000) {
+            Err(DocxError::Limit(m)) => assert!(m.contains(wordcraft_doc::inflate::TOO_LARGE), "{m}"),
+            other => panic!("expected a refusal, got {:?}", other.err()),
         }
     }
 

@@ -333,6 +333,16 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
         });
 }
 
+/// A status bar message, labelled for screen readers.
+fn status_message(ui: &mut Ui, msg: &str, t: &Tokens) {
+    let font = TypeRung::Caption.regular();
+    let track = TypeRung::Caption.tracking();
+    paint_text(ui.painter(), pos2(ui.cursor().min.x, ui.cursor().min.y), Align2::LEFT_TOP, msg, &font, track, t.accent_text);
+    let size = vec2(text_width(ui.painter(), msg, &font, track, t.accent_text) + 1.0, TypeRung::Caption.line_height());
+    let resp = ui.allocate_exact_size(size, Sense::hover()).1;
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, msg));
+}
+
 pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     egui::Panel::bottom("status")
@@ -344,8 +354,12 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                 .stroke(Stroke::new(1.0, t.border)),
         )
         .show(ui, |ui| {
-            // No document open (#1129): an empty status bar.
+            // No document open (#1129): an empty status bar but for a message, such as why a
+            // file didn't open, which stays since the empty window has nothing else to say it.
             if !app.has_document() {
+                if let Some((msg, _)) = &app.status_msg {
+                    ui.horizontal_centered(|ui| status_message(ui, msg, &t));
+                }
                 return;
             }
             ui.horizontal_centered(|ui| {
@@ -397,10 +411,7 @@ pub fn status_bar(app: &mut WordApp, ui: &mut Ui) {
                 if let Some((msg, at)) = &app.status_msg
                     && crate::now_ms() - at < 6000.0
                 {
-                    let font = TypeRung::Caption.regular();
-                    let track = TypeRung::Caption.tracking();
-                    paint_text(ui.painter(), pos2(ui.cursor().min.x, ui.cursor().min.y), Align2::LEFT_TOP, msg, &font, track, t.accent_text);
-                    ui.allocate_space(vec2(text_width(ui.painter(), msg, &font, track, t.accent_text) + 1.0, TypeRung::Caption.line_height()));
+                    status_message(ui, msg, &t);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.spacing_mut().item_spacing = vec2(4.0, 0.0);

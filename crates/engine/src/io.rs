@@ -92,6 +92,12 @@ pub fn wrong_password(err: &str) -> bool {
     err.contains(wordcraft_docx::WRONG_PASSWORD)
 }
 
+/// Does this open error mean the file was refused by the decompression limits (a zip bomb, or a
+/// file too large for this build)? See `wordcraft_doc::inflate`.
+pub fn too_large(err: &str) -> bool {
+    err.contains(wordcraft_doc::inflate::TOO_LARGE)
+}
+
 /// Can files with this extension be saved with a password (Word's packages)?
 pub fn can_encrypt(name: &str) -> bool {
     is_word_package(&ext_of(name))

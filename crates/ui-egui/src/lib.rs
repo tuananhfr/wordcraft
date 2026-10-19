@@ -805,7 +805,13 @@ impl WordApp {
         }
         self.after_command(id);
         if let Err(e) = &r {
-            self.status(e.clone());
+            if wordcraft_engine::io::too_large(e) {
+                // File › Open is on the File tab, which hides the status bar that says why.
+                self.ui.backstage = false;
+                self.status(tl!("The file is too large or abnormally compressed, so it can't be opened."));
+            } else {
+                self.status(e.clone());
+            }
         }
         r
     }

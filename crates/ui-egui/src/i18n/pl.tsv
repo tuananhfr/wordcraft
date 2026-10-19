@@ -2474,4 +2474,5 @@ preview	Title	Tytuł
 	Close {name}	Zamknij {name}
 	Unsaved changes	Niezapisane zmiany
 	You can have up to 10 documents open. Close one to open another.	Można mieć otwartych najwyżej 10 dokumentów. Zamknij jeden, aby otworzyć kolejny.
+	The file is too large or abnormally compressed, so it can't be opened.	Plik jest za duży lub nietypowo skompresowany, więc nie można go otworzyć.
 	Document{number}	Dokument{number}
