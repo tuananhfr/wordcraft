@@ -2,6 +2,8 @@
 //! a category and a command, see its keys, press a new key combination, see which command uses
 //! it now, then Assign / Remove / Reset All. Every change runs `tools.customizeKeyboard`, so
 //! agents get the same result without the dialog; the keys persist with the preferences.
+//!
+//! Also Keyboard Shortcuts (F1): the keys in effect, customized ones included, searchable.
 
 use egui::{Sense, Ui, vec2};
 use serde::Serialize;
@@ -9,6 +11,7 @@ use serde_json::json;
 use wordcraft_engine::keymap::normalize;
 
 use crate::WordApp;
+use crate::keys::ShortcutRow;
 use crate::theme::{Tokens, semibold};
 use crate::widgets::key_text;
 
@@ -262,6 +265,56 @@ fn capture(ui: &mut Ui, f: &mut KeyboardForm) -> bool {
     close
 }
 
+/// The Keyboard Shortcuts dialog's rows, by label in the interface language, then by key.
+pub(crate) fn shortcut_list(app: &WordApp) -> Vec<ShortcutRow> {
+    let mut rows = crate::keys::shortcut_rows(app);
+    rows.sort_by_cached_key(|r| (crate::i18n::lowercase(tl!(r.label)), key_text(&r.key)));
+    rows
+}
+
+/// Every word of the query is in the row's label (English or translated) or its key, as shown or
+/// as the registry writes it (`Mod+B`).
+fn shortcut_matches(row: &ShortcutRow, query: &str) -> bool {
+    let hay = crate::i18n::lowercase(&format!("{} {} {} {}", row.label, tl!(row.label), key_text(&row.key), row.key));
+    crate::i18n::lowercase(query).split_whitespace().all(|w| hay.contains(w))
+}
+
+/// The Keyboard Shortcuts body (F1): a search box over the key / command list. True closes it.
+pub fn shortcuts(ui: &mut Ui, query: &mut String, rows: &[ShortcutRow]) -> bool {
+    let width = 460.0;
+    ui.add(egui::TextEdit::singleline(query).hint_text(tl!("Search by command or key")).desired_width(width)).request_focus();
+    ui.add_space(6.0);
+    let shown: Vec<&ShortcutRow> = rows.iter().filter(|r| shortcut_matches(r, query)).collect();
+    let row_h = ui.text_style_height(&egui::TextStyle::Body) + 6.0;
+    egui::Frame::new().stroke(ui.visuals().widgets.noninteractive.bg_stroke).inner_margin(4.0).show(ui, |ui| {
+        ui.set_width(width);
+        ui.set_height(380.0);
+        if shown.is_empty() {
+            ui.label(egui::RichText::new(tl!("No shortcut matches.")).weak());
+            return;
+        }
+        egui::ScrollArea::vertical().id_salt("shortcut_rows").auto_shrink([false, false]).show_rows(ui, row_h, shown.len(), |ui, range| {
+            for r in shown.get(range).unwrap_or_default() {
+                ui.horizontal(|ui| {
+                    ui.allocate_ui_with_layout(vec2(170.0, row_h), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.set_min_width(170.0);
+                        ui.label(egui::RichText::new(key_text(&r.key)).font(semibold(12.5)));
+                    });
+                    ui.label(tl!(r.label));
+                });
+            }
+        });
+    });
+    let mut close = false;
+    ui.add_space(8.0);
+    ui.horizontal(|ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            close = ui.button(tl!("Close")).clicked();
+        });
+    });
+    close || ui.input(|i| i.key_pressed(egui::Key::Escape))
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -291,5 +344,54 @@ mod tests {
         );
         assert_eq!(c.ui.tab, "Insert");
         assert!(c.session.keymap.is_empty());
+    }
+
+    /// F1's list filters by label, in English or the interface language, and by key as shown
+    /// (`Ctrl+Shift+S`) or as written (`Mod+Shift+S`); Close closes it.
+    #[test]
+    fn keyboard_shortcuts_filter_by_label_or_key() {
+        use egui_kittest::kittest::Queryable;
+        let mut a = WordApp::new(Session::new(wordcraft_doc::Document::new()), Services::default());
+        a.run("ui.dialog", json!({"name": "shortcuts"})).unwrap();
+        let Some(Dialog::Shortcuts { rows, .. }) = &a.dialog else { panic!("the dialog opened") };
+        let rows = rows.clone();
+        let find = |query: &str| -> Vec<&str> { rows.iter().filter(|r| super::shortcut_matches(r, query)).map(|r| r.id).collect() };
+        assert_eq!(find("").len(), rows.len());
+        assert!(find("save as").contains(&"file.saveAs"));
+        assert!(find("F12").contains(&"file.saveAs"));
+        assert!(find("mod+shift+s").contains(&"styles.apply") && !find("mod+shift+s").contains(&"format.bold"));
+        if !cfg!(target_os = "macos") {
+            assert!(find("CTRL+SHIFT+S").contains(&"styles.apply"));
+        }
+        assert!(find("no such command anywhere").is_empty());
+        crate::i18n::set_current(crate::i18n::Lang::from_code("vi").unwrap());
+        assert!(find("đậm").contains(&"format.bold"));
+        assert!(find("bold").contains(&"format.bold"), "English still finds it");
+        assert!(find("phím tắt f1").contains(&"ui.dialog"));
+        crate::i18n::set_current(crate::i18n::Lang::EN);
+
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).build_ui_state(
+            |ui, app: &mut WordApp| {
+                let ctx = ui.ctx().clone();
+                app.logic(&ctx);
+                app.ui(ui);
+            },
+            a,
+        );
+        h.run_steps(4);
+        assert!(h.query_all_by_label("Keyboard Shortcuts").next().is_some(), "the title");
+        if let Some(Dialog::Shortcuts { query, .. }) = &mut h.state_mut().dialog {
+            *query = "save as".into();
+        }
+        h.run_steps(2);
+        assert!(h.query_all_by_label("Save As").next().is_some() && h.query_all_by_label("F12").next().is_some());
+        if let Some(Dialog::Shortcuts { query, .. }) = &mut h.state_mut().dialog {
+            *query = "no such command anywhere".into();
+        }
+        h.run_steps(2);
+        assert!(h.query_by_label("No shortcut matches.").is_some());
+        h.get_by_label("Close").click();
+        h.run_steps(2);
+        assert!(h.state().dialog.is_none());
     }
 }

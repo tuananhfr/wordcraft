@@ -104,38 +104,108 @@ pub fn combo(m: Modifiers, key: &str, with_shift: bool) -> String {
     s
 }
 
+/// An interface shortcut: `key` (in the registry's canonical spelling) opens dialog `dialog`.
+pub(crate) struct UiShortcut {
+    pub key: &'static str,
+    pub label: &'static str,
+    pub dialog: &'static str,
+}
+
 /// Shortcuts for interface commands (`ui.*`), which aren't in the engine's keymap: Alt+Q moves
-/// to "Tell me" command search, as in Word for Windows (#819). Not on macOS, where Option+Q types
-/// a character.
+/// to "Tell me" command search, as in Word for Windows (#819); F1 lists every shortcut.
+const UI_SHORTCUTS: &[UiShortcut] = &[
+    UiShortcut { key: "Alt+Q", label: "Search Commands", dialog: "commands" },
+    UiShortcut { key: "F1", label: "Keyboard Shortcuts", dialog: "shortcuts" },
+];
+
+/// The interface shortcuts on this platform: none with Alt on macOS, where Option+letter types a
+/// character.
+fn ui_shortcuts() -> impl Iterator<Item = &'static UiShortcut> {
+    UI_SHORTCUTS.iter().filter(|s| !(cfg!(target_os = "macos") && s.key.starts_with("Alt+")))
+}
+
 fn ui_shortcut(key: Key, m: Modifiers) -> Option<(&'static str, Value)> {
-    let alt_only = m.alt && !m.command && !m.ctrl && !m.mac_cmd && !m.shift;
-    match key {
-        Key::Q if alt_only && !cfg!(target_os = "macos") => Some(("ui.dialog", json!({"name": "commands"}))),
-        _ => None,
+    let pressed = combo(m, key_name(key)?, true);
+    ui_shortcuts().find(|s| s.key == pressed).map(|s| ("ui.dialog", json!({"name": s.dialog})))
+}
+
+/// The command (and params) a key press runs: an interface shortcut, else the keymap's command
+/// for the combo, else a Shift variant of a plain key's command.
+fn command_for(app: &WordApp, key: Key, m: Modifiers) -> Option<(&'static str, Value)> {
+    if let Some(hit) = ui_shortcut(key, m) {
+        return Some(hit);
     }
+    let name = key_name(key)?;
+    let reg = &app.session.registry;
+    if let Some(spec) = app.session.keymap.resolve(reg, &combo(m, name, true)) {
+        return Some((spec.id, json!({})));
+    }
+    // Shift extends caret movement; Shift+Backspace still erases (#707).
+    if m.shift
+        && let Some(spec) = app.session.keymap.resolve(reg, &combo(m, name, false))
+        && let Some(params) = shift_variant_params(spec.id)
+    {
+        return Some((spec.id, params));
+    }
+    None
 }
 
 /// Find and run the command bound to this key. Returns true if handled.
 fn dispatch(app: &mut WordApp, key: Key, m: Modifiers) -> bool {
-    if let Some((id, params)) = ui_shortcut(key, m) {
-        let _ = app.run(id, params);
-        return true;
+    let Some((id, params)) = command_for(app, key, m) else { return false };
+    let _ = app.run(id, params);
+    true
+}
+
+/// A row of the Keyboard Shortcuts dialog (F1): a key in the registry's spelling, the English
+/// label shown for it and the command it runs.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShortcutRow {
+    pub key: String,
+    pub label: &'static str,
+    pub id: &'static str,
+    pub params: Value,
+}
+
+/// Every key that runs a command now: the interface shortcuts, then each command's keys in effect
+/// (built-in or customized). A key is listed only if pressing it runs that very command, so keys
+/// the keyboard can't produce or that something else takes first never show.
+pub(crate) fn shortcut_rows(app: &WordApp) -> Vec<ShortcutRow> {
+    let reg = &app.session.registry;
+    let ui = ui_shortcuts().map(|s| ShortcutRow { key: s.key.to_string(), label: s.label, id: "ui.dialog", params: json!({"name": s.dialog}) });
+    let commands = reg.all().iter().flat_map(|spec| {
+        app.session.keymap.keys_for(reg, spec.id).into_iter().map(|key| ShortcutRow { key, label: spec.label, id: spec.id, params: json!({}) })
+    });
+    ui.chain(commands)
+        .filter(|row| press(&row.key).and_then(|(key, m)| command_for(app, key, m)).is_some_and(|(id, params)| id == row.id && params == row.params))
+        .collect()
+}
+
+/// The key press that a registry key stands for, with the modifiers the windowing layer reports
+/// for it here: outside macOS, Ctrl also sets `command`, so `Mod` and `Ctrl` are the same key.
+fn press(key: &str) -> Option<(Key, Modifiers)> {
+    let key = wordcraft_engine::keymap::normalize(key)?;
+    let (mods, name) = key.rsplit_once('+').unwrap_or(("", key.as_str()));
+    let k = Key::ALL.iter().copied().find(|k| key_name(*k) == Some(name))?;
+    let mac = cfg!(target_os = "macos");
+    let mut m = Modifiers::NONE;
+    for part in mods.split('+') {
+        match part {
+            "Mod" => {
+                m.command = true;
+                m.mac_cmd = mac;
+                m.ctrl |= !mac;
+            }
+            "Ctrl" => {
+                m.ctrl = true;
+                m.command |= !mac;
+            }
+            "Alt" => m.alt = true,
+            "Shift" => m.shift = true,
+            _ => {}
+        }
     }
-    let Some(name) = key_name(key) else { return false };
-    let reg = app.session.registry.clone();
-    if let Some(spec) = app.session.keymap.resolve(&reg, &combo(m, name, true)) {
-        let _ = app.run(spec.id, json!({}));
-        return true;
-    }
-    // Shift extends caret movement; Shift+Backspace still erases (#707).
-    if m.shift
-        && let Some(spec) = app.session.keymap.resolve(&reg, &combo(m, name, false))
-        && let Some(params) = shift_variant_params(spec.id)
-    {
-        let _ = app.run(spec.id, params);
-        return true;
-    }
-    false
+    Some((k, m))
 }
 
 /// How a command bound to a plain key runs when Shift is also held and nothing is bound to the
@@ -570,5 +640,83 @@ mod tests {
         assert!(is_global_shortcut(Key::F7, m(false, false, false)), "F7");
         assert!(!is_global_shortcut(Key::Q, m(false, false, false)), "a plain letter is typing");
         assert!(!is_global_shortcut(Key::Q, m(false, false, true)), "Shift+letter is typing");
+        assert!(is_global_shortcut(Key::F1, m(false, false, false)), "F1");
+    }
+
+    #[test]
+    fn f1_opens_the_keyboard_shortcuts() {
+        let m = |shift, command| egui::Modifiers { shift, command, ctrl: command, ..Default::default() };
+        assert_eq!(ui_shortcut(Key::F1, m(false, false)), Some(("ui.dialog", json!({"name": "shortcuts"}))));
+        assert_eq!(ui_shortcut(Key::F1, m(true, false)), None, "Shift+F1");
+        assert_eq!(ui_shortcut(Key::F1, m(false, true)), None, "Ctrl+F1");
+        for s in UI_SHORTCUTS {
+            assert_eq!(wordcraft_engine::keymap::normalize(s.key).as_deref(), Some(s.key), "written canonically");
+        }
+
+        let mut h = harness();
+        let press = |key| egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE };
+        h.event(press(Key::F1));
+        h.run_steps(2);
+        assert_eq!(h.state().dialog.as_ref().map(|d| d.name()), Some("shortcuts"));
+        // Typing goes into its search box, not the document.
+        h.event(egui::Event::Text("bold".into()));
+        h.run_steps(2);
+        assert!(matches!(&h.state().dialog, Some(crate::dialogs::Dialog::Shortcuts { query, .. }) if query == "bold"));
+        assert_eq!(body(&h), "");
+        h.event(press(Key::Escape));
+        h.run_steps(2);
+        assert!(h.state().dialog.is_none(), "Escape closes it");
+        // Without the canvas focused (after a ribbon click) F1 still opens it.
+        h.state_mut().canvas.want_focus = false;
+        h.ctx.memory_mut(|m| m.request_focus(egui::Id::new("elsewhere")));
+        h.run_steps(2);
+        assert!(!h.state().canvas.focused);
+        h.event(press(Key::F1));
+        h.run_steps(2);
+        assert_eq!(h.state().dialog.as_ref().map(|d| d.name()), Some("shortcuts"));
+    }
+
+    fn row<'a>(rows: &'a [ShortcutRow], key: &str) -> Option<&'a ShortcutRow> {
+        rows.iter().find(|r| r.key == key)
+    }
+
+    /// F1's list is what the keyboard really does: every row's key runs its command, every built-in
+    /// key that runs its command is listed, and customized keys show as customized.
+    #[test]
+    fn the_shortcut_list_is_the_keys_dispatch_runs() {
+        let mut app = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        let rows = shortcut_rows(&app);
+        assert!(rows.len() > 100, "{} rows", rows.len());
+        for r in &rows {
+            let (key, m) = press(&r.key).unwrap_or_else(|| panic!("{} can't be pressed", r.key));
+            assert_eq!(command_for(&app, key, m), Some((r.id, r.params.clone())), "{}", r.key);
+            assert_eq!(rows.iter().filter(|o| o.key == r.key).count(), 1, "{} listed once", r.key);
+        }
+        let reg = app.session.registry.clone();
+        for spec in reg.all() {
+            for key in spec.shortcut.split(" / ").filter_map(wordcraft_engine::keymap::normalize) {
+                let runs = press(&key).and_then(|(k, m)| command_for(&app, k, m)).is_some_and(|(id, p)| id == spec.id && p == json!({}));
+                if runs {
+                    assert_eq!(row(&rows, &key).map(|r| r.id), Some(spec.id), "{key} is missing");
+                }
+            }
+        }
+        let id = |rows: &[ShortcutRow], key: &str| row(rows, key).map(|r| r.id);
+        assert_eq!(row(&rows, "F1").map(|r| (r.id, r.params.clone())), Some(("ui.dialog", json!({"name": "shortcuts"}))));
+        assert_eq!(id(&rows, "F12"), Some("file.saveAs"));
+        assert_eq!(id(&rows, "Mod+Shift+S"), Some("styles.apply"), "Apply Styles, as in Word");
+        assert_eq!(id(&rows, "Mod+Shift+."), Some("format.growFont"));
+        assert_eq!(id(&rows, "Mod+Shift+>"), None, "no key types it");
+        if !cfg!(target_os = "macos") {
+            assert_eq!(id(&rows, "Alt+Q"), Some("ui.dialog"));
+        }
+
+        app.run("tools.customizeKeyboard", json!({"assign": {"command": "format.italic", "key": "Mod+B"}})).unwrap();
+        app.run("tools.customizeKeyboard", json!({"assign": {"command": "format.bold", "key": "F1"}})).unwrap();
+        app.run("tools.customizeKeyboard", json!({"assign": {"command": "format.bold", "key": "Mod+Alt+Shift+B"}})).unwrap();
+        let rows = shortcut_rows(&app);
+        assert_eq!(id(&rows, "Mod+B"), Some("format.italic"));
+        assert_eq!(id(&rows, "Mod+Alt+Shift+B"), Some("format.bold"));
+        assert_eq!(id(&rows, "F1"), Some("ui.dialog"), "F1 still opens this list, so it isn't Bold's");
     }
 }

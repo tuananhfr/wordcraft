@@ -326,6 +326,13 @@ pub enum Dialog {
         #[serde(skip)]
         swallow: bool,
     },
+    /// Keyboard Shortcuts (F1, [`crate::dialogs_keyboard::shortcuts`]): every key in effect when
+    /// it opened, filtered by `query`.
+    Shortcuts {
+        query: String,
+        #[serde(skip)]
+        rows: Vec<crate::keys::ShortcutRow>,
+    },
     /// Columns, Symbol and Field ([`crate::dialogs_insert`], #321).
     Insert(Box<crate::dialogs_insert::InsertDialog>),
     /// Caption, Index, Mark Index Entry, Table of Contents, Source Manager and Create / Edit
@@ -889,6 +896,7 @@ impl Dialog {
             Dialog::TableStyle { id: None, .. } => "newTableStyle",
             Dialog::TableStyle { .. } => "modifyTableStyle",
             Dialog::Commands { .. } => "commands",
+            Dialog::Shortcuts { .. } => "shortcuts",
             Dialog::Insert(d) => d.name(),
             Dialog::Refs(d) => d.name(),
             Dialog::Icons { .. } => "icons",
@@ -1117,6 +1125,7 @@ impl Dialog {
                 Dialog::TableStyle { id: Some(id), name, based_on, region: 0, basis: regions.clone(), regions }
             }
             "commands" => Dialog::Commands { query: String::new(), swallow: true },
+            "shortcuts" => Dialog::Shortcuts { query: String::new(), rows: crate::dialogs_keyboard::shortcut_list(app) },
             "icons" => Dialog::Icons { query: String::new(), category: String::new(), selected: String::new() },
             "tableProperties" => {
                 let form = Box::new(TableForm::read(app)?);
@@ -1338,6 +1347,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::TableStyle { id: None, .. } => "New Table Style",
         Dialog::TableStyle { .. } => "Modify Table Style",
         Dialog::Commands { .. } => "Search Commands",
+        Dialog::Shortcuts { .. } => "Keyboard Shortcuts",
         Dialog::Insert(d) => d.title(),
         Dialog::Refs(d) => d.title(),
         Dialog::Icons { .. } => "Icons",
@@ -2233,6 +2243,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
         }
         Dialog::Insert(f) => crate::dialogs_insert::body(app, ui, f),
         Dialog::Refs(f) => crate::dialogs_refs::body(app, ui, f),
+        Dialog::Shortcuts { query, rows } => crate::dialogs_keyboard::shortcuts(ui, query, rows),
         Dialog::Commands { query, swallow } => {
             if *swallow {
                 ui.ctx().input_mut(|i| i.events.retain(|e| !swallow_shortcut_text(swallow, e)));
