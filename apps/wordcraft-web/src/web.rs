@@ -11,6 +11,7 @@ use wordcraft_ui_egui::{Download, Inbox, PickerAnswer, Services, WordApp};
 const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
 const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
 const RECIPIENT_EXTS: &[&str] = &["csv", "tsv", "txt", "xlsx", "xlsm", "ods"];
+mod drafts;
 mod font_store;
 const CANVAS_ID: &str = "wordcraft_canvas";
 const LOADING_ID: &str = "wordcraft_loading";
@@ -58,13 +59,16 @@ pub fn start() {
                     let doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_engine::blank_document(&region) };
                     let mut session = Session::new(doc);
                     session.system_region = region;
-                    let mut app = WordApp::new(session, services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves));
+                    let (bridge, drafts) = drafts::connect().unzip();
+                    let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves);
+                    services.drafts = bridge;
+                    let mut app = WordApp::new(session, services);
                     app.autosave = false;
                     // No document to show: start on File › Home, as the desktop app does (#766).
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox }))
+                    Ok(Box::new(WebShell { app, inbox, drafts }))
                 }),
             )
             .await;
@@ -86,6 +90,8 @@ fn query() -> String {
 struct WebShell {
     app: WordApp,
     inbox: Inbox,
+    /// The office shell's draft storage, unless the page is embedded.
+    drafts: Option<drafts::Drafts>,
 }
 
 /// Saves the browser's save picker finishes after `download` has returned (#728). Each one's
@@ -113,6 +119,9 @@ impl eframe::App for WebShell {
                     Err(e) => log::error!("couldn't read dropped file {name}: {e}"),
                 }
             });
+        }
+        if let Some(drafts) = &mut self.drafts {
+            drafts.announce_ready(ctx);
         }
         self.app.logic(ctx);
     }

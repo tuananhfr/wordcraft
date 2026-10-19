@@ -46,6 +46,8 @@ pub mod dialogs_review;
 pub mod dialogs_ribbon;
 pub mod dialogs_smart_art;
 pub mod dialogs_templates;
+pub mod draft_bridge;
+pub mod drafts;
 pub mod equation_tab;
 /// The built-in file browser, for desktops without a system file dialog (#576).
 #[cfg(not(target_arch = "wasm32"))]
@@ -153,6 +155,9 @@ pub struct Services {
     /// `xdg-mime`. `None` (web, macOS) hides the button; macOS shows how to do it in Finder
     /// instead. An error means nothing changed.
     pub make_default_app: Option<Box<dyn Fn() -> Result<DefaultApp, String>>>,
+    /// Web: the page's draft storage, which keeps the unsaved document for recovery after a
+    /// crash or a closed tab ([`draft_bridge`]).
+    pub drafts: Option<draft_bridge::DraftBridge>,
 }
 
 /// What [`Services::make_default_app`] did.
@@ -459,6 +464,8 @@ pub struct WordApp {
     /// the session's document, no document is open: the window shows no page and only the File
     /// tab, Help and settings work. See [`WordApp::has_document`].
     no_document: Option<u64>,
+    /// Web: drafting the document into the page's draft storage ([`draft_bridge`]).
+    drafts: draft_bridge::DraftState,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -546,6 +553,7 @@ impl WordApp {
             file_browser: file_browser::State::default(),
             info_editing: None,
             no_document: None,
+            drafts: Default::default(),
         }
     }
 
@@ -1451,6 +1459,7 @@ impl WordApp {
         let _ = self.poll_file_dialog();
         self.poll_picker_saves();
         self.drain_inbox();
+        self.drafts_tick(ctx, now_ms());
         self.watch_fonts(ctx);
         self.autosave_tick(now_ms());
         if self.autosaves() && self.session.dirty {
@@ -1484,6 +1493,7 @@ impl WordApp {
         self.ensure_caption_fonts();
         self.install_ui_fonts(ctx, lang);
         self.report_dirty();
+        self.refresh_draft_snapshot();
     }
 
     /// Install the interface fonts when the language, the CJK fallback, or a caption fallback
@@ -1640,6 +1650,7 @@ impl WordApp {
         self.frame_ms = now_ms() - t0;
         // Typing and formatting land here, after `logic` has reported.
         self.report_dirty();
+        self.refresh_draft_snapshot();
     }
 
     /// A click on the window's chrome (ribbon tabs and empty ribbon space, galleries, check

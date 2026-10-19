@@ -167,6 +167,11 @@ impl WordApp {
         self.picker_saves.push(PickerSave { rx, name: name.to_string(), document, marked_saved, then: None });
     }
 
+    /// Whether a save of `document` is still in the browser's save picker.
+    pub(crate) fn picker_save_pending(&self, document: u64) -> bool {
+        self.picker_saves.iter().any(|s| s.document == document)
+    }
+
     /// Hold `then` back until the save just started in the picker has written the file.
     pub(crate) fn continue_after_picker_save(&mut self, then: String, params: Value) {
         if let Some(save) = self.picker_saves.last_mut() {
