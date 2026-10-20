@@ -50,6 +50,10 @@ impl OpenDocuments {
         self.slots.iter().enumerate().filter_map(|(i, p)| p.as_deref().map(|p| (i, p)))
     }
 
+    pub(crate) fn parked_sessions_mut(&mut self) -> impl Iterator<Item = &mut Session> {
+        self.slots.iter_mut().flatten().map(|p| &mut p.session)
+    }
+
     fn parked_index(&self, document: u64) -> Option<usize> {
         self.parked().find(|(_, p)| p.session.document_id() == document).map(|(i, _)| i)
     }

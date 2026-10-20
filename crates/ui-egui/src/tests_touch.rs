@@ -38,11 +38,11 @@ impl Window {
             .drop_without_applying_deltas();
     }
 
-    /// A point on the first page's text, `dy` points below its first line.
+    /// A point inside the first word on the first page, `dy` points below its first line.
     fn on_text(&self, dy: f32) -> Pos2 {
         let page = self.app.canvas.page_rects[0];
         let scale = self.app.canvas.scale;
-        pos2(page.min.x + 72.0 * scale + 40.0, page.min.y + 72.0 * scale + 8.0 + dy)
+        pos2(page.min.x + 82.0 * scale, page.min.y + 72.0 * scale + 8.0 + dy)
     }
 }
 
@@ -156,5 +156,10 @@ fn two_fingers_still_zoom() {
     w.frame(vec![touch(2, b + vec2(80.0, 0.0), TouchPhase::End)]);
     web_release(&mut w, a - vec2(80.0, 0.0));
     w.frame(vec![]);
-    assert!(w.app.canvas.scale > scale * 1.3, "spreading two fingers zoomed in: {scale} -> {}", w.app.canvas.scale);
+    let pinched = w.app.canvas.scale;
+    assert!(pinched > scale * 1.3, "spreading two fingers zoomed in: {scale} -> {pinched}");
+    for _ in 0..5 {
+        w.frame(vec![]);
+    }
+    assert_eq!(w.app.canvas.scale, pinched, "the pinched zoom holds; the phone's Page Width doesn't come back");
 }

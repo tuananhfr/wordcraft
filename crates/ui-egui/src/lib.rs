@@ -1684,7 +1684,7 @@ impl WordApp {
             return;
         }
         let t = theme::Tokens::get(&ctx);
-        self.narrow.update(ctx.content_rect().width());
+        narrow::follow_width(self, ctx.content_rect().width());
         // Keytips are read before layout so the frame paints the new state; badges paint after
         // the ribbon so they sit on top of it.
         crate::keytips::logic(self, &ctx);
@@ -2055,6 +2055,9 @@ mod tests_perf;
 
 #[cfg(test)]
 mod tests_touch;
+
+#[cfg(test)]
+mod tests_narrow;
 
 #[cfg(test)]
 mod tests {

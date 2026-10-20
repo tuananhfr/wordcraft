@@ -1,5 +1,10 @@
-//! Phone-width layout: below [`NARROW_WIDTH`] the ribbon folds away and side panes float over the
-//! page instead of squeezing it.
+//! Phone-width layout: below [`NARROW_WIDTH`] the ribbon folds away, the page fits the width
+//! without rulers, and side panes float over the page instead of squeezing it.
+
+use serde_json::json;
+use wordcraft_engine::ViewState;
+
+use crate::WordApp;
 
 /// Window content width (points) below which the interface compacts. A tablet in portrait
 /// (768+ points) stays wide; a phone (360–430) is narrow.
@@ -15,6 +20,62 @@ pub struct Narrow {
     /// `None` until the first width is seen, so a window that starts narrow compacts too.
     narrow: Option<bool>,
     ribbon_collapsed: bool,
+    /// The documents open while narrow, with the zoom and rulers each had in the wide window.
+    documents: Vec<Fitted>,
+    /// The document shown in the last narrow frame.
+    shown: Option<u64>,
+}
+
+#[derive(Clone, Debug)]
+struct Fitted {
+    document: u64,
+    wide: WideView,
+    fitted: bool,
+}
+
+/// What fitting a document to a narrow window changes, kept to put back when the window widens.
+#[derive(Clone, Debug, PartialEq)]
+struct WideView {
+    zoom: f32,
+    fit: String,
+    multi_page: bool,
+    single_column: bool,
+    ruler: bool,
+}
+
+impl WideView {
+    fn of(v: &ViewState) -> WideView {
+        WideView { zoom: v.zoom, fit: v.fit.clone(), multi_page: v.multi_page, single_column: v.single_column, ruler: v.ruler }
+    }
+
+    fn put_back(self, v: &mut ViewState) {
+        (v.zoom, v.fit, v.multi_page, v.single_column, v.ruler) = (self.zoom, self.fit, self.multi_page, self.single_column, self.ruler);
+    }
+}
+
+/// Follow the window width: fit each document to a narrow window once, the first time it shows
+/// there, and give every document its wide zoom and rulers back when the window widens.
+pub(crate) fn follow_width(app: &mut WordApp, width: f32) {
+    let was_narrow = app.narrow.is_narrow();
+    app.narrow.update(width);
+    if app.narrow.is_narrow() {
+        if !was_narrow {
+            let parked = app.docs.parked().map(|(_, p)| (p.session.document_id(), &p.session.view));
+            app.narrow.begin(std::iter::once((app.session.document_id(), &app.session.view)).chain(parked));
+        }
+        if app.narrow.show(app.session.document_id(), &app.session.view) {
+            // View › Page Width, so the zoom then behaves as if the user had picked it.
+            let _ = app.session.run("view.pageWidth", &json!({}));
+            app.session.view.ruler = false;
+        }
+    } else if was_narrow {
+        app.narrow.restore(app.session.document_id(), &mut app.session.view);
+        for s in app.docs.parked_sessions_mut() {
+            app.narrow.restore(s.document_id(), &mut s.view);
+        }
+        app.narrow.documents.clear();
+        app.narrow.shown = None;
+    }
 }
 
 impl Narrow {
@@ -30,6 +91,36 @@ impl Narrow {
             self.ribbon_collapsed = true;
         }
         self.narrow = Some(now);
+    }
+
+    /// The window just narrowed: note each open document's wide view, to fit it when shown.
+    fn begin<'a>(&mut self, documents: impl Iterator<Item = (u64, &'a ViewState)>) {
+        self.documents = documents.map(|(document, v)| Fitted { document, wide: WideView::of(v), fitted: false }).collect();
+        self.shown = None;
+    }
+
+    /// A narrow frame shows `document`; true when it should be fitted now, the first time it
+    /// shows. Later zooms and ruler changes are the user's and stand.
+    fn show(&mut self, document: u64, view: &ViewState) -> bool {
+        let fit = if let Some(d) = self.documents.iter_mut().find(|d| d.document == document) {
+            !std::mem::replace(&mut d.fitted, true)
+        } else {
+            // Opened or created while narrow: its view is a copy of the one shown before (see
+            // `Session::sibling`), and so is the wide view it should get back.
+            let before = self.shown.and_then(|s| self.documents.iter().find(|d| d.document == s)).map(|d| d.wide.clone());
+            let fit = before.is_none();
+            self.documents.push(Fitted { document, wide: before.unwrap_or_else(|| WideView::of(view)), fitted: true });
+            fit
+        };
+        self.shown = Some(document);
+        fit
+    }
+
+    /// Put back the wide view of a document fitted while narrow.
+    fn restore(&mut self, document: u64, view: &mut ViewState) {
+        if let Some(i) = self.documents.iter().position(|d| d.document == document) {
+            self.documents.swap_remove(i).wide.put_back(view);
+        }
     }
 
     pub fn is_narrow(&self) -> bool {
@@ -112,6 +203,34 @@ mod tests {
         let mut edge = Narrow::default();
         edge.update(NARROW_WIDTH);
         assert!(!edge.is_narrow(), "the breakpoint itself is wide");
+    }
+
+    #[test]
+    fn each_document_is_fitted_once_per_narrow_spell_and_gets_its_own_view_back() {
+        let mut n = Narrow::default();
+        let (mut a, mut b) = (ViewState::default(), ViewState::default());
+        b.zoom = 1.5;
+        b.ruler = false;
+        let (wide_a, wide_b) = (WideView::of(&a), WideView::of(&b));
+        n.update(PHONE);
+        n.begin([(1, &a), (2, &b)].into_iter());
+        assert!(n.show(1, &a), "the shown document is fitted");
+        assert!(!n.show(1, &a), "once");
+        a.zoom = 0.4;
+        a.ruler = false;
+        // A document opened now copies the shown one's (narrow) view: it isn't fitted, and the
+        // wide view it gets back is the one it was copied from.
+        let mut c = a.clone();
+        assert!(!n.show(3, &c));
+        assert!(n.show(2, &b), "a parked document is fitted when first shown");
+        b.zoom = 0.7;
+        n.restore(2, &mut b);
+        n.restore(1, &mut a);
+        n.restore(3, &mut c);
+        assert_eq!((WideView::of(&a), WideView::of(&b), WideView::of(&c)), (wide_a.clone(), wide_b, wide_a));
+        let before = WideView::of(&a);
+        n.restore(1, &mut a);
+        assert_eq!(WideView::of(&a), before, "a second restore changes nothing");
     }
 
     #[test]
