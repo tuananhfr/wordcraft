@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- HTML paste preserves allow-listed Word, Google Docs and LibreOffice stylesheet classes, paragraph indents and spacing, real lists, cell borders/shading/alignment and column widths, and run fonts; bounded input, CSS, nesting and cell expansion fall back to inert plain text, with scripts and remote images discarded (both).
+
 This branch (`erpcons`) is the ERPCons Văn phòng fork of [WordCraft](https://github.com/storytold/wordcraft), based on WordCraft by the ArtCraft team, licensed MIT OR Apache-2.0 (see `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE`). Changes from upstream `main` (Apache-2.0 §4b):
 
 - Removed the ArtCraft logos and marks (`docs/brand/`) and every link to the ArtCraft Discord and getartcraft.com, as the ArtCraft brand terms require for forks: About dialog, title-bar Discord button and its Options switch, Backstage and ribbon Discord entries, the `ui.discord` command, README.

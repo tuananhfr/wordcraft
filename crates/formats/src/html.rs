@@ -4,14 +4,23 @@
 //! HTML's implicit closes for `p`, `li`, `tr`, `td`/`th` and headings. It understands `p`, `div`,
 //! `h1`–`h6`, `b`/`strong`, `i`/`em`, `u`, `s`/`strike`/`del`, `sup`/`sub`, `code`/`kbd`, `a`
 //! (links and `id`/`name` anchors), `br`, `hr`, `ul`/`ol`/`li` (nested), `table`/`tr`/`td`/`th`
-//! (colspan/rowspan), `img` (`data:` URIs, other sources through a caller's [`ImageLoader`]), `blockquote`, `pre`, `font`, and the CSS
+//! (colspan/rowspan), `img` (`data:` URIs, relative paths through a caller's [`ImageLoader`]), `blockquote`, `pre`, `font`, and the CSS
 //! properties `color`, `background-color`, `font-weight`, `font-style`, `font-size`,
 //! `font-family`, `text-decoration`, `vertical-align`, `text-align`, `white-space` and page
-//! breaks. Scripts and styles are skipped; nesting is capped.
+//! breaks. Stylesheets use a bounded CSS allow-list; scripts are skipped and nesting is capped.
 //!
 //! Export writes clean semantic HTML with inline CSS and pictures as `data:` URIs.
 
 use std::sync::Arc;
+
+#[path = "html_css.rs"]
+mod css;
+#[path = "html_tables.rs"]
+mod tables;
+#[path = "html_safety.rs"]
+mod safety;
+
+use css::{apply_style, css_len_pt};
 
 use wordcraft_doc::{Align, Document};
 
@@ -19,8 +28,8 @@ use crate::model::{
     self, Cell, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, base64_encode, data_uri, make_img, mime_of, parse_color,
 };
 
-/// Open elements kept at most (deeper start tags are ignored).
-const MAX_STACK: usize = 256;
+/// Deeper content falls back to inert text to avoid unbounded nesting.
+const MAX_STACK: usize = 64;
 
 // ---------------------------------------------------------------------------------------------
 // Entities and decoding
@@ -184,6 +193,7 @@ pub fn decode(b: &[u8]) -> String {
 #[derive(Debug)]
 enum Tok {
     Text(String),
+    ListMarker(String),
     Start { name: String, attrs: Vec<(String, String)>, self_close: bool },
     End(String),
 }
@@ -223,6 +233,16 @@ impl Lexer<'_> {
             return Some(Tok::Text(t));
         }
         let b = rest.as_bytes();
+        let marker_open = "<![if !supportLists]>";
+        let comment_marker = "<!--[if !supportLists]>";
+        if rest.get(..marker_open.len()).is_some_and(|s| s.eq_ignore_ascii_case(marker_open)) ||
+            rest.get(..comment_marker.len()).is_some_and(|s| s.eq_ignore_ascii_case(comment_marker)) {
+            let commented = rest.starts_with("<!--");
+            self.pos += if commented { comment_marker.len() } else { marker_open.len() };
+            let start = self.pos;
+            let end = self.skip_past(if commented { "<![endif]-->" } else { "<![endif]>" });
+            return Some(Tok::ListMarker(self.s.get(start..end).unwrap_or("").to_string()));
+        }
         if rest.starts_with("<!--") {
             self.pos += 4;
             self.skip_past("-->");
@@ -341,6 +361,8 @@ struct El {
     align: Option<Align>,
     preserve: bool,
     page_break: bool,
+    spacing: model::Spacing,
+    list: Option<ListInfo>,
     /// Li: a paragraph of this item was already emitted.
     used: bool,
 }
@@ -350,23 +372,8 @@ struct TableB {
     row: Option<Vec<Cell>>,
     /// The table or one of its cells asks for borders.
     bordered: bool,
-}
-
-/// Whether an element's `border` attribute or `style` declares a visible border.
-fn declares_border(attrs: &[(String, String)], is_table: bool) -> bool {
-    if is_table && attr(attrs, "border").is_some_and(|b| b.trim().parse::<u32>().map(|n| n > 0).unwrap_or(b.trim().is_empty())) {
-        return true;
-    }
-    let Some(style) = attr(attrs, "style") else { return false };
-    style.split(';').any(|decl| {
-        let Some((name, value)) = decl.split_once(':') else { return false };
-        let name = name.trim().to_ascii_lowercase();
-        if !matches!(name.as_str(), "border" | "border-top" | "border-right" | "border-bottom" | "border-left") {
-            return false;
-        }
-        let value = value.trim().to_ascii_lowercase();
-        !value.is_empty() && !value.split_whitespace().any(|tok| matches!(tok, "none" | "hidden" | "0" | "0px" | "0pt"))
-    })
+    widths: Vec<Option<f32>>,
+    col: usize,
 }
 
 /// Loads the bytes of an image an `img` names by a source other than a `data:` URI (a path
@@ -389,6 +396,9 @@ struct Builder<'r> {
     pre_tail: bool,
     meta: Meta,
     title: Option<String>,
+    sheet: css::Sheet,
+    cell_count: usize,
+    failed: bool,
 }
 
 fn is_void(n: &str) -> bool {
@@ -469,108 +479,12 @@ fn closes_p(n: &str) -> bool {
     )
 }
 
-fn css_len_pt(v: &str) -> Option<f32> {
-    let v = v.trim().to_ascii_lowercase();
-    let num = |s: &str| s.trim().parse::<f32>().ok().filter(|x| x.is_finite());
-    if let Some(x) = v.strip_suffix("pt") {
-        num(x)
-    } else if let Some(x) = v.strip_suffix("px") {
-        num(x).map(|p| p * 0.75)
-    } else if let Some(x) = v.strip_suffix("rem").or_else(|| v.strip_suffix("em")) {
-        num(x).map(|p| p * 12.0)
-    } else if let Some(x) = v.strip_suffix("in") {
-        num(x).map(|p| p * 72.0)
-    } else if let Some(x) = v.strip_suffix("cm") {
-        num(x).map(|p| p * 72.0 / 2.54)
-    } else if let Some(x) = v.strip_suffix("mm") {
-        num(x).map(|p| p * 72.0 / 25.4)
-    } else if let Some(x) = v.strip_suffix('%') {
-        num(x).map(|p| p * 0.12)
-    } else {
-        match v.as_str() {
-            "xx-small" => Some(7.0),
-            "x-small" => Some(7.5),
-            "small" => Some(10.0),
-            "medium" => Some(12.0),
-            "large" => Some(13.5),
-            "x-large" => Some(18.0),
-            "xx-large" => Some(24.0),
-            _ => num(&v).map(|p| p * 0.75),
-        }
-    }
-}
-
-/// Apply a `style` attribute to formatting / block properties.
-fn apply_style(css: &str, f: &mut Fmt, align: &mut Option<Align>, preserve: &mut bool, page_break: &mut bool) {
-    for decl in css.split(';').take(64) {
-        let Some((k, v)) = decl.split_once(':') else { continue };
-        let k = k.trim().to_ascii_lowercase();
-        let v = v.trim().trim_end_matches("!important").trim();
-        let lv = v.to_ascii_lowercase();
-        match k.as_str() {
-            "font-weight" => f.bold = lv.starts_with("bold") || lv.parse::<u32>().is_ok_and(|w| w >= 600),
-            "font-style" => f.italic = lv == "italic" || lv == "oblique",
-            "text-decoration" | "text-decoration-line" => {
-                if lv.contains("none") {
-                    f.underline = false;
-                    f.strike = false;
-                }
-                if lv.contains("underline") {
-                    f.underline = true;
-                }
-                if lv.contains("line-through") {
-                    f.strike = true;
-                }
-            }
-            "color" => {
-                if let Some(c) = parse_color(v) {
-                    f.color = Some(c);
-                }
-            }
-            "background-color" | "background" => {
-                if let Some(c) = v.split_whitespace().find_map(parse_color) {
-                    f.background = Some(c);
-                }
-            }
-            "font-size" => {
-                if let Some(p) = css_len_pt(v).filter(|p| *p >= 1.0 && *p <= 1638.0) {
-                    f.size = Some(p);
-                }
-            }
-            "font-family" => {
-                let fam = v.split(',').next().unwrap_or("").trim().trim_matches(['"', '\'']).to_string();
-                if model::is_mono(&fam) || fam.eq_ignore_ascii_case("monospace") {
-                    f.code = true;
-                } else if !fam.is_empty() && !matches!(fam.to_ascii_lowercase().as_str(), "serif" | "sans-serif" | "inherit" | "initial") {
-                    f.font = Some(fam);
-                }
-            }
-            "vertical-align" => {
-                f.sup = lv == "super";
-                f.sub = lv == "sub";
-            }
-            "text-align" => {
-                *align = match lv.as_str() {
-                    "center" => Some(Align::Center),
-                    "right" | "end" => Some(Align::Right),
-                    "justify" => Some(Align::Justify),
-                    "left" | "start" => Some(Align::Left),
-                    _ => *align,
-                }
-            }
-            "white-space" => *preserve = lv.starts_with("pre"),
-            "page-break-before" | "break-before" => *page_break = lv == "always" || lv == "page",
-            _ => {}
-        }
-    }
-}
-
 fn attr<'a>(attrs: &'a [(String, String)], name: &str) -> Option<&'a str> {
     attrs.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
 }
 
 impl<'r> Builder<'r> {
-    fn new(images: ImageLoader<'r>) -> Builder<'r> {
+    fn new(images: ImageLoader<'r>, sheet: css::Sheet) -> Builder<'r> {
         Builder {
             images,
             containers: vec![Vec::new()],
@@ -583,11 +497,24 @@ impl<'r> Builder<'r> {
             pre_tail: false,
             meta: Meta::default(),
             title: None,
+            sheet,
+            cell_count: 0,
+            failed: false,
         }
     }
 
     fn fmt(&self) -> Fmt {
         self.stack.last().map(|e| e.fmt.clone()).unwrap_or_default()
+    }
+
+    fn list_marker(&mut self, html: &str) {
+        let text = safety::plain(html).blocks.first().and_then(|b| match b { FBlock::Para(p) => Some(p.text()), _ => None }).unwrap_or_default();
+        let text = text.trim();
+        let ordered = text.chars().next().is_some_and(char::is_alphanumeric) && text.contains(['.', ')']);
+        if let Some(el) = self.stack.iter_mut().rev().find(|e| e.list.is_some()) {
+            if let Some(list) = &mut el.list { list.ordered = ordered; }
+            if let Some(para) = &mut self.para { para.list = el.list; }
+        }
     }
 
     fn preserve(&self) -> bool {
@@ -623,9 +550,24 @@ impl<'r> Builder<'r> {
                 if p.align.is_none() && e.align.is_some() && e.kind != ElKind::Inline {
                     p.align = e.align;
                 }
+                if e.kind != ElKind::Inline {
+                    let sp = e.spacing;
+                    p.spacing.before = p.spacing.before.or(sp.before);
+                    p.spacing.after = p.spacing.after.or(sp.after);
+                    p.spacing.left = p.spacing.left.or(sp.left);
+                    p.spacing.right = p.spacing.right.or(sp.right);
+                    p.spacing.first = p.spacing.first.or(sp.first);
+                    p.spacing.line = p.spacing.line.or(sp.line);
+                    p.list = p.list.or(e.list);
+                }
             }
             if let (Some((o, _)), Some(li)) = (list_level, li_at) {
                 p.list = Some(ListInfo { ordered: o, level: lists.saturating_sub(1).min(8) as u8 });
+                if let Some(list) = &mut p.list {
+                    let margin = p.spacing.left.unwrap_or(0.0);
+                    let margin_level = (margin / 36.0).round().clamp(1.0, 9.0) as u8 - 1;
+                    list.level = list.level.max(margin_level);
+                }
                 self.para_cont = self.stack.get(li).is_some_and(|e| e.used);
                 if let Some(e) = self.stack.get_mut(li) {
                     e.used = true;
@@ -808,10 +750,15 @@ impl<'r> Builder<'r> {
                     if let Some(r) = t.row.take() {
                         t.rows.push(r);
                     }
-                    let borderless = !t.bordered;
-                    let mut ft = FTable { rows: t.rows.into_iter().filter(|r| !r.is_empty()).collect(), widths: Vec::new(), borderless };
+                    let extra: usize = t.rows.iter().enumerate().map(|(r, row)| row.iter().map(|c|
+                        (c.rowspan.saturating_sub(1) as usize).min(t.rows.len().saturating_sub(r + 1))).sum::<usize>()).sum();
+                    self.cell_count = self.cell_count.saturating_add(extra);
+                    if self.cell_count > safety::MAX_CELLS {
+                        self.failed = true;
+                        return;
+                    }
+                    let ft = tables::finish(t);
                     if !ft.rows.is_empty() {
-                        ft.insert_covered();
                         self.container().push(FBlock::Table(ft));
                     }
                 }
@@ -912,8 +859,18 @@ impl<'r> Builder<'r> {
         {
             self.start_para().inlines.push(Inline::Anchor(id.to_string()));
         }
+        let style = self.sheet.style(name, attrs);
         // Element-specific work.
         match name {
+            "col" => {
+                if let Some(table) = self.tables.last_mut() {
+                    let span = attr(attrs, "span").and_then(|s| s.parse::<usize>().ok()).unwrap_or(1).clamp(1, 63);
+                    let column = table.col;
+                    tables::set_width(table, column, span, tables::width(&style, attrs).map(|w| w * span as f32), true);
+                    table.col = table.col.saturating_add(span).min(63);
+                }
+                return;
+            }
             "br" => {
                 if self.stack.iter().any(|e| e.kind == ElKind::Pre) {
                     self.start_para();
@@ -946,7 +903,7 @@ impl<'r> Builder<'r> {
                     }
                 }
                 let img = attr(attrs, "src")
-                    .and_then(|src| if src.trim_start().starts_with("data:") { data_uri(src).map(Arc::new) } else { (self.images)(src.trim()) })
+                    .and_then(|src| if src.trim_start().starts_with("data:") { data_uri(src).map(Arc::new) } else if safety::local_image(src) { (self.images)(src.trim()) } else { None })
                     .and_then(|d| make_img(d, w, h, &alt));
                 let f = self.fmt();
                 match img {
@@ -962,6 +919,7 @@ impl<'r> Builder<'r> {
             return;
         }
         if self.stack.len() >= MAX_STACK {
+            self.failed = true;
             return;
         }
         let mut kind = block_kind(name).unwrap_or(ElKind::Inline);
@@ -1022,14 +980,17 @@ impl<'r> Builder<'r> {
         if name == "center" {
             align = Some(Align::Center);
         }
-        if let Some(st) = attr(attrs, "style") {
-            apply_style(st, &mut fmt, &mut align, &mut preserve, &mut page_break);
-        }
+        apply_style(&style, &mut fmt, &mut align, &mut preserve, &mut page_break);
+        let spacing = css::spacing(&style, fmt.size.unwrap_or(12.0));
+        let list = css::list(&style);
         if kind == ElKind::Pre {
             preserve = true;
         }
         match kind {
-            ElKind::Table => self.tables.push(TableB { rows: Vec::new(), row: None, bordered: declares_border(attrs, true) }),
+            ElKind::Table => self.tables.push(TableB {
+                rows: Vec::new(), row: None, bordered: attr(attrs, "border").is_some_and(|b| b.trim().parse::<u32>().is_ok_and(|n| n > 0)) || tables::borders(&style).is_some_and(|b| b.any_visible()),
+                widths: Vec::new(), col: 0,
+            }),
             ElKind::Tr => {
                 if let Some(t) = self.tables.last_mut()
                     && let Some(r) = t.row.take()
@@ -1038,9 +999,14 @@ impl<'r> Builder<'r> {
                 }
             }
             ElKind::Cell => {
+                self.cell_count = self.cell_count.saturating_add(1);
+                if self.cell_count > safety::MAX_CELLS {
+                    self.failed = true;
+                    return;
+                }
                 let tb = self.find_open(|e| e.kind == ElKind::Tr, |e| e.kind == ElKind::Table).is_none();
                 if let Some(t) = self.tables.last_mut()
-                    && declares_border(attrs, false)
+                    && tables::borders(&style).is_some_and(|b| b.any_visible())
                 {
                     t.bordered = true;
                 }
@@ -1053,21 +1019,24 @@ impl<'r> Builder<'r> {
                 }
                 let num = |k: &str| attr(attrs, k).and_then(|v| v.trim().parse::<u32>().ok()).map(|v| v.clamp(1, 63));
                 let shading = attr(attrs, "bgcolor").and_then(parse_color).or(fmt.background);
+                let colspan = num("colspan").unwrap_or(1);
                 self.cells.push(Cell {
                     blocks: Vec::new(),
-                    colspan: num("colspan").unwrap_or(1),
+                    colspan,
                     rowspan: attr(attrs, "rowspan").and_then(|v| v.trim().parse::<u32>().ok()).map(|v| v.clamp(1, 1000)).unwrap_or(1),
                     covered: false,
                     header: name == "th",
                     shading,
-                    borders: None,
+                    borders: tables::borders(&style),
+                    valign: tables::valign(&style, attrs),
+                    width: tables::width(&style, attrs),
                 });
                 fmt.background = None;
                 self.containers.push(Vec::new());
             }
             _ => {}
         }
-        self.stack.push(El { name: name.to_string(), kind, fmt, align, preserve, page_break, used: false });
+        self.stack.push(El { name: name.to_string(), kind, fmt, align, preserve, page_break, spacing, list, used: false });
     }
 
     fn end(&mut self, name: &str) {
@@ -1111,10 +1080,16 @@ pub fn parse(s: &str) -> Flow {
     parse_with(s, &|_| None)
 }
 
-/// [`parse`], loading pictures that aren't `data:` URIs through `images`.
+/// [`parse`], loading relative picture paths through `images`; over-limit HTML becomes plain text.
 pub fn parse_with(s: &str, images: ImageLoader) -> Flow {
+    parse_bounded(s, images).unwrap_or_else(|()| safety::plain(s))
+}
+
+fn parse_bounded(s: &str, images: ImageLoader) -> Result<Flow, ()> {
+    if s.len() > safety::MAX_INPUT { return Err(()); }
+    let sheet = safety::sheet(s)?;
     let mut lx = Lexer { s, pos: 0 };
-    let mut b = Builder::new(images);
+    let mut b = Builder::new(images, sheet);
     let mut guard = 0usize;
     while let Some(t) = lx.next() {
         guard += 1;
@@ -1123,6 +1098,7 @@ pub fn parse_with(s: &str, images: ImageLoader) -> Flow {
         }
         match t {
             Tok::Text(t) => b.text(&t),
+            Tok::ListMarker(marker) => b.list_marker(&marker),
             Tok::Start { name, attrs, self_close } => {
                 b.close_head_for_start(&name);
                 if crate::mathml::local(&name) == "math" && !self_close {
@@ -1134,17 +1110,26 @@ pub fn parse_with(s: &str, images: ImageLoader) -> Flow {
                     }
                     continue;
                 }
-                if matches!(name.as_str(), "script" | "style" | "noscript" | "template" | "textarea") && !self_close {
+                if matches!(name.as_str(), "script" | "style" | "noscript" | "template" | "textarea" | "o:p") && !self_close {
                     lx.skip_past(&format!("</{name}"));
                     lx.skip_past(">");
+                    continue;
+                }
+                if !self_close && name == "span" && b.sheet.style(&name, &attrs).split(';').any(|d|
+                    d.split_once(':').is_some_and(|(k, v)| k == "mso-list" && v.trim().eq_ignore_ascii_case("ignore"))) {
+                    let marker = safety::skip_element(&mut lx, &name);
+                    b.list_marker(&marker);
                     continue;
                 }
                 b.start(&name, &attrs, self_close);
             }
             Tok::End(name) => b.end(&name),
         }
+        if b.failed { return Err(()); }
     }
-    b.finish()
+    b.pop_to(0);
+    if b.failed { return Err(()); }
+    Ok(b.finish())
 }
 
 /// A `<math>` element (#816): its tokens up to the matching end tag, as a tree. Nesting and size
@@ -1169,6 +1154,7 @@ fn read_math(lx: &mut Lexer, name: String, attrs: Vec<(String, String)>) -> crat
             break;
         }
         match t {
+            Tok::ListMarker(_) => {}
             Tok::Text(t) => {
                 if let Some(top) = stack.last_mut()
                     && !t.is_empty()
@@ -1232,7 +1218,7 @@ pub fn import(s: &str) -> Document {
     model::to_doc(&parse(s))
 }
 
-/// [`import`], loading pictures that aren't `data:` URIs through `images`.
+/// [`import`], loading relative picture paths through `images`.
 pub fn import_with(s: &str, images: ImageLoader) -> Document {
     model::to_doc(&parse_with(s, images))
 }
@@ -1567,6 +1553,10 @@ pub fn export_flow(flow: &Flow, lang: &str) -> String {
     out.push_str("</body>\n</html>\n");
     out
 }
+
+#[cfg(test)]
+#[path = "html_import_tests.rs"]
+mod import_tests;
 
 #[cfg(test)]
 mod tests {

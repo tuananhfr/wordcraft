@@ -205,11 +205,14 @@ pub struct Cell {
     pub shading: Option<Rgb>,
     /// The cell's own borders (RTF `\clbrdr…`), drawn whatever the table's style.
     pub borders: Option<wordcraft_doc::props::Borders>,
+    pub valign: wordcraft_doc::props::VAlign,
+    /// Preferred width in points, when the source states one.
+    pub width: Option<f32>,
 }
 
 impl Default for Cell {
     fn default() -> Self {
-        Cell { blocks: Vec::new(), colspan: 1, rowspan: 1, covered: false, header: false, shading: None, borders: None }
+        Cell { blocks: Vec::new(), colspan: 1, rowspan: 1, covered: false, header: false, shading: None, borders: None, valign: Default::default(), width: None }
     }
 }
 
@@ -571,7 +574,7 @@ impl Builder<'_> {
                     VMerge::None
                 };
                 row.cells.push(wordcraft_doc::Cell {
-                    props: CellProps { width: Some(w), span: span as u32, vmerge, shading: c.shading, borders: c.borders, ..Default::default() },
+                    props: CellProps { width: Some(w), span: span as u32, vmerge, shading: c.shading, borders: c.borders, valign: c.valign, ..Default::default() },
                     blocks,
                     controls: Default::default(),
                 });
@@ -873,6 +876,8 @@ fn flow_table(doc: &Document, t: &Table, depth: usize) -> FTable {
                 header,
                 shading: c.props.shading,
                 borders: c.props.borders,
+                valign: c.props.valign,
+                width: c.props.width,
             });
         }
         rows.push(cells);
