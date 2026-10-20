@@ -2483,3 +2483,8 @@ preview	Title	Tiêu đề
 	The browser cannot read the clipboard — use Ctrl+V	Trình duyệt không cho đọc bảng tạm — hãy dùng Ctrl+V
 	Could not write to the clipboard	Không ghi được vào bảng tạm
 	Some clipboard content is too large and was skipped	Một phần nội dung bảng tạm quá lớn nên đã được bỏ qua
+	the clipboard is empty	Bảng tạm đang trống.
+	nothing on the clipboard can be pasted here (it holds {formats})	Không thể dán nội dung bảng tạm vào đây (bảng tạm chứa {formats}).
+	 and {count} more	 và {count} định dạng khác
+	The clipboard content is too large to paste.	Nội dung bảng tạm quá lớn nên không thể dán.
+	The clipboard content cannot be pasted here.	Không thể dán nội dung bảng tạm vào đây.

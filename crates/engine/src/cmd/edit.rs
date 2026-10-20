@@ -61,7 +61,7 @@ pub fn specs() -> Vec<CommandSpec> {
         .pure(),
         CommandSpec::new("edit.cut", "Cut", "Home › Clipboard", cut).key("Mod+X").when(has_sel),
         CommandSpec::new("edit.copy", "Copy", "Home › Clipboard", copy).key("Mod+C").pure(),
-        CommandSpec::new("edit.paste", "Paste", "Home › Clipboard", paste).key("Mod+V").params(r#"{"text"?: string, "html"?: string, "rtf"?: string}"#),
+        CommandSpec::new("edit.paste", "Paste", "Home › Clipboard", paste).key("Mod+V").params(r#"{"text"?: string, "html"?: string, "rtf"?: string, "keepSource"?: bool (default false; preserve conflicting source styles)}"#),
         CommandSpec::new("edit.pasteText", "Paste: Keep Text Only", "Home › Clipboard › Paste", paste_text)
             .params(r#"{"text"?: string}"#)
             .key("Mod+Shift+Alt+V"),
@@ -165,11 +165,10 @@ fn copy(s: &mut Session, _: &Value) -> CmdResult {
     Ok(copy_result(s))
 }
 
-/// What Copy and Cut return: the clipboard's text, and HTML with the equations as MathML when
-/// the copy holds any (#816), for the host to put on the system clipboard too.
+/// Clipboard representations for native and web hosts.
 pub(crate) fn copy_result(s: &mut Session) -> Value {
     s.clipboard_html = match &s.clipboard {
-        Some(f) if f.has_equation() => wordcraft_formats::html::export_fragment(&f.to_document()),
+        Some(f) => super::clipboard_fragment::export(s, f),
         _ => String::new(),
     };
     if s.clipboard_html.is_empty() { json!({"text": s.clipboard_text}) } else { json!({"text": s.clipboard_text, "html": s.clipboard_html}) }
@@ -188,16 +187,13 @@ fn cut(s: &mut Session, v: &Value) -> CmdResult {
 /// Paste keeps the source formatting: our own copy while the system clipboard still holds it,
 /// else another program's HTML or RTF (#687), else the system clipboard's text.
 fn paste(s: &mut Session, v: &Value) -> CmdResult {
-    let frag = super::paste::paste_fragment(s, v)?;
-    super::paste::insert(s, frag)?;
+    super::paste::paste(s, v, false)?;
     sel_result(s)
 }
 
 /// Merge Formatting: the pasted text takes the destination's formatting, keeping its emphasis.
 fn paste_merge(s: &mut Session, v: &Value) -> CmdResult {
-    let mut frag = super::paste::paste_fragment(s, v)?;
-    super::paste::merge_formatting(s, &mut frag);
-    super::paste::insert(s, frag)?;
+    super::paste::paste(s, v, true)?;
     sel_result(s)
 }
 

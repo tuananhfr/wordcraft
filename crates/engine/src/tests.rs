@@ -856,10 +856,10 @@ fn copying_an_equation_puts_mathml_on_the_clipboard() {
     run(&mut s, "edit.paste", json!({"text": clip, "html": html}));
     assert_eq!(equations(&s), vec!["y=2x_s".to_string(), "y=2x_s".to_string()]);
 
-    // A copy without an equation carries no HTML.
+    // Plain selections also carry HTML and the internal marker.
     run(&mut s, "select.range", json!({"anchor": {"block": 0, "off": 0}, "focus": {"block": 0, "off": 5}}));
     let r = run(&mut s, "edit.copy", json!({}));
-    assert!(r.get("html").is_none() && s.clipboard_html.is_empty(), "{r}");
+    assert!(r["html"].as_str().is_some_and(|html| html.contains("Speed") && html.contains("erpcons-clip")), "{r}");
 }
 
 #[test]

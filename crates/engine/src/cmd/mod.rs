@@ -5,6 +5,8 @@ pub mod canvas;
 pub mod caret;
 pub mod chart;
 pub mod citations;
+mod clipboard_adopt;
+mod clipboard_fragment;
 pub mod column;
 pub mod connectors;
 pub mod controls;

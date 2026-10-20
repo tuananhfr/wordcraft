@@ -7,7 +7,7 @@
 //! comes from other programs: sizes are capped before it reaches the engine.
 
 use serde_json::Value;
-use wordcraft_engine::cmd::paste::{MAX_PASTE_BYTES, MAX_PICTURE_BYTES};
+use wordcraft_engine::cmd::paste::{CLIPBOARD_TOO_LARGE, CLIPBOARD_UNUSABLE, MAX_PASTE_BYTES, MAX_PICTURE_BYTES};
 
 use crate::{WordApp, paste_picture};
 
@@ -113,15 +113,15 @@ pub(crate) fn nothing_to_paste(app: &WordApp) -> String {
         }
     }
     if shown_names.is_empty() {
-        return "the clipboard is empty".into();
+        return tl!("the clipboard is empty").into();
     }
     let more = shown_names.len().saturating_sub(MAX_NAMES);
     shown_names.truncate(MAX_NAMES);
     let mut list = shown_names.join(", ");
     if more > 0 {
-        list.push_str(&format!(" and {more} more"));
+        list.push_str(&crate::i18n::fmt(tl!(" and {count} more"), &[("count", &more.to_string())]));
     }
-    format!("nothing on the clipboard can be pasted here (it holds {list})")
+    crate::i18n::fmt(tl!("nothing on the clipboard can be pasted here (it holds {formats})"), &[("formats", &list)])
 }
 
 /// A paste that found the clipboard empty, explained (#833): the status bar says what is there.
@@ -129,6 +129,11 @@ pub(crate) fn explain(app: &mut WordApp, id: &str, r: Result<Value, String>) -> 
     match r {
         Err(e) if is_paste(id) && e == "the clipboard is empty" => {
             let e = nothing_to_paste(app);
+            app.status(e.clone());
+            Err(e)
+        }
+        Err(e) if is_paste(id) && matches!(e.as_str(), CLIPBOARD_TOO_LARGE | CLIPBOARD_UNUSABLE) => {
+            let e = crate::i18n::t(&e).to_string();
             app.status(e.clone());
             Err(e)
         }
@@ -299,6 +304,22 @@ mod tests {
     }
 
     #[test]
+    fn paste_failures_use_the_vietnamese_catalog() {
+        let previous = crate::i18n::current();
+        crate::i18n::set_current(crate::i18n::Lang::from_code("vi").unwrap());
+        let mut a = app(Services::default());
+        assert_eq!(a.run("edit.paste", json!({})).unwrap_err(), "Bảng tạm đang trống.");
+        for (key, expected) in
+            [(CLIPBOARD_TOO_LARGE, "Nội dung bảng tạm quá lớn nên không thể dán."), (CLIPBOARD_UNUSABLE, "Không thể dán nội dung bảng tạm vào đây.")]
+        {
+            assert_eq!(explain(&mut a, "edit.paste", Err(key.into())).unwrap_err(), expected);
+        }
+        let a = app(Services { clipboard_formats: Some(Box::new(|| vec!["image/x-unknown".into()])), ..Default::default() });
+        assert_eq!(nothing_to_paste(&a), "Không thể dán nội dung bảng tạm vào đây (bảng tạm chứa image/x-unknown).");
+        crate::i18n::set_current(previous);
+    }
+
+    #[test]
     fn copying_an_equation_puts_its_html_on_the_system_clipboard() {
         // #816: the host gets HTML with the equation as MathML beside the text.
         let got = std::rc::Rc::new(std::cell::RefCell::new(Vec::<(String, String)>::new()));
@@ -320,10 +341,10 @@ mod tests {
         let got_now = got.borrow().clone();
         assert_eq!(got_now.len(), 1);
         assert!(got_now[0].0.contains("<math") && got_now[0].1.contains("y=2x_s"), "{got_now:?}");
-        // Plain text needs no HTML.
+        // Plain selections also reach the rich clipboard host.
         a.run("select.range", json!({"anchor": {"block": 0, "off": 0}, "focus": {"block": 0, "off": 5}})).unwrap();
         let r = a.run("edit.copy", json!({})).unwrap();
         put_result(&a, &ctx, &r);
-        assert_eq!(got.borrow().len(), 1);
+        assert_eq!(got.borrow().len(), 2);
     }
 }

@@ -7,7 +7,6 @@
 //! HTML source can also be pasted as that format. Paste keeps the source formatting of another
 //! program's HTML or RTF; Merge Formatting keeps only its emphasis (#687).
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -21,6 +20,8 @@ use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 pub const MAX_PASTE_BYTES: usize = 16 << 20;
 /// Largest clipboard picture Paste Special accepts (base64), in bytes.
 pub const MAX_PICTURE_BYTES: usize = 96 << 20;
+pub const CLIPBOARD_TOO_LARGE: &str = "The clipboard content is too large to paste.";
+pub const CLIPBOARD_UNUSABLE: &str = "The clipboard content cannot be pasted here.";
 /// Nesting depth we follow when adjusting pasted tables.
 const MAX_DEPTH: usize = 64;
 
@@ -37,7 +38,7 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("edit.pasteSpecial", "Paste Special", "Home › Clipboard › Paste", paste_special)
             .key("Mod+Alt+V")
-            .params(r#"{"as"?: "formatted"|"rtf"|"html"|"picture"|"text", "text"?: string, "html"?: string, "rtf"?: string, "picture"?: base64}"#),
+            .params(r#"{"as"?: "formatted"|"rtf"|"html"|"picture"|"text", "text"?: string, "html"?: string, "rtf"?: string, "picture"?: base64, "keepSource"?: bool}"#),
     ]
 }
 
@@ -63,6 +64,12 @@ fn source(s: &Session, v: &Value, fmt: &str) -> Option<String> {
     let non_empty = |t: String| if t.is_empty() { None } else { Some(t) };
     match fmt {
         "formatted" => {
+            if let Some(html) = p::str(v, "html") {
+                return super::clipboard_fragment::decode(html).map(|_| html.to_string());
+            }
+            if p::str(v, "rtf").is_some() {
+                return None;
+            }
             let f = s.clipboard.as_ref()?;
             // System clipboard text that isn't our own copy means someone else copied since.
             match p::str(v, "text") {
@@ -90,11 +97,11 @@ fn formats_json(ids: &[&str]) -> Value {
 fn paste_special(s: &mut Session, v: &Value) -> CmdResult {
     for k in ["text", "html", "rtf"] {
         if p::str(v, k).is_some_and(|t| t.len() > MAX_PASTE_BYTES) {
-            return Err(CmdError::Params(format!("`{k}` is larger than {} MB", MAX_PASTE_BYTES >> 20)));
+            return Err(CmdError::Failed(CLIPBOARD_TOO_LARGE.into()));
         }
     }
     if p::str(v, "picture").is_some_and(|t| t.len() > MAX_PICTURE_BYTES) {
-        return Err(CmdError::Params(format!("`picture` is larger than {} MB", MAX_PICTURE_BYTES >> 20)));
+        return Err(CmdError::Failed(CLIPBOARD_TOO_LARGE.into()));
     }
     let ids = available(s, v);
     let Some(fmt) = p::str(v, "as") else {
@@ -117,12 +124,9 @@ fn paste_special(s: &mut Session, v: &Value) -> CmdResult {
         other => return Err(CmdError::Params(format!("unknown format `{other}` (formatted, rtf, html, picture or text)"))),
     };
     let Some(src) = source(s, v, fmt) else {
-        return Err(CmdError::Failed(if ids.is_empty() {
-            "the clipboard is empty".into()
-        } else {
-            format!("the clipboard has no {fmt} content (available: {})", ids.join(", "))
-        }));
+        return Err(CmdError::Failed(if ids.is_empty() { "the clipboard is empty".into() } else { CLIPBOARD_UNUSABLE.into() }));
     };
+    let preserve = (fmt == "html" && foreign_marker(s, &src)) || (fmt == "formatted" && foreign_source(s, v));
     let frag = match fmt {
         "text" => {
             super::paste_text(s, &src.replace("\r\n", "\r").replace('\n', "\r"))?;
@@ -135,11 +139,11 @@ fn paste_special(s: &mut Session, v: &Value) -> CmdResult {
             r["pastedAs"] = json!(fmt);
             return Ok(r);
         }
-        "formatted" => s.clipboard.clone().ok_or_else(|| CmdError::Failed("the clipboard is empty".into()))?,
-        "html" => adopt(s, wordcraft_formats::html::import(html_fragment(&src))),
-        _ => adopt(s, wordcraft_formats::rtf::import(src.as_bytes()).map_err(|e| CmdError::Failed(format!("bad RTF: {e}")))?),
+        "formatted" => paste_fragment(s, v)?,
+        "html" => from_html(s, &src, p::bool(v, "keepSource").unwrap_or(false))?,
+        _ => adopt(s, wordcraft_formats::rtf::import(src.as_bytes()).map_err(|_| CmdError::Failed(CLIPBOARD_UNUSABLE.into()))?)?,
     };
-    insert(s, frag)?;
+    insert_prepared(s, frag, preserve)?;
     let mut r = sel_result(s)?;
     r["pastedAs"] = json!(fmt);
     Ok(r)
@@ -178,6 +182,11 @@ fn has_content(d: &Document) -> bool {
 /// [`MAX_PASTE_BYTES`], or it holds nothing to paste (the caller pastes the text then).
 pub fn rich_fragment(s: &mut Session, v: &Value) -> Option<Fragment> {
     let fits = |k: &str| p::str(v, k).filter(|t| !t.trim().is_empty() && t.len() <= MAX_PASTE_BYTES);
+    if let Some(html) = fits("html")
+        && super::clipboard_fragment::decode(html).is_some()
+    {
+        return from_html(s, html, p::bool(v, "keepSource").unwrap_or(false)).ok();
+    }
     let doc = fits("html").map(|html| wordcraft_formats::html::import(html_fragment(html)));
     let doc = match doc.filter(has_content) {
         Some(d) => d,
@@ -186,26 +195,106 @@ pub fn rich_fragment(s: &mut Session, v: &Value) -> Option<Fragment> {
             wordcraft_formats::rtf::import(rtf.as_bytes()).ok().filter(has_content)?
         }
     };
-    Some(adopt(s, doc))
+    adopt(s, doc).ok()
+}
+
+fn from_html(s: &mut Session, html: &str, keep_source: bool) -> Result<Fragment, CmdError> {
+    if let Some(payload) = super::clipboard_fragment::decode(html) {
+        if payload.is_local(s) {
+            // The cached fragment also retains native-only data omitted by serde.
+            if super::clipboard_fragment::is_cached(s, html)
+                && let Some(f) = &s.clipboard
+            {
+                return Ok(f.clone());
+            }
+            return Ok(payload.fragment);
+        }
+        return super::clipboard_adopt::adopt(s, payload.into_document(), keep_source, false);
+    }
+    adopt(s, wordcraft_formats::html::import(html_fragment(html)))
+}
+
+fn foreign_marker(s: &Session, html: &str) -> bool {
+    super::clipboard_fragment::decode(html).is_some_and(|p| !p.is_local(s))
+}
+
+fn foreign_source(s: &Session, v: &Value) -> bool {
+    if let Some(html) = p::str(v, "html") {
+        return foreign_marker(s, html);
+    }
+    if p::str(v, "rtf").is_some() {
+        return false;
+    }
+    let Some(f) = &s.clipboard else { return false };
+    if p::str(v, "text").is_some_and(|t| f.clipboard_text() != t.replace("\r\n", "\n")) {
+        return false;
+    }
+    super::clipboard_fragment::decode(&s.clipboard_html).is_some_and(|payload| payload.fragment == *f && !payload.is_local(s))
+}
+
+pub(crate) fn paste(s: &mut Session, v: &Value, merge: bool) -> Result<(), CmdError> {
+    let preserve = !merge && foreign_source(s, v);
+    let mut frag = paste_fragment(s, v)?;
+    if merge {
+        merge_formatting(s, &mut frag);
+    }
+    insert_prepared(s, frag, preserve)
 }
 
 /// What Paste inserts: WordCraft's own copy while the system clipboard still holds it, else
 /// another program's formatted copy (HTML, RTF), else the system clipboard's text.
 pub fn paste_fragment(s: &mut Session, v: &Value) -> Result<Fragment, CmdError> {
+    if let Some(html) = p::str(v, "html")
+        && super::clipboard_fragment::decode(html).is_some()
+    {
+        return from_html(s, html, p::bool(v, "keepSource").unwrap_or(false));
+    }
     let text = p::str(v, "text").map(|t| t.replace("\r\n", "\n"));
     if let Some(f) = &s.clipboard
+        && p::str(v, "html").is_none()
+        && p::str(v, "rtf").is_none()
         && text.as_ref().is_none_or(|t| f.clipboard_text() == *t)
-        && (text.is_some() || (p::str(v, "html").is_none() && p::str(v, "rtf").is_none()))
     {
+        if let Some(payload) = super::clipboard_fragment::decode(&s.clipboard_html)
+            && payload.fragment == *f
+            && !payload.is_local(s)
+        {
+            return super::clipboard_adopt::adopt(s, payload.into_document(), false, false);
+        }
         return Ok(f.clone());
     }
     if let Some(f) = rich_fragment(s, v) {
         return Ok(f);
     }
     match text {
+        Some(t) if t.len() > MAX_PASTE_BYTES => Err(CmdError::Failed(CLIPBOARD_TOO_LARGE.into())),
         Some(t) if !t.is_empty() => Ok(Fragment::from_text(&t)),
+        _ if ["html", "rtf"].iter().any(|k| p::str(v, k).is_some_and(|t| t.len() > MAX_PASTE_BYTES)) => {
+            Err(CmdError::Failed(CLIPBOARD_TOO_LARGE.into()))
+        }
+        _ if ["html", "rtf"].iter().any(|k| p::str(v, k).is_some_and(|t| !t.trim().is_empty())) => Err(CmdError::Failed(CLIPBOARD_UNUSABLE.into())),
         _ => Err(CmdError::Failed("the clipboard is empty".into())),
     }
+}
+
+fn insert_prepared(s: &mut Session, frag: Fragment, preserve: bool) -> Result<(), CmdError> {
+    let (a, b) = s.sel.ordered();
+    let props = if preserve && frag.blocks.len() == 1 {
+        match (frag.blocks.first(), s.doc.para_at(&a)) {
+            (Some(Block::Para(src)), Some(dst)) if a.path == b.path && b.off.saturating_sub(a.off) == dst.len() => Some(src.props.clone()),
+            _ => None,
+        }
+    } else {
+        None
+    };
+    insert(s, frag)?;
+    // A foreign whole paragraph in an empty target must retain its list and paragraph style.
+    if let Some(props) = props {
+        let target = s.doc.para_mut(a.story, &a.path)?;
+        target.props = props;
+        target.touch();
+    }
+    Ok(())
 }
 
 /// Merge Formatting (#687): the pasted text takes the formatting where it lands — the paragraph's
@@ -304,57 +393,7 @@ pub(crate) fn each_para(b: &mut Block, depth: usize, f: &mut dyn FnMut(&mut Para
     }
 }
 
-/// Turn an imported document into a fragment of the session's document: bring over the media,
-/// lists and styles it refers to (renumbered so they can't collide with ours).
-fn adopt(s: &mut Session, src: Document) -> Fragment {
-    let mut media = BTreeMap::new();
-    for (key, data) in &src.media {
-        let ext = key.rsplit_once('.').map(|(_, e)| e).unwrap_or("png");
-        media.insert(key.clone(), s.doc.add_media(data.to_vec(), ext));
-    }
-    let next_abs = s.doc.numbering.abstracts.iter().map(|a| a.id.saturating_add(1)).max().unwrap_or(0);
-    let mut abs_map = BTreeMap::new();
-    for (i, a) in src.numbering.abstracts.iter().enumerate() {
-        let id = next_abs.saturating_add(i as u32);
-        abs_map.insert(a.id, id);
-        s.doc.numbering.abstracts.push(wordcraft_doc::numbering::AbstractNum { id, ..a.clone() });
-    }
-    let next_num = s.doc.numbering.nums.iter().map(|n| n.id.saturating_add(1)).max().unwrap_or(1).max(1);
-    let mut num_map = BTreeMap::new();
-    for (i, n) in src.numbering.nums.iter().enumerate() {
-        let id = next_num.saturating_add(i as u32);
-        num_map.insert(n.id, id);
-        let abstract_id = abs_map.get(&n.abstract_id).copied().unwrap_or(n.abstract_id);
-        s.doc.numbering.nums.push(wordcraft_doc::numbering::Num { id, abstract_id, ..n.clone() });
-    }
-    for st in &src.styles.styles {
-        if s.doc.styles.get(&st.id).is_none() {
-            s.doc.styles.upsert(st.clone());
-        }
-    }
-    let mut blocks: Vec<Block> = src.body.iter().map(|b| (**b).clone()).collect();
-    // Pasted pictures fit our text width, like Insert › Pictures (layout keeps their size).
-    let max_w = crate::io::text_width(&s.doc);
-    for b in &mut blocks {
-        crate::io::fit_block_pictures(b, max_w);
-    }
-    for b in &mut blocks {
-        each_para(b, 0, &mut |p| {
-            if let Some(n) = p.props.numbering.as_mut()
-                && n.num != 0
-            {
-                n.num = num_map.get(&n.num).copied().unwrap_or(0);
-            }
-            for o in &mut p.objects {
-                if let wordcraft_doc::InlineObject::Image { media: key, .. } = o
-                    && let Some(k) = media.get(key.as_str())
-                {
-                    *key = k.clone();
-                }
-            }
-        });
-    }
-    // Text box stories the imported shapes show; pasting gives each a new story of its own.
-    let parts = src.parts.into_iter().filter(|(_, p)| p.kind == wordcraft_doc::PartKind::TextBox).collect();
-    Fragment { blocks, parts }
+/// Adopt external HTML and RTF while retaining their existing picture fitting behavior.
+fn adopt(s: &mut Session, src: Document) -> Result<Fragment, CmdError> {
+    super::clipboard_adopt::adopt(s, src, false, true)
 }

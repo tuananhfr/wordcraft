@@ -169,6 +169,8 @@ mod tests;
 #[cfg(test)]
 mod tests_bidi;
 #[cfg(test)]
+mod tests_clipboard;
+#[cfg(test)]
 mod tests_fonts;
 #[cfg(test)]
 mod tests_typing;
