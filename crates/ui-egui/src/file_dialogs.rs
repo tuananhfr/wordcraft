@@ -50,6 +50,8 @@ pub(crate) struct PickerSave {
     document: u64,
     /// The save marked the document saved, so a save that didn't happen marks it unsaved again.
     marked_saved: bool,
+    /// A save rather than an export: the status bar shows how it goes.
+    save: bool,
     /// "Save changes?" answered Save: the command it held back (New, Open, Close…), run once the
     /// file is written.
     then: Option<(String, Value)>,
@@ -162,14 +164,19 @@ impl WordApp {
     }
 
     /// Remember a save the browser's picker finishes later ([`Download::Pending`]).
-    pub(crate) fn track_picker_save(&mut self, rx: Receiver<PickerAnswer>, name: &str, marked_saved: bool) {
+    pub(crate) fn track_picker_save(&mut self, rx: Receiver<PickerAnswer>, name: &str, marked_saved: bool, save: bool) {
         let document = self.session.document_id();
-        self.picker_saves.push(PickerSave { rx, name: name.to_string(), document, marked_saved, then: None });
+        self.picker_saves.push(PickerSave { rx, name: name.to_string(), document, marked_saved, save, then: None });
     }
 
     /// Whether a save of `document` is still in the browser's save picker.
     pub(crate) fn picker_save_pending(&self, document: u64) -> bool {
         self.picker_saves.iter().any(|s| s.document == document)
+    }
+
+    /// Whether a save (not an export) of `document` is still being written by the browser's picker.
+    pub(crate) fn picker_saving(&self, document: u64) -> bool {
+        self.picker_saves.iter().any(|s| s.document == document && s.save)
     }
 
     /// Hold `then` back until the save just started in the picker has written the file.
@@ -201,26 +208,31 @@ impl WordApp {
     fn finish_picker_save(&mut self, save: PickerSave, answer: PickerAnswer) {
         match answer {
             Ok(()) => {
+                if save.save {
+                    self.save_failures.saved(save.document);
+                }
                 // Unsaved again (changed since, or a format that doesn't keep everything):
                 // carrying on would lose the changes. Closing goes by document; the mailings act
                 // on the shown document, so only while that is still the one saved.
                 if let Some((then, params)) = save.then {
                     let clean = self.find_document(save.document).is_some_and(|(s, _)| !s.dirty);
-                    if clean && (then == "ui.closeDocument" || save.document == self.session.document_id()) {
+                    let by_document = then == "ui.closeDocument" || then == crate::close_many::CLOSE_DOCUMENTS;
+                    if clean && (by_document || save.document == self.session.document_id()) {
                         let _ = self.execute_user(&then, params);
                     } else {
-                        self.closing_all = false;
+                        self.stop_save_all(save.document);
                     }
                 }
             }
             Err(error) => {
-                if save.then.is_some() {
-                    self.closing_all = false;
-                }
+                self.stop_save_all(save.document);
                 if save.marked_saved {
                     self.mark_document_unsaved(save.document);
                 }
                 if let Some(error) = error {
+                    if save.save {
+                        self.note_save_failed(save.document, &error);
+                    }
                     self.status(crate::i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &save.name), ("error", &error)]));
                 }
             }
@@ -354,7 +366,6 @@ impl WordApp {
                     }
                     AfterSave::Continue { then, params, document } => {
                         if !self.in_document(document, |app| app.safely_saved(saved)).unwrap_or(false) {
-                            self.closing_all = false;
                             return Ok(json!({"done": false}));
                         }
                         self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))

@@ -3,7 +3,7 @@
 //! history, selection, view, find…) and the window state it had; switching swaps a parked one in
 //! ([`Session::swap_document`] keeps what is the user's rather than a document's in place).
 
-use serde_json::{Value, json};
+use serde_json::Value;
 use wordcraft_engine::Session;
 
 use crate::WordApp;
@@ -132,7 +132,7 @@ impl WordApp {
     }
 
     /// The session and untitled number of the document at tab `i`.
-    fn document_at(&self, i: usize) -> Option<(&Session, u32)> {
+    pub(crate) fn document_at(&self, i: usize) -> Option<(&Session, u32)> {
         match self.docs.slots.get(i)? {
             None => Some((&self.session, self.untitled)),
             Some(p) => Some((&p.session, p.untitled)),
@@ -300,9 +300,9 @@ impl WordApp {
         n
     }
 
-    /// Close the document at tab `i` without asking; closing another one keeps the shown one,
-    /// closing the shown one shows the next (or the last). Closing the only one quits, as Close
-    /// did before tabs.
+    /// Close the document at tab `i` without asking, keeping it for Reopen Closed Document;
+    /// closing another one keeps the shown one, closing the shown one shows the next (or the
+    /// last). Closing the only one quits, as Close did before tabs.
     pub(crate) fn close_document_at(&mut self, i: usize) {
         let active = self.docs.active_index();
         if i >= self.docs.count() {
@@ -312,6 +312,10 @@ impl WordApp {
             self.quit_requested = true;
             return;
         }
+        self.keep_closed(i);
+        if let Some(document) = self.document_id_at(i) {
+            self.save_failures.saved(document);
+        }
         if i == active {
             let next = if i + 1 < self.docs.count() { i + 1 } else { i - 1 };
             self.swap_with(next);
@@ -320,25 +324,6 @@ impl WordApp {
         } else {
             self.docs.slots.remove(i);
         }
-        if self.closing_all {
-            self.close_next_for_quit();
-        }
-    }
-
-    /// Quitting with unsaved documents: ask about the next one (shown first), or quit once none
-    /// is left. Cancel on any prompt stops the quit.
-    pub(crate) fn close_next_for_quit(&mut self) {
-        let dirty = self.document_tabs().into_iter().find(|t| t.dirty);
-        let Some(tab) = dirty else {
-            self.closing_all = false;
-            self.quit_requested = true;
-            return;
-        };
-        if !tab.active && self.activate_document(tab.index).is_err() {
-            self.closing_all = false;
-            return;
-        }
-        let _ = self.run("file.close", json!({}));
     }
 
     /// The tab a `ui.activateDocument` / `ui.closeDocument` call means: `index`, or `document`
@@ -572,20 +557,30 @@ mod tests {
     }
 
     #[test]
-    fn closing_the_window_asks_about_each_unsaved_document() {
+    fn closing_the_window_asks_once_about_every_unsaved_document() {
         let mut a = app();
         typed(&mut a, "One");
         a.run("file.new", json!({})).unwrap();
         a.run("file.new", json!({})).unwrap();
         typed(&mut a, "Three");
         assert!(!a.close_requested());
-        assert_eq!(asked_about(&a).map(|(n, _)| n), Some("Document1".to_string()));
-        a.run("ui.saveChanges", json!({"answer": "dontSave"})).unwrap();
-        assert_eq!(asked_about(&a).map(|(n, _)| n), Some("Document3".to_string()), "the clean one needs no question");
+        let Some(Dialog::SaveAll { names, .. }) = &a.dialog else { panic!("one question for all: {:?}", a.dialog) };
+        assert_eq!(names, &["Document1", "Document3"], "the clean one needs no question");
         a.run("ui.saveChanges", json!({"answer": "cancel"})).unwrap();
         assert!(!a.quit_requested, "Cancel stops closing");
-        assert_eq!(a.document_count(), 2);
+        assert_eq!(a.document_count(), 3);
         assert!(!a.close_requested());
+        a.run("ui.saveChanges", json!({"answer": "dontSave"})).unwrap();
+        assert!(a.quit_requested);
+    }
+
+    #[test]
+    fn closing_the_window_with_one_unsaved_document_asks_about_it_alone() {
+        let mut a = app();
+        typed(&mut a, "One");
+        a.run("file.new", json!({})).unwrap();
+        assert!(!a.close_requested());
+        assert_eq!(asked_about(&a).map(|(n, _)| n), Some("Document1".to_string()));
         a.run("ui.saveChanges", json!({"answer": "dontSave"})).unwrap();
         assert!(a.quit_requested);
     }

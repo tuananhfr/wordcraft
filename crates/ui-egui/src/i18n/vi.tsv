@@ -2467,3 +2467,16 @@ preview	Title	Tiêu đề
 	You can have up to 10 documents open. Close one to open another.	Chỉ mở được tối đa 10 tài liệu. Hãy đóng bớt một tài liệu để mở tài liệu khác.
 	The file is too large or abnormally compressed, so it can't be opened.	Tệp quá lớn hoặc bị nén bất thường nên không mở được.
 	Document{number}	Tài liệu{number}
+	Reopen Closed Document	Mở lại tài liệu vừa đóng
+	Reopen {name}	Mở lại {name}
+	No closed document to reopen.	Không có tài liệu nào vừa đóng để mở lại.
+	Type the password of the document being reopened first.	Hãy nhập mật khẩu của tài liệu đang được mở lại trước.
+	Close Others	Đóng các tài liệu khác
+	Close All	Đóng tất cả
+	Save All	Lưu tất cả
+	Do you want to save changes to these {count} documents?	Bạn có muốn lưu thay đổi trong {count} tài liệu này không?
+	Saving…	Đang lưu…
+	Save failed	Lưu không thành công
+	Save “{name}”	Lưu “{name}”
+	{name} — Saved	{name} — Đã lưu
+	{name} — Saving…	{name} — Đang lưu…

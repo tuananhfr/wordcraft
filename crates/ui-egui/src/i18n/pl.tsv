@@ -2476,3 +2476,16 @@ preview	Title	Tytuł
 	You can have up to 10 documents open. Close one to open another.	Można mieć otwartych najwyżej 10 dokumentów. Zamknij jeden, aby otworzyć kolejny.
 	The file is too large or abnormally compressed, so it can't be opened.	Plik jest za duży lub nietypowo skompresowany, więc nie można go otworzyć.
 	Document{number}	Dokument{number}
+	Reopen Closed Document	Otwórz ponownie zamknięty dokument
+	Reopen {name}	Otwórz ponownie {name}
+	No closed document to reopen.	Brak zamkniętego dokumentu do ponownego otwarcia.
+	Type the password of the document being reopened first.	Najpierw wpisz hasło ponownie otwieranego dokumentu.
+	Close Others	Zamknij pozostałe
+	Close All	Zamknij wszystkie
+	Save All	Zapisz wszystkie
+	Do you want to save changes to these {count} documents?	Czy chcesz zapisać zmiany w tych dokumentach ({count})?
+	Saving…	Zapisywanie…
+	Save failed	Zapisywanie nie powiodło się
+	Save “{name}”	Zapisz „{name}”
+	{name} — Saved	{name} — zapisano
+	{name} — Saving…	{name} — zapisywanie…

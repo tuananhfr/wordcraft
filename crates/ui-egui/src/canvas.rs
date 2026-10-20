@@ -805,7 +805,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     // Keys first, so this frame lays out and paints what was typed (handled after painting, a
     // keystroke showed one frame later). Focus is the canvas's from the last frame.
     // While "Save changes?" is up, keys answer it rather than edit the document behind it.
-    if app.canvas.focused && !matches!(app.dialog, Some(crate::dialogs::Dialog::SaveChanges { .. })) {
+    if app.canvas.focused && !matches!(app.dialog, Some(crate::dialogs::Dialog::SaveChanges { .. } | crate::dialogs::Dialog::SaveAll { .. })) {
         crate::keys::canvas_events(app, ui.ctx());
     }
     crate::ink::replay_tick(app, ui.ctx());

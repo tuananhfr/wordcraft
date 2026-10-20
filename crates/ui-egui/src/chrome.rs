@@ -421,6 +421,12 @@ fn status_left(app: &mut WordApp, ui: &mut Ui, t: &Tokens, narrow: bool) {
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, s));
         resp
     };
+    // Narrow, a cut "Save failed" would read as its opposite: it goes first and the word count
+    // makes room for it.
+    let save_first = narrow && app.save_status().is_some();
+    if save_first {
+        crate::save_status::status_item(app, ui, t);
+    }
     if st(ui, &crate::i18n::fmt(tl!("Page {page} of {pages}"), &[("page", &page.to_string()), ("pages", &l.pages.len().to_string())]))
         .on_hover_text(tl!("Go To (⌘⌥G)"))
         .clicked()
@@ -435,8 +441,11 @@ fn status_left(app: &mut WordApp, ui: &mut Ui, t: &Tokens, narrow: bool) {
         let sw = wordcraft_doc::count_words(&app.session.selected_text());
         crate::i18n::fmt(tl!("{selected} of {words} words"), &[("selected", &sw.to_string()), ("words", &words.to_string())])
     };
-    if st(ui, &wtxt).clicked() {
-        let _ = app.run("ui.dialog", json!({"name": "wordCount"}));
+    if !save_first {
+        if st(ui, &wtxt).clicked() {
+            let _ = app.run("ui.dialog", json!({"name": "wordCount"}));
+        }
+        crate::save_status::status_item(app, ui, t);
     }
     if app.session.sel.focus.story != StoryRef::Body && !crate::canvas::in_text_box(app) {
         st(ui, tl!("Editing header/footer"));

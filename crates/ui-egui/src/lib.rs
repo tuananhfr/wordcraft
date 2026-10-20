@@ -27,6 +27,8 @@ pub mod backstage;
 pub mod canvas;
 pub mod caret_glide;
 pub mod chrome;
+pub mod close_many;
+pub mod closed_documents;
 pub mod colors;
 pub mod content_controls;
 pub mod control;
@@ -74,6 +76,7 @@ pub mod printing;
 pub mod read_aloud;
 pub mod ribbon;
 pub mod ribbon_strip;
+pub mod save_status;
 pub mod scroll;
 pub mod system_clipboard;
 pub mod table_mouse;
@@ -483,8 +486,10 @@ pub struct WordApp {
     untitled: u32,
     /// The documents open besides the shown one ([`open_documents`]).
     pub(crate) docs: open_documents::OpenDocuments,
-    /// The window is closing: each document with unsaved changes is asked about in turn.
-    pub(crate) closing_all: bool,
+    /// Documents closed in this session, for Reopen Closed Document ([`closed_documents`]).
+    pub(crate) closed: closed_documents::ClosedDocuments,
+    /// Saves that failed, shown in the status bar until saved or edited ([`save_status`]).
+    pub(crate) save_failures: save_status::SaveFailures,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -578,7 +583,8 @@ impl WordApp {
             drafts: Default::default(),
             untitled: 1,
             docs: Default::default(),
-            closing_all: false,
+            closed: Default::default(),
+            save_failures: Default::default(),
         }
     }
 
@@ -676,6 +682,11 @@ impl WordApp {
             self.dialog = dialogs::Dialog::open(name, self);
             return Ok(json!({"pending": name}));
         }
+        // Closing several documents asks once about all the unsaved ones ([`close_many`]).
+        if matches!(id, "ui.closeAll" | "ui.closeOthers") {
+            let targets = self.close_targets(id, &params)?;
+            return self.ask_close(targets, false);
+        }
         if let Some((document, then, then_params)) = self.discards(id, &params)
             && let Some((session, untitled)) = self.find_document(document)
             && session.dirty
@@ -768,11 +779,24 @@ impl WordApp {
             let password =
                 if matches!(id, "file.save" | "file.saveAs") { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
             let opts = wordcraft_engine::cmd::file::export_options(&self.session, &params);
-            let bytes = wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts)?;
+            let saving = matches!(id, "file.save" | "file.saveAs");
+            let document = self.session.document_id();
+            let bytes = match wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts) {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    if saving {
+                        self.note_save_failed(document, &e);
+                    }
+                    return Err(e);
+                }
+            };
             let picker = match self.services.download.as_ref().map(|d| d(&name, &bytes)) {
                 Some(Err(e)) => {
                     let msg = i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &name), ("error", &e)]);
                     log::error!("download of {name} failed: {e}");
+                    if saving {
+                        self.note_save_failed(document, &e);
+                    }
                     self.status(msg.clone());
                     return Err(msg);
                 }
@@ -787,7 +811,9 @@ impl WordApp {
             }
             let pending = picker.is_some();
             if let Some(rx) = picker {
-                self.track_picker_save(rx, &name, marked_saved);
+                self.track_picker_save(rx, &name, marked_saved, saving);
+            } else if saving {
+                self.save_failures.saved(document);
             }
             return Ok(json!({"downloaded": name, "bytes": bytes.len(), "pending": pending}));
         }
@@ -803,6 +829,13 @@ impl WordApp {
             self.autosave_path = None;
             if matches!(self.dialog, Some(dialogs::Dialog::SaveChanges { .. })) {
                 self.dialog = None;
+            }
+        }
+        if matches!(id, "file.save" | "file.saveAs") {
+            match &r {
+                Err(e) => self.note_save_failed(document, e),
+                Ok(v) if v.get("saved").and_then(Value::as_bool) == Some(true) => self.save_failures.saved(document),
+                Ok(_) => {}
             }
         }
         // An explicit save to the document's own file lets AutoSave keep writing there.
@@ -875,7 +908,6 @@ impl WordApp {
         };
         // The prompt may be about a document in the background (its tab's ×): it is saved there.
         let Some(untitled_here) = self.find_document(document).map(|(s, _)| s.path.is_none() && self.services.download.is_none()) else {
-            self.closing_all = false;
             return Err("the document the prompt asked about has been replaced".into());
         };
         let go = match choice {
@@ -888,10 +920,7 @@ impl WordApp {
                 return match asked {
                     Some(file_dialogs::Asked::Done(r)) => r,
                     Some(file_dialogs::Asked::Pending) => Ok(json!({"pending": "saveAs"})),
-                    Some(file_dialogs::Asked::Busy) | None => {
-                        self.closing_all = false;
-                        Ok(json!({"done": false}))
-                    }
+                    Some(file_dialogs::Asked::Busy) | None => Ok(json!({"done": false})),
                 };
             }
             SaveChoice::Save => match self.in_document(document, WordApp::save_for_prompt).flatten() {
@@ -904,7 +933,6 @@ impl WordApp {
             },
         };
         if !go {
-            self.closing_all = false;
             return Ok(json!({"done": false}));
         }
         self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))
@@ -976,8 +1004,8 @@ impl WordApp {
         if self.quit_requested || !self.any_document_dirty() || !self.has_document() {
             return true;
         }
-        self.closing_all = true;
-        self.close_next_for_quit();
+        let all = self.document_tabs().iter().map(|t| t.document).collect();
+        let _ = self.ask_close(all, true);
         false
     }
 
@@ -1226,6 +1254,9 @@ impl WordApp {
                 let Some(choice) = s("answer").and_then(SaveChoice::parse) else {
                     return Some(Err("`answer` must be save, dontSave or cancel".into()));
                 };
+                if matches!(self.dialog, Some(dialogs::Dialog::SaveAll { .. })) {
+                    return Some(self.answer_save_all(choice));
+                }
                 return Some(self.answer_save_changes(choice));
             }
             "ui.openFileDialog" => {
@@ -1302,6 +1333,18 @@ impl WordApp {
                 self.close_document_at(i);
                 json!({"closed": i, "documents": self.document_count()})
             }
+            // Close All / Close Others (the tab strip's menu): a user's close (`run`) asks first;
+            // a script's closes without asking, as `ui.closeDocument` does.
+            "ui.closeAll" | "ui.closeOthers" => {
+                let targets = match self.close_targets(id, p) {
+                    Ok(t) => t,
+                    Err(e) => return Some(Err(e)),
+                };
+                return Some(self.close_documents(&json!({"documents": targets, "discard": targets})));
+            }
+            close_many::CLOSE_DOCUMENTS => return Some(self.close_documents(p)),
+            // Reopen Closed Document (Ctrl+Shift+T): the last document closed, as it was.
+            "ui.reopenDocument" => return Some(self.reopen_document()),
             // Shape Format › Text › Create Link: the next click on an empty text box links the
             // selected box to it (`shape.link` with that box as the target); Esc cancels.
             "ui.linkTextBox" => {
@@ -1527,6 +1570,7 @@ impl WordApp {
         self.clear_stale_change_picture();
         let _ = self.poll_file_dialog();
         self.poll_picker_saves();
+        self.poll_reopening();
         self.drain_inbox();
         self.drafts_tick(ctx, now_ms());
         self.watch_fonts(ctx);
@@ -1635,6 +1679,7 @@ impl WordApp {
             self.last_autosave = now;
             if let Err(e) = self.session.run("file.save", &json!({})) {
                 log::warn!("AutoSave failed: {e}");
+                self.note_save_failed(self.session.document_id(), &e.to_string());
                 self.autosave_path = None;
                 self.status(i18n::fmt(tl!("AutoSave failed: {error}. Save the document to turn AutoSave back on."), &[("error", &e.to_string())]));
             }
@@ -2021,6 +2066,7 @@ pub(crate) fn works_without_document(id: &str) -> bool {
             | "ui.makeDefaultApp"
             | "ui.caretAnimation"
             | "ui.startScreen"
+            | "ui.reopenDocument"
     ) || id.starts_with("help.")
 }
 

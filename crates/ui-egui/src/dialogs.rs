@@ -371,6 +371,24 @@ pub enum Dialog {
         #[serde(skip)]
         document: u64,
     },
+    /// Closing several documents with more than one unsaved: one question naming them all,
+    /// Save All / Don't Save / Cancel ([`crate::close_many`]), answered with `ui.saveChanges`.
+    SaveAll {
+        names: Vec<String>,
+        /// The unsaved ones, as `names` lists them.
+        #[serde(skip)]
+        documents: Vec<u64>,
+        /// Every document being closed.
+        #[serde(skip)]
+        targets: Vec<u64>,
+        quit: bool,
+        /// Saved so far (browser: one save picker per click).
+        #[serde(skip)]
+        saved: Vec<u64>,
+        /// The one whose save picker is still writing.
+        #[serde(skip)]
+        saving: Option<u64>,
+    },
     /// Mailings › Select Recipients / Edit Recipient List: a table of recipients to type or
     /// edit (field names on top), or a file to load instead (#240).
     RecipientList {
@@ -903,6 +921,7 @@ impl Dialog {
             Dialog::PasteSpecial { .. } => "pasteSpecial",
             Dialog::About { .. } => "about",
             Dialog::SaveChanges { .. } => "saveChanges",
+            Dialog::SaveAll { .. } => "saveAll",
             Dialog::RecipientList { .. } => "recipientList",
             Dialog::SelectTable { .. } => "selectTable",
             Dialog::InsertMergeField { .. } => "insertMergeField",
@@ -1353,7 +1372,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Icons { .. } => "Icons",
         Dialog::PasteSpecial { .. } => "Paste Special",
         Dialog::About { .. } => "About WordCraft",
-        Dialog::SaveChanges { .. } => "WordCraft",
+        Dialog::SaveChanges { .. } | Dialog::SaveAll { .. } => "WordCraft",
         Dialog::RecipientList { .. } => "Recipient List",
         Dialog::SelectTable { .. } => "Select Table",
         Dialog::InsertMergeField { .. } => "Insert Merge Field",
@@ -2387,6 +2406,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             let _ = app.run("ui.saveChanges", json!({"answer": answer}));
             true
         }
+        Dialog::SaveAll { .. } => crate::close_many::save_all_body(app, ui, d),
         Dialog::RecipientList { fields, rows, message } => recipient_list(app, ui, fields, rows, message),
         Dialog::InsertMergeField { fields, field } => {
             if fields.is_empty() {

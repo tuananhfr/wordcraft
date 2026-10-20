@@ -1,6 +1,7 @@
 //! The document tab strip under the title bar: one tab per open document, shown once two are
 //! open, so a second file never hides the first. Click to switch, × or a middle-click to close
-//! (through "Save changes?" when it has unsaved changes).
+//! (through "Save changes?" when it has unsaved changes); its context menu also closes the others
+//! or all ([`crate::close_many`]) and reopens the last closed document.
 
 use egui::{CornerRadius, Rect, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
@@ -24,6 +25,9 @@ pub fn tabs(app: &WordApp) -> Vec<DocumentTab> {
 enum Click {
     Activate,
     Close,
+    CloseOthers,
+    CloseAll,
+    Reopen,
 }
 
 pub fn show(app: &mut WordApp, ui: &mut Ui) {
@@ -34,6 +38,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     // A dialog or file dialog belongs to the shown document: no switching under it.
     let enabled = app.dialog.is_none() && app.colors.is_none() && !app.file_dialog_open();
+    let reopen = app.can_reopen_document().then(|| app.closed.last_title().unwrap_or_default().to_string());
     let mut clicked = None;
     egui::Panel::top("document_tabs").exact_size(STRIP_H).frame(egui::Frame::NONE.fill(t.title_bar)).show(ui, |ui| {
         let rect = ui.max_rect();
@@ -58,7 +63,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     ui.spacing_mut().item_spacing.x = 1.0;
                     ui.add_space(PAD);
                     for tab in &tabs {
-                        if let Some(c) = tab_button(ui, &t, tab, width, reveal, enabled) {
+                        if let Some(c) = tab_button(ui, &t, tab, width, reveal, enabled, reopen.as_deref()) {
                             clicked = Some((tab.document, c));
                         }
                     }
@@ -72,11 +77,21 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         Some((document, Click::Activate)) => {
             let _ = app.run("ui.activateDocument", json!({"document": document}));
         }
+        Some((document, Click::CloseOthers)) => {
+            let _ = app.run("ui.closeOthers", json!({"document": document}));
+        }
+        Some((_, Click::CloseAll)) => {
+            let _ = app.run("ui.closeAll", json!({}));
+        }
+        Some((_, Click::Reopen)) => {
+            let _ = app.run("ui.reopenDocument", json!({}));
+        }
         None => {}
     }
 }
 
-fn tab_button(ui: &mut Ui, t: &Tokens, tab: &DocumentTab, width: f32, reveal: bool, enabled: bool) -> Option<Click> {
+/// `reopen`: the title Reopen Closed Document would bring back, when there is one.
+fn tab_button(ui: &mut Ui, t: &Tokens, tab: &DocumentTab, width: f32, reveal: bool, enabled: bool, reopen: Option<&str>) -> Option<Click> {
     let sense = if enabled { Sense::click() } else { Sense::hover() };
     let (rect, resp) = ui.allocate_exact_size(vec2(width, STRIP_H), sense);
     if tab.active && reveal {
@@ -116,13 +131,43 @@ fn tab_button(ui: &mut Ui, t: &Tokens, tab: &DocumentTab, width: f32, reveal: bo
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, enabled, tab.active, &tab.title));
     let tip = if tab.dirty { format!("{}\n{}", tab.title, tl!("Unsaved changes")) } else { tab.title.clone() };
     let resp = resp.on_hover_text(tip);
+    let mut menu = None;
+    if enabled {
+        resp.context_menu(|ui| menu = tab_menu(ui, reopen));
+    }
     if close_resp.clicked() || resp.middle_clicked() {
         Some(Click::Close)
     } else if resp.clicked() && !tab.active {
         Some(Click::Activate)
     } else {
-        None
+        menu
     }
+}
+
+fn tab_menu(ui: &mut Ui, reopen: Option<&str>) -> Option<Click> {
+    let mut picked = None;
+    if ui.button(tl!("Close")).clicked() {
+        picked = Some(Click::Close);
+    }
+    if ui.button(tl!("Close Others")).clicked() {
+        picked = Some(Click::CloseOthers);
+    }
+    if ui.button(tl!("Close All")).clicked() {
+        picked = Some(Click::CloseAll);
+    }
+    ui.separator();
+    let item = ui.add_enabled(reopen.is_some(), egui::Button::new(tl!("Reopen Closed Document")));
+    let item = match reopen {
+        Some(title) => item.on_hover_text(crate::i18n::fmt(tl!("Reopen {name}"), &[("name", title)])),
+        None => item,
+    };
+    if item.clicked() {
+        picked = Some(Click::Reopen);
+    }
+    if picked.is_some() {
+        ui.close();
+    }
+    picked
 }
 
 /// `text` on one line, cut with "…" where it would pass `max_width`.

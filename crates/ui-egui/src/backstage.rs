@@ -301,6 +301,14 @@ fn open_page(app: &mut WordApp, ui: &mut Ui) {
     {
         let _ = app.run("ui.fileBrowser", json!({}));
     }
+    let reopen = ui.add_enabled(app.can_reopen_document(), egui::Button::new(egui::RichText::new(tl!("Reopen Closed Document")).font(medium(14.0))));
+    let reopen = match app.closed.last_title() {
+        Some(title) if app.can_reopen_document() => reopen.on_hover_text(crate::i18n::fmt(tl!("Reopen {name}"), &[("name", title)])),
+        _ => reopen,
+    };
+    if reopen.clicked() {
+        let _ = app.run("ui.reopenDocument", json!({}));
+    }
     ui.add_space(18.0);
     open_list(app, ui);
 }
