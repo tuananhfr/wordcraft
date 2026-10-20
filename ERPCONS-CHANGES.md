@@ -1,5 +1,10 @@
 # ERPCons changes
 
+- Vietnamese catalog product names now read “Văn bản”, with a regression guard against “WordCraft” in translated values (both).
+- Close All web coverage now checks clean documents reach the empty Start state and Cancel preserves all tabs; the existing last-document close bridge already handles completion (web).
+- Ctrl+Tab and Ctrl+Shift+Tab cycle open documents with wrap-around, preserve customized bindings and plain Tab editing; Ctrl+PageUp/PageDown keep their existing find navigation (both).
+- Keyboard Shortcuts lists the existing F10 KeyTips and Shift+F10 context menu actions; F10 is hidden when KeyTips are disabled (both).
+
 - Review › Language and the command palette convert selected TCVN3/ABC or VNI Windows text to NFC Unicode, with explicit encoding choices for unknown fonts; automatic whole-document conversion includes tables and all stories, preserves formatting, replaces legacy fonts with the default body font and can be undone in one step (both).
 
 - Legacy Word files are detected by .doc/.dot names and OLE2 content even with another extension; readable files open with a conversion notice and a separate .docx save name, while refused files show one translated dialog explaining how to convert them (both).

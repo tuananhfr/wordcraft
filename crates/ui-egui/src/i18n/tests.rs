@@ -8,6 +8,26 @@ fn lang(code: &str) -> Lang {
 }
 
 #[test]
+fn vietnamese_product_name_is_van_ban() {
+    let (entries, errors) = parse_entries(lang("vi").0.source);
+    assert!(errors.is_empty());
+    for entry in entries {
+        assert!(!entry.translation.contains("WordCraft"), "{}: {}", entry.source, entry.translation);
+    }
+}
+
+#[test]
+fn document_switching_and_context_menu_labels_are_translated() {
+    for l in &LANGUAGES {
+        if l.code != "en" {
+            for key in ["Next Document", "Previous Document", "Context Menu"] {
+                assert!(has(lang(l.code), key), "{}: {key}", l.code);
+            }
+        }
+    }
+}
+
+#[test]
 fn system_locales_map_to_languages() {
     assert_eq!(lang_from_tag("zh_CN.UTF-8"), Some(lang("zh-hans")));
     assert_eq!(lang_from_tag("zh-CN"), Some(lang("zh-hans")));
@@ -1298,7 +1318,7 @@ fn vietnamese_covers_the_entire_existing_interface_catalog() {
         ("Save", "Lưu"),
         ("Heading 1", "Đầu đề 1"),
         ("Track Changes", "Theo dõi Thay đổi"),
-        ("WordCraft", "WordCraft"),
+        ("WordCraft", "Văn bản"),
         ("unknown future label", "unknown future label"),
     ] {
         assert_eq!(tr(vi, source), expected, "{source}");

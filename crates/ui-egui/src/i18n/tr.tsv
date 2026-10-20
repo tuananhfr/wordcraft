@@ -2489,3 +2489,6 @@ preview	Title	Örnek
 	Convert VNI → Unicode	VNI → Unicode dönüştür
 	Select text to choose a legacy encoding.	Eski bir karakter kodlaması seçmek için metni seçin.
 	The document contains invalid text formatting.	Belge geçersiz metin biçimlendirmesi içeriyor.
+	Next Document	Sonraki belge
+	Previous Document	Önceki belge
+	Context Menu	Bağlam menüsü

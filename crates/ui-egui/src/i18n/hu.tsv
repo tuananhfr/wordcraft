@@ -2489,3 +2489,6 @@
 	Convert VNI → Unicode	VNI → Unicode átalakítás
 	Select text to choose a legacy encoding.	Régi karakterkódolás kiválasztásához jelöljön ki szöveget.
 	The document contains invalid text formatting.	A dokumentum érvénytelen szövegformázást tartalmaz.
+	Next Document	Következő dokumentum
+	Previous Document	Előző dokumentum
+	Context Menu	Helyi menü

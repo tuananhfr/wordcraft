@@ -52,6 +52,7 @@ pub mod dialogs_smart_art;
 pub mod dialogs_templates;
 pub mod doc_tabs;
 mod document_close;
+mod document_switching;
 pub mod draft_bridge;
 pub mod drafts;
 pub mod equation_tab;
@@ -1723,6 +1724,7 @@ impl WordApp {
         let t = theme::Tokens::get(&ctx);
         narrow::follow_width(self, ctx.content_rect().width());
         focus::begin_frame(self, &ctx);
+        document_switching::handle(self, &ctx);
         // Keytips are read before layout so the frame paints the new state; badges paint after
         // the ribbon so they sit on top of it.
         crate::keytips::logic(self, &ctx);

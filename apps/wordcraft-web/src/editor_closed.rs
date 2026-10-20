@@ -87,4 +87,42 @@ mod tests {
         assert!(!app.has_document());
         assert_eq!(poll(&mut app), 0);
     }
+
+    #[test]
+    fn close_all_clean_documents_reaches_the_same_start_state_as_last_close() {
+        let mut app = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        let mut documents = Vec::new();
+        for text in ["A", "B", "C"] {
+            app.run("text.insert", json!({"text": text})).unwrap();
+            app.session.dirty = false;
+            documents.push(app.session.document_id());
+            if text != "C" {
+                app.run("file.new", json!({})).unwrap();
+            }
+        }
+        assert_eq!(app.document_count(), 3);
+        app.run("ui.closeAll", json!({})).unwrap();
+        assert_eq!(poll(&mut app), 1);
+        assert!(!app.has_document());
+        assert!(!app.any_document_dirty());
+        assert!(app.ui.backstage);
+        assert_eq!(app.ui.backstage_page, "home");
+        assert!(documents.iter().all(|id| *id != app.session.document_id()));
+        assert_eq!(app.session.doc.plain_text(wordcraft_doc::StoryRef::Body), "");
+        assert_eq!(poll(&mut app), 0);
+    }
+
+    #[test]
+    fn cancelling_close_all_keeps_every_document_on_the_web_path() {
+        let mut app = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        for text in ["A", "B"] {
+            app.run("text.insert", json!({"text": text})).unwrap();
+            app.run("file.new", json!({})).unwrap();
+        }
+        let tabs = app.document_tabs();
+        app.run("ui.closeAll", json!({})).unwrap();
+        app.run("ui.saveChanges", json!({"answer": "cancel"})).unwrap();
+        assert_eq!(poll(&mut app), 0);
+        assert_eq!(app.document_tabs(), tabs);
+    }
 }

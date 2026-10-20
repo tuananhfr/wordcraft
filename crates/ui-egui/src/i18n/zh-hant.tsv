@@ -2092,3 +2092,6 @@
 	Convert VNI → Unicode	轉換 VNI → Unicode
 	Select text to choose a legacy encoding.	請選取文字以指定舊版字元編碼。
 	The document contains invalid text formatting.	文件包含無效的文字格式。
+	Next Document	下一份文件
+	Previous Document	上一份文件
+	Context Menu	快顯功能表

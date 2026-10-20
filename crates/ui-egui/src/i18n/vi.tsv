@@ -15,7 +15,7 @@
 	(no suggestions)	(không có gợi ý)
 	1.5 Line Spacing	Giãn cách Dòng 1,5
 	About	Giới thiệu
-	About WordCraft	Giới thiệu WordCraft
+	About WordCraft	Giới thiệu Văn bản
 	Accept	Chấp nhận
 	Accept All Changes	Chấp nhận Tất cả Thay đổi
 	Accept This Change	Chấp nhận Thay đổi Này
@@ -903,7 +903,7 @@
 	Word Right	Sang phải một Từ
 	Word document (*.docx)	Tài liệu Word (*.docx)
 	WordArt	WordArt
-	WordCraft	WordCraft
+	WordCraft	Văn bản
 	Words	Từ
 	Words only	Chỉ từ
 	Wrap Text	Bao quanh Văn bản
@@ -970,7 +970,7 @@
 	Stopped	Đã dừng
 	Speed	Tốc độ
 	Normal speed	Tốc độ bình thường
-	AutoSave documents you have saved in WordCraft	Tự động lưu các tài liệu bạn đã lưu trong WordCraft
+	AutoSave documents you have saved in WordCraft	Tự động lưu các tài liệu bạn đã lưu trong Văn bản
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Tự động Lưu không thành công: {error}. Hãy lưu tài liệu để bật lại Tự động Lưu.
 	Couldn't download {name}: {error}	Không tải xuống được {name}: {error}
 	Do you want to save changes to {name}?	Bạn có muốn lưu các thay đổi trong {name} không?
@@ -1274,7 +1274,7 @@
 	The document will be saved with a password. Save it to protect it.	Tài liệu sẽ được lưu kèm mật khẩu. Hãy lưu để bảo vệ tài liệu.
 	The password is removed. Save the document to keep the change.	Đã gỡ mật khẩu. Hãy lưu tài liệu để giữ thay đổi này.
 	The passwords don't match.	Mật khẩu không khớp.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Hãy cất giữ mật khẩu ở nơi an toàn: thiếu nó thì không ai, kể cả WordCraft, mở được tài liệu. Để trống cả hai ô nếu muốn gỡ mật khẩu.
+	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Hãy cất giữ mật khẩu ở nơi an toàn: thiếu nó thì không ai, kể cả Văn bản, mở được tài liệu. Để trống cả hai ô nếu muốn gỡ mật khẩu.
 	Align Top Left	Căn Trên Trái
 	Align Top Center	Căn Trên Giữa
 	Align Top Right	Căn Trên Phải
@@ -2359,7 +2359,7 @@
 	Word document	Tài liệu Word
 	All files	Tất cả tệp
 	Recipient lists	Danh sách người nhận
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Không có hộp thoại tệp của hệ thống nên WordCraft dùng hộp thoại riêng. Để dùng hộp thoại của hệ thống, hãy cài một portal chọn tệp (như xdg-desktop-portal-gtk) hoặc zenity.
+	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Không có hộp thoại tệp của hệ thống nên Văn bản dùng hộp thoại riêng. Để dùng hộp thoại của hệ thống, hãy cài một portal chọn tệp (như xdg-desktop-portal-gtk) hoặc zenity.
 	Up one level	Lên một cấp
 	Home folder	Thư mục chính
 	{name} wasn't found.	Không tìm thấy {name}.
@@ -2367,8 +2367,8 @@
 	This folder can't be read: {error}	Không thể đọc thư mục này: {error}
 	Showing the first {count} items.	Đang hiển thị {count} mục đầu tiên.
 	File name:	Tên tệp:
-	Browse in WordCraft…	Duyệt trong WordCraft…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Mở tệp bằng trình duyệt tệp riêng của WordCraft khi hộp thoại tệp của hệ thống không xuất hiện.
+	Browse in WordCraft…	Duyệt trong Văn bản…
+	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Mở tệp bằng trình duyệt tệp riêng của Văn bản khi hộp thoại tệp của hệ thống không xuất hiện.
 	Resize Table by Dragging	Đổi kích thước Bảng bằng cách Kéo
 	Visual effects	Hiệu ứng hình ảnh
 	Animation effects:	Hiệu ứng hoạt hình:
@@ -2394,23 +2394,23 @@
 	TOC {n}	Mục lục {n}
 	Good afternoon	Chào buổi chiều
 	Context	Ngữ cảnh
-	Couldn't make WordCraft the default: {error}	Không thể đặt WordCraft làm mặc định: {error}
+	Couldn't make WordCraft the default: {error}	Không thể đặt Văn bản làm mặc định: {error}
 	Do Not Check Spelling or Grammar	Không Kiểm tra Chính tả hoặc Ngữ pháp
 	Hindi	Tiếng Hindi
-	In Default apps, choose WordCraft for the document types you want it to open.	Trong Ứng dụng mặc định, chọn WordCraft cho các loại tài liệu bạn muốn mở bằng nó.
-	Make WordCraft the default for Word documents…	Đặt WordCraft làm mặc định cho tài liệu Word…
+	In Default apps, choose WordCraft for the document types you want it to open.	Trong Ứng dụng mặc định, chọn Văn bản cho các loại tài liệu bạn muốn mở bằng nó.
+	Make WordCraft the default for Word documents…	Đặt Văn bản làm mặc định cho tài liệu Word…
 	Numerals	Chữ số
 	Numerals:	Chữ số:
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Từ giờ, tệp .docx, .doc, .rtf, .odt và mẫu Word sẽ mở bằng WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Mở Cài đặt › Ứng dụng mặc định, nơi bạn chọn WordCraft cho .docx và các loại tài liệu khác.
+	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Từ giờ, tệp .docx, .doc, .rtf, .odt và mẫu Word sẽ mở bằng Văn bản.
+	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Mở Cài đặt › Ứng dụng mặc định, nơi bạn chọn Văn bản cho .docx và các loại tài liệu khác.
 	Reading	Đọc
 	Reading Column Width	Độ rộng Cột khi Đọc
 	Reading Line Spacing	Giãn cách Dòng khi Đọc
 	Reading Text Size	Cỡ Chữ khi Đọc
 	Show KeyTips (Alt or F10)	Hiện mẹo phím (Alt hoặc F10)
 	System	Hệ thống
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Để mở tài liệu Word bằng WordCraft theo mặc định: chọn một tài liệu trong Finder, chọn Tệp › Lấy thông tin, chọn WordCraft trong mục Mở bằng, rồi bấm Thay đổi tất cả.
-	WordCraft is now the default app for Word documents.	WordCraft hiện là ứng dụng mặc định cho tài liệu Word.
+	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Để mở tài liệu Word bằng Văn bản theo mặc định: chọn một tài liệu trong Finder, chọn Tệp › Lấy thông tin, chọn Văn bản trong mục Mở bằng, rồi bấm Thay đổi tất cả.
+	WordCraft is now the default app for Word documents.	Văn bản hiện là ứng dụng mặc định cho tài liệu Word.
 	Correct TWo INitial CApitals	Sửa HAi CHữ HOa ĐẦu từ
 	Correct accidental usage of cAPS LOCK key	Sửa lỗi vô tình bật phím cAPS LOCK
 	Picture	Ảnh
@@ -2422,8 +2422,8 @@
 	Undo History	Lịch sử Hoàn tác
 	Undo {n} Actions	Hoàn tác {n} Thao tác
 	Start-up	Khởi động
-	Show the Start screen when WordCraft starts	Hiện màn hình Bắt đầu khi khởi động WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Bật: WordCraft mở tại Tệp › Trang đầu, kèm tài liệu trống, các mẫu và tài liệu gần đây của bạn. Tắt: WordCraft mở một tài liệu trống.
+	Show the Start screen when WordCraft starts	Hiện màn hình Bắt đầu khi khởi động Văn bản
+	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Bật: Văn bản mở tại Tệp › Trang đầu, kèm tài liệu trống, các mẫu và tài liệu gần đây của bạn. Tắt: Văn bản mở một tài liệu trống.
 	Typing	Nhập liệu
 	Level 4	Mức 4
 	Level 5	Mức 5
@@ -2512,3 +2512,6 @@ preview	Title	Tiêu đề
 	Convert VNI → Unicode	Chuyển mã VNI → Unicode
 	Select text to choose a legacy encoding.	Chọn văn bản để chọn bảng mã cũ.
 	The document contains invalid text formatting.	Tài liệu có định dạng văn bản không hợp lệ.
+	Next Document	Tài liệu tiếp theo
+	Previous Document	Tài liệu trước
+	Context Menu	Menu ngữ cảnh

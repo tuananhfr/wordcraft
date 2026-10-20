@@ -147,7 +147,7 @@ fn command_for(app: &WordApp, key: Key, m: Modifiers) -> Option<(&'static str, V
     {
         return Some((spec.id, params));
     }
-    None
+    crate::document_switching::command_for(app, key, m)
 }
 
 /// Find and run the command bound to this key. Returns true if handled.
@@ -176,9 +176,17 @@ pub(crate) fn shortcut_rows(app: &WordApp) -> Vec<ShortcutRow> {
     let commands = reg.all().iter().flat_map(|spec| {
         app.session.keymap.keys_for(reg, spec.id).into_iter().map(|key| ShortcutRow { key, label: spec.label, id: spec.id, params: json!({}) })
     });
-    ui.chain(commands)
+    let mut rows: Vec<_> = ui.chain(commands)
         .filter(|row| press(&row.key).and_then(|(key, m)| command_for(app, key, m)).is_some_and(|(id, params)| id == row.id && params == row.params))
-        .collect()
+        .collect();
+    rows.extend(crate::document_switching::rows(app));
+    // These keys are intercepted by keytips and the canvas before command dispatch.
+    rows.retain(|r| !(r.key == "F10" && app.ui.keytips_enabled) && r.key != "Shift+F10");
+    if app.ui.keytips_enabled {
+        rows.push(ShortcutRow { key: "F10".into(), label: "Show KeyTips (Alt or F10)", id: "ui.keytips", params: json!({}) });
+    }
+    rows.push(ShortcutRow { key: "Shift+F10".into(), label: "Context Menu", id: "ui.contextMenu", params: json!({}) });
+    rows
 }
 
 /// The key press that a registry key stands for, with the modifiers the windowing layer reports
@@ -728,7 +736,9 @@ mod tests {
         assert!(rows.len() > 100, "{} rows", rows.len());
         for r in &rows {
             let (key, m) = press(&r.key).unwrap_or_else(|| panic!("{} can't be pressed", r.key));
-            assert_eq!(command_for(&app, key, m), Some((r.id, r.params.clone())), "{}", r.key);
+            if r.key != "F10" && r.key != "Shift+F10" {
+                assert_eq!(command_for(&app, key, m), Some((r.id, r.params.clone())), "{}", r.key);
+            }
             assert_eq!(rows.iter().filter(|o| o.key == r.key).count(), 1, "{} listed once", r.key);
         }
         let reg = app.session.registry.clone();
@@ -757,5 +767,17 @@ mod tests {
         assert_eq!(id(&rows, "Mod+B"), Some("format.italic"));
         assert_eq!(id(&rows, "Mod+Alt+Shift+B"), Some("format.bold"));
         assert_eq!(id(&rows, "F1"), Some("ui.dialog"), "F1 still opens this list, so it isn't Bold's");
+    }
+
+    #[test]
+    fn shortcut_list_includes_existing_f10_actions() {
+        let mut app = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        let rows = shortcut_rows(&app);
+        assert_eq!(row(&rows, "F10").map(|r| (r.id, r.label)), Some(("ui.keytips", "Show KeyTips (Alt or F10)")));
+        assert_eq!(row(&rows, "Shift+F10").map(|r| (r.id, r.label)), Some(("ui.contextMenu", "Context Menu")));
+        app.ui.keytips_enabled = false;
+        let rows = shortcut_rows(&app);
+        assert!(row(&rows, "F10").is_none());
+        assert!(row(&rows, "Shift+F10").is_some());
     }
 }

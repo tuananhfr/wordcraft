@@ -2091,3 +2091,6 @@
 	Convert VNI → Unicode	VNI → Unicode に変換
 	Select text to choose a legacy encoding.	従来の文字コードを選ぶには、テキストを選択してください。
 	The document contains invalid text formatting.	文書に無効なテキスト書式が含まれています。
+	Next Document	次の文書
+	Previous Document	前の文書
+	Context Menu	コンテキストメニュー
