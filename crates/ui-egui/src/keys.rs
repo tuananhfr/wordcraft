@@ -526,6 +526,28 @@ mod tests {
         h.state().session.doc.plain_text(wordcraft_doc::StoryRef::Body)
     }
 
+    #[test]
+    fn web_duplicate_paste_keys_insert_once_and_undo_once() {
+        let mut h = harness();
+        // Without filtering, the key also pastes successfully from the internal clipboard.
+        h.state_mut().session.clipboard = Some(wordcraft_doc::edit::Fragment::from_text("abc"));
+        let modifiers = egui::Modifiers { command: true, ctrl: true, ..Default::default() };
+        let mut events = vec![
+            egui::Event::Key { key: Key::V, physical_key: None, pressed: true, repeat: false, modifiers },
+            egui::Event::Paste("abc".into()),
+        ];
+        crate::clipboard_keys::drop_duplicate_clipboard_keys(&mut events, true);
+        for event in events {
+            h.event(event);
+        }
+        h.step();
+        assert_eq!(body(&h), "abc");
+        assert_eq!(h.state().session.undo_depth(), 1);
+        assert!(h.state_mut().session.undo());
+        assert_eq!(body(&h), "");
+        assert_eq!(h.state().session.undo_depth(), 0);
+    }
+
     fn surrounding(before_chars: usize, after_chars: usize) -> egui::Event {
         egui::Event::Ime(egui::ImeEvent::DeleteSurrounding { before_chars, after_chars })
     }

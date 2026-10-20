@@ -27,6 +27,7 @@ pub mod backstage;
 pub mod canvas;
 pub mod caret_glide;
 pub mod chrome;
+pub mod clipboard_keys;
 pub mod close_many;
 pub mod closed_documents;
 pub mod colors;
@@ -1696,6 +1697,7 @@ impl WordApp {
     pub fn raw_input_hook(&mut self, raw: &mut egui::RawInput) {
         self.inject_synthetic(raw);
         self.press_dedup.filter(raw);
+        clipboard_keys::drop_duplicate_clipboard_keys(&mut raw.events, cfg!(target_arch = "wasm32"));
     }
 
     fn inject_synthetic(&mut self, raw: &mut egui::RawInput) {
