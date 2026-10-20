@@ -50,10 +50,12 @@ enum State<S> {
         origin: Pos2,
         before: Option<S>,
     },
-    /// A finger drag scrolling the page; `travel` is its whole movement.
+    /// A finger drag scrolling the page; `travel` is its whole movement, `pinched` whether a
+    /// second finger joined in.
     Panning {
         last: Pos2,
         travel: Vec2,
+        pinched: bool,
     },
     /// A long press opened the context menu: the rest of the touch does nothing.
     Held,
@@ -66,6 +68,15 @@ pub struct Pan<S> {
     pub delta: Vec2,
     /// The drag became a pan this frame: put back this selection and drop the drag-select.
     pub started: Option<S>,
+}
+
+/// A finger pan let go, from [`PageTouch::end`].
+#[derive(Debug, PartialEq)]
+pub struct PanEnd {
+    /// A sideways swipe: `Some(-1.0)` back, `Some(1.0)` forward (Read Mode turns a column).
+    pub swipe: Option<f32>,
+    /// How fast the finger moved as it lifted (points per second), for the fling.
+    pub velocity: Vec2,
 }
 
 /// The page's touch gesture; `S` is the selection type kept from before a press.
@@ -91,12 +102,14 @@ impl<S> PageTouch<S> {
         match &mut self.state {
             State::Pressed { origin, before } if may_pan && i.any_touches() && p.distance(*origin) > max_click_dist => {
                 let (from, before) = (*origin, before.take());
-                self.state = State::Panning { last: p, travel: p - from };
+                self.state = State::Panning { last: p, travel: p - from, pinched: false };
                 Pan { delta: p - from, started: before }
             }
-            State::Panning { last, travel } => {
+            State::Panning { last, travel, pinched } => {
                 // Two fingers: follow their middle, so a pinch doesn't jump with the first finger.
-                let d = i.multi_touch().map_or(p - *last, |m| m.translation_delta);
+                let multi = i.multi_touch();
+                *pinched |= multi.is_some();
+                let d = multi.map_or(p - *last, |m| m.translation_delta);
                 *last = p;
                 *travel += d;
                 Pan { delta: d, started: None }
@@ -118,16 +131,17 @@ impl<S> PageTouch<S> {
         matches!(self.state, State::Panning { .. } | State::Held)
     }
 
-    /// The press is over (call once per frame, last). Returns the sideways swipe of a pan that
-    /// ended this frame: `Some(-1.0)` back, `Some(1.0)` forward (Read Mode turns a column).
-    pub fn end(&mut self, i: &egui::InputState) -> Option<f32> {
+    /// The press is over (call once per frame, last). Returns how a pan that ended this frame
+    /// was let go.
+    pub fn end(&mut self, i: &egui::InputState) -> Option<PanEnd> {
         if i.pointer.primary_down() || i.pointer.primary_pressed() {
             return None;
         }
-        match std::mem::replace(&mut self.state, State::Idle) {
-            State::Panning { travel, .. } if travel.x.abs() >= SWIPE_TURN && travel.x.abs() > travel.y.abs() => Some(-travel.x.signum()),
-            _ => None,
-        }
+        let State::Panning { travel, pinched, .. } = std::mem::replace(&mut self.state, State::Idle) else { return None };
+        let swipe = (travel.x.abs() >= SWIPE_TURN && travel.x.abs() > travel.y.abs()).then(|| -travel.x.signum());
+        // After a pinch the pointer is one of the two fingers: its speed is the zoom's, not a throw.
+        let velocity = if pinched { Vec2::ZERO } else { i.pointer.velocity() };
+        Some(PanEnd { swipe, velocity })
     }
 
     /// A long press or a pan is in progress.
@@ -216,11 +230,13 @@ mod tests {
         let p2 = pos2(195.0, 350.0);
         let pan = frame(&ctx, 0.16, vec![Event::PointerMoved(p2), touch(p2, TouchPhase::Move)], |i| g.pan(i, true, 6.0));
         assert_eq!(pan, Pan { delta: vec2(-5.0, -30.0), started: None });
-        let swipe = frame(&ctx, 0.2, vec![press(p2, false), Event::PointerGone, touch(p2, TouchPhase::End)], |i| {
+        let end = frame(&ctx, 0.2, vec![press(p2, false), Event::PointerGone, touch(p2, TouchPhase::End)], |i| {
             assert!(g.after(i, false, false, || "unused"), "the release is the pan's too");
             g.end(i)
         });
-        assert_eq!(swipe, None, "a vertical pan is not a swipe");
+        let end = end.expect("the pan ended");
+        assert_eq!(end.swipe, None, "a vertical pan is not a swipe");
+        assert!(end.velocity.y < -250.0, "thrown upwards: {:?}", end.velocity);
         assert!(!g.is_active());
     }
 
@@ -258,8 +274,8 @@ mod tests {
         frame(&ctx, 0.1, vec![press(at, true), touch(at, TouchPhase::Start)], |i| g.after(i, true, false, || 0));
         let p = pos2(200.0, 310.0);
         frame(&ctx, 0.15, vec![Event::PointerMoved(p), touch(p, TouchPhase::Move)], |i| g.pan(i, true, 6.0));
-        let swipe = frame(&ctx, 0.2, vec![press(p, false), touch(p, TouchPhase::End)], |i| g.end(i));
-        assert_eq!(swipe, Some(1.0), "a swipe to the left goes forward");
+        let end = frame(&ctx, 0.2, vec![press(p, false), touch(p, TouchPhase::End)], |i| g.end(i));
+        assert_eq!(end.and_then(|e| e.swipe), Some(1.0), "a swipe to the left goes forward");
 
         let held = frame(&ctx, 1.0, vec![press(at, true), touch(at, TouchPhase::Start)], |i| g.after(i, true, false, || 0));
         assert!(!held);

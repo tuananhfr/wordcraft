@@ -15,7 +15,7 @@ use crate::theme::{Tokens, regular, semibold};
 
 /// Points on screen per document point at 100% (96 px per inch, like a word processor).
 pub const PX_PER_PT: f32 = 96.0 / 72.0;
-const GAP: f32 = 18.0;
+pub(crate) const GAP: f32 = 18.0;
 const RULER: f32 = 22.0;
 
 /// Drag-select auto-scroll (#688): the pointer within this many points of the viewport's edge
@@ -141,6 +141,8 @@ pub struct CanvasState {
     pub(crate) table_drag: Option<crate::table_mouse::TableDrag>,
     /// A finger on the page: pan, tap or long press (`touch`).
     pub(crate) touch: crate::touch::PageTouch<wordcraft_engine::Selection>,
+    /// A quick finger pan carrying on after the finger lifted (`fling`).
+    pub(crate) fling: crate::fling::Fling,
 }
 
 impl CanvasState {
@@ -214,6 +216,7 @@ impl Default for CanvasState {
             a11y: Default::default(),
             table_drag: None,
             touch: Default::default(),
+            fling: Default::default(),
         }
     }
 }
@@ -966,7 +969,23 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     } else {
         app.canvas.auto_scroll.update(ui, area)
     };
-    let delta = wheel_delta + auto_delta + middle_delta + touch_delta;
+    // A flicked page keeps going until it slows down, hits an edge, or anything else scrolls it.
+    let fling_delta = if !app.canvas.fling.is_active() {
+        egui::Vec2::ZERO
+    } else if app.session.view.read_mode
+        || ui.input(|i| i.pointer.any_down())
+        || app.canvas.scroll_request.is_some()
+        || scroll_target.is_some()
+        || wheel_delta != egui::Vec2::ZERO
+        || middle_delta != egui::Vec2::ZERO
+    {
+        app.canvas.fling.stop();
+        egui::Vec2::ZERO
+    } else {
+        ui.ctx().request_repaint();
+        app.canvas.fling.step(dt, app.canvas.scroll_offset, app.canvas.scroll_max)
+    };
+    let delta = wheel_delta + auto_delta + middle_delta + touch_delta + fling_delta;
     let mut scroll_area = egui::ScrollArea::both()
         // Each document keeps its own scroll position while another one is shown.
         .id_salt(("canvas_scroll", app.session.document_id()))
@@ -1435,10 +1454,15 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     // Stand down while the context menu owns the pointer so the two never double up; the open
     // state also covers the click that dismisses the menu.
     app.canvas.context_menu_open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
-    if let Some(direction) = ui.input(|i| app.canvas.touch.end(i))
-        && app.session.view.read_mode
-    {
-        turn_read_page(app, direction);
+    if let Some(end) = ui.input(|i| app.canvas.touch.end(i)) {
+        if app.session.view.read_mode {
+            if let Some(direction) = end.swipe {
+                turn_read_page(app, direction);
+            }
+        } else if animate {
+            // Like the other glides: no fling with animation effects off.
+            app.canvas.fling.release(end.velocity);
+        }
     }
     if let Some(c) = crate::ink::cursor(app).filter(|_| resp.hovered() || app.canvas.ink.is_some()) {
         ui.ctx().set_cursor_icon(c);
