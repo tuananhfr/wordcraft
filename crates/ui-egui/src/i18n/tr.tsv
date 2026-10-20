@@ -2483,3 +2483,9 @@ preview	Title	Örnek
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	Eski .doc dosyası açıldı. Kaydedildiğinde .docx biçiminde kaydedilecek
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	{fonts} yazı tipleri bu cihazda bulunmadığından benzer yazı tipleriyle görüntüleniyor.
 	{fonts} and {count} others	{fonts} ve {count} diğer yazı tipi
+
+	Convert TCVN3/VNI → Unicode	TCVN3/VNI → Unicode dönüştür
+	Convert TCVN3 → Unicode	TCVN3 → Unicode dönüştür
+	Convert VNI → Unicode	VNI → Unicode dönüştür
+	Select text to choose a legacy encoding.	Eski bir karakter kodlaması seçmek için metni seçin.
+	The document contains invalid text formatting.	Belge geçersiz metin biçimlendirmesi içeriyor.

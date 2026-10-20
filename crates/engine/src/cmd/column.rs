@@ -157,6 +157,7 @@ pub(crate) fn dispatch(s: &mut Session, id: &str, mutates: bool, run: fn(&mut Se
     let Some(segs) = s.column_segments().map(<[(Pos, Pos)]>::to_vec) else { return run(s, v) };
     let cells = s.cell_range().is_some();
     match id {
+        "tools.convert_vietnamese_legacy" | "tools.convert_vietnamese_legacy_tcvn3" | "tools.convert_vietnamese_legacy_vni" => run(s, v),
         // Whole cells: table commands take the rectangle between the corners, and Tab moves on
         // from it without clearing it, as in Word.
         _ if cells && (id.starts_with("table.") || matches!(id, "text.tab" | "text.backTab")) => run(s, v),

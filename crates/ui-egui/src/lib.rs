@@ -92,6 +92,7 @@ pub mod table_resize;
 pub mod table_ruler;
 pub mod theme;
 pub mod touch;
+mod vn_legacy;
 pub mod widgets;
 pub mod window_geometry;
 pub mod wordart_menus;
@@ -786,7 +787,7 @@ impl WordApp {
         let r = if open_documents::opens_document(id, &params) {
             self.run_opening(id, &params)
         } else {
-            self.session.run(id, &params).map_err(|e| e.to_string())
+            self.session.run(id, &params).map_err(|e| vn_legacy::command_error(id, e))
         };
         if r.is_ok() {
             focus::changed(self, was_focus);

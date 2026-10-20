@@ -2483,3 +2483,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	A régi .doc-fájl megnyílt. Mentéskor .docx formátumban lesz mentve
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	A(z) {fonts} betűtípusok nem érhetők el ezen az eszközön, ezért hasonló betűtípusokkal jelennek meg.
 	{fonts} and {count} others	{fonts} és további {count}
+
+	Convert TCVN3/VNI → Unicode	TCVN3/VNI → Unicode átalakítás
+	Convert TCVN3 → Unicode	TCVN3 → Unicode átalakítás
+	Convert VNI → Unicode	VNI → Unicode átalakítás
+	Select text to choose a legacy encoding.	Régi karakterkódolás kiválasztásához jelöljön ki szöveget.
+	The document contains invalid text formatting.	A dokumentum érvénytelen szövegformázást tartalmaz.

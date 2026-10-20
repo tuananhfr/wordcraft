@@ -2119,3 +2119,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	Vana .doc-fail on avatud. Salvestamisel kasutatakse .docx-vormingut
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Fonte {fonts} pole selles seadmes saadaval, seega kuvatakse neid sarnaste fontidega.
 	{fonts} and {count} others	{fonts} ja veel {count}
+
+	Convert TCVN3/VNI → Unicode	Teisenda TCVN3/VNI → Unicode
+	Convert TCVN3 → Unicode	Teisenda TCVN3 → Unicode
+	Convert VNI → Unicode	Teisenda VNI → Unicode
+	Select text to choose a legacy encoding.	Vana märgikodeeringu valimiseks valige tekst.
+	The document contains invalid text formatting.	Dokument sisaldab vigast tekstivormingut.

@@ -2086,3 +2086,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	已開啟舊版 .doc 檔案。儲存時將使用 .docx 格式
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	此裝置上沒有字型 {fonts}，因此使用相似字型顯示。
 	{fonts} and {count} others	{fonts}，以及其他 {count} 種字型
+
+	Convert TCVN3/VNI → Unicode	轉換 TCVN3/VNI → Unicode
+	Convert TCVN3 → Unicode	轉換 TCVN3 → Unicode
+	Convert VNI → Unicode	轉換 VNI → Unicode
+	Select text to choose a legacy encoding.	請選取文字以指定舊版字元編碼。
+	The document contains invalid text formatting.	文件包含無效的文字格式。

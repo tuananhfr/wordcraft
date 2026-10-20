@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Review › Language and the command palette convert selected TCVN3/ABC or VNI Windows text to NFC Unicode, with explicit encoding choices for unknown fonts; automatic whole-document conversion includes tables and all stories, preserves formatting, replaces legacy fonts with the default body font and can be undone in one step (both).
+
 - Legacy Word files are detected by .doc/.dot names and OLE2 content even with another extension; readable files open with a conversion notice and a separate .docx save name, while refused files show one translated dialog explaining how to convert them (both).
 - Opened documents show one dismissible notice listing unavailable fonts replaced for display, with at most three names and a remaining count; dismissal is kept across edits and document tabs, and all interface catalogs include the new wording (both).
 

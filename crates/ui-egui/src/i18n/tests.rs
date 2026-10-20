@@ -80,6 +80,25 @@ fn lookups_fall_back_to_english() {
 }
 
 #[test]
+fn vietnamese_legacy_conversion_is_translated_in_every_catalog() {
+    let keys = [
+        "Convert TCVN3/VNI → Unicode",
+        "Convert TCVN3 → Unicode",
+        "Convert VNI → Unicode",
+        "Select text to choose a legacy encoding.",
+        "The document contains invalid text formatting.",
+    ];
+    for l in &LANGUAGES {
+        if l.code != "en" {
+            for key in keys {
+                assert!(has(lang(l.code), key), "{}: {key}", l.code);
+            }
+        }
+    }
+    assert_eq!(tr(lang("vi"), keys[0]), "Chuyển mã TCVN3/VNI → Unicode");
+}
+
+#[test]
 fn close_and_focus_hint_are_translated_in_every_catalog() {
     for l in &LANGUAGES {
         if l.code != "en" {

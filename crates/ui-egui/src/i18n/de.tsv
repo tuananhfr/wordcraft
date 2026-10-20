@@ -2084,3 +2084,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	Die ältere .doc-Datei wurde geöffnet. Beim Speichern wird sie als .docx gespeichert
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Die Schriftarten {fonts} sind auf diesem Gerät nicht verfügbar und werden daher durch ähnliche Schriftarten ersetzt.
 	{fonts} and {count} others	{fonts} und {count} weitere
+
+	Convert TCVN3/VNI → Unicode	TCVN3/VNI → Unicode konvertieren
+	Convert TCVN3 → Unicode	TCVN3 → Unicode konvertieren
+	Convert VNI → Unicode	VNI → Unicode konvertieren
+	Select text to choose a legacy encoding.	Wählen Sie Text aus, um eine ältere Zeichenkodierung festzulegen.
+	The document contains invalid text formatting.	Das Dokument enthält eine ungültige Textformatierung.

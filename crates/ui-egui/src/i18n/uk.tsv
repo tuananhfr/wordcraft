@@ -2097,3 +2097,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	Файл .doc старого формату відкрито. Під час збереження буде використано формат .docx
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Шрифти {fonts} недоступні на цьому пристрої, тому для відображення використовуються схожі шрифти.
 	{fonts} and {count} others	{fonts}; інших шрифтів: {count}
+
+	Convert TCVN3/VNI → Unicode	Перетворити TCVN3/VNI → Unicode
+	Convert TCVN3 → Unicode	Перетворити TCVN3 → Unicode
+	Convert VNI → Unicode	Перетворити VNI → Unicode
+	Select text to choose a legacy encoding.	Виділіть текст, щоб вибрати старе кодування.
+	The document contains invalid text formatting.	Документ містить неприпустиме форматування тексту.

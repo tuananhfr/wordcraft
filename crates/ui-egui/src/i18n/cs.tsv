@@ -2090,3 +2090,9 @@
 	The legacy .doc file has been opened. When saved, it will be saved as .docx	Starší soubor .doc byl otevřen. Při uložení bude uložen jako .docx
 	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Písma {fonts} nejsou v tomto zařízení dostupná, proto se zobrazují pomocí podobných písem.
 	{fonts} and {count} others	{fonts} a další ({count})
+
+	Convert TCVN3/VNI → Unicode	Převést TCVN3/VNI → Unicode
+	Convert TCVN3 → Unicode	Převést TCVN3 → Unicode
+	Convert VNI → Unicode	Převést VNI → Unicode
+	Select text to choose a legacy encoding.	Vyberte text, abyste mohli zvolit starší kódování.
+	The document contains invalid text formatting.	Dokument obsahuje neplatné formátování textu.

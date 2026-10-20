@@ -411,6 +411,8 @@ pub(crate) fn language_menu(ui: &mut Ui, app: &mut WordApp) {
     }
     ui.separator();
     mi_check(ui, app, "Do Not Check Spelling or Grammar", no_proof, "review.language", json!({"noProof": !no_proof}));
+    ui.separator();
+    crate::vn_legacy::menu(ui, app);
 }
 
 /// A menu item with a check mark when `checked` (the current choice of several).

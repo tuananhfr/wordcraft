@@ -48,6 +48,7 @@ pub mod templates;
 pub mod text;
 pub mod tools;
 pub mod view;
+pub mod vn_legacy;
 pub mod wordart;
 
 use serde_json::{Value, json};
@@ -97,6 +98,7 @@ pub fn registry() -> Registry {
     v.extend(wordart::specs());
     v.extend(connectors::specs());
     v.extend(tools::specs());
+    v.extend(vn_legacy::specs());
     v.extend(templates::specs());
     v.extend(protect::specs());
     v.extend(speech::specs());
