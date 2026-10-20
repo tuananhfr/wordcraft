@@ -16,7 +16,7 @@ pub(crate) fn begin_frame(app: &mut WordApp, ctx: &egui::Context) {
         || app.dialog.is_some()
         || app.colors.is_some()
         || app.file_dialog_open()
-        || app.controls.popup.is_some()
+        || app.controls.popup_open()
         || app.ui.keytips != crate::keytips::Phase::Off
         || egui::Popup::is_any_open(ctx)
         || app.canvas.auto_scroll.active()
@@ -53,7 +53,7 @@ pub(crate) fn escape(app: &mut WordApp, ctx: &egui::Context) -> bool {
         || app.dialog.is_some()
         || app.colors.is_some()
         || app.file_dialog_open()
-        || app.controls.popup.is_some()
+        || app.controls.popup_open()
         || app.canvas.link_from.is_some()
         || egui::Popup::is_any_open(ctx)
         || !app.canvas.ime_preedit.is_empty()

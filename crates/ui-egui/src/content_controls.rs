@@ -241,3 +241,9 @@ fn calendar(ui: &mut Ui, t: &Tokens, month: &mut (i64, u32)) -> Option<u32> {
     });
     picked
 }
+
+impl ControlUi {
+    pub(crate) fn popup_open(&self) -> bool {
+        self.popup.is_some()
+    }
+}

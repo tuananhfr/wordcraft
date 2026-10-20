@@ -7,7 +7,8 @@ use wordcraft_engine::Session;
 
 use crate::dialogs::Dialog;
 use crate::file_dialogs::{AfterSave, Asked};
-use crate::{Download, PickerAnswer, SaveStatus, Services, WordApp};
+use crate::save_status::SaveStatus;
+use crate::{Download, PickerAnswer, Services, WordApp};
 
 type Answers = Rc<RefCell<Vec<Sender<PickerAnswer>>>>;
 
