@@ -24,6 +24,35 @@ fn run(para: &Para) -> &Fmt {
 }
 
 #[test]
+fn explicit_font_families_keep_the_first_family_without_monospace_substitution() {
+    for (html, expected) in [
+        (r#"<p style="font-family:'Golden Paste Mono','Courier New',monospace">Text</p>"#, "Golden Paste Mono"),
+        (r#"<p style="font-family:'Courier New','Golden Paste Mono',monospace">Text</p>"#, "Courier New"),
+        (r#"<p><font face="'Golden Paste Mono','Courier New',monospace">Text</font></p>"#, "Golden Paste Mono"),
+        (r#"<p><font face="Courier New,Golden Paste Mono,monospace">Text</font></p>"#, "Courier New"),
+        (r#"<p><code><font face="Golden Paste Mono,Courier New,monospace">Text</font></code></p>"#, "Golden Paste Mono"),
+    ] {
+        let flow = parse(html);
+        let fmt = run(paragraph(&flow, 0));
+        assert_eq!(fmt.font.as_deref(), Some(expected), "{html}");
+        assert!(!fmt.code, "{html}");
+        let doc = model::to_doc(&flow);
+        let Block::Para(p) = &*doc.body[0] else { panic!("expected paragraph") };
+        assert_eq!(p.runs[0].props.font.as_deref(), Some(expected), "{html}");
+    }
+}
+
+#[test]
+fn underlined_links_keep_semantic_underline_on_export() {
+    for (content, underline) in [("<u>Text</u>", true), ("Text", false)] {
+        let flow = parse(&format!(r#"<p><a href="https://example.test/">{content}</a></p>"#));
+        let html = export_fragment(&model::to_doc(&flow));
+        assert!(html.contains(r#"<a href="https://example.test/">"#), "{html}");
+        assert_eq!(html.contains("<u>Text</u>"), underline, "{html}");
+    }
+}
+
+#[test]
 fn office_stylesheets_cascade_with_inline_precedence() {
     let flow = parse(r#"
         <style>

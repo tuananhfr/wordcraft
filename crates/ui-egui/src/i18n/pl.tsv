@@ -2489,3 +2489,11 @@ preview	Title	Tytuł
 	Save “{name}”	Zapisz „{name}”
 	{name} — Saved	{name} — zapisano
 	{name} — Saving…	{name} — zapisywanie…
+	The browser cannot read the clipboard — use Ctrl+V	Przeglądarka nie może odczytać schowka — użyj Ctrl+V
+	Could not write to the clipboard	Nie udało się zapisać do schowka
+	Some clipboard content is too large and was skipped	Część zawartości schowka jest zbyt duża i została pominięta
+	the clipboard is empty	Schowek jest pusty.
+	nothing on the clipboard can be pasted here (it holds {formats})	Nie można tu wkleić zawartości schowka (zawiera {formats}).
+	and {count} more	oraz inne formaty: {count}
+	The clipboard content is too large to paste.	Zawartość schowka jest zbyt duża, aby ją wkleić.
+	The clipboard content cannot be pasted here.	Nie można tu wkleić zawartości schowka.

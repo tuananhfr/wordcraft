@@ -119,7 +119,8 @@ pub(crate) fn nothing_to_paste(app: &WordApp) -> String {
     shown_names.truncate(MAX_NAMES);
     let mut list = shown_names.join(", ");
     if more > 0 {
-        list.push_str(&crate::i18n::fmt(tl!(" and {count} more"), &[("count", &more.to_string())]));
+        list.push(' ');
+        list.push_str(&crate::i18n::fmt(tl!("and {count} more"), &[("count", &more.to_string())]));
     }
     crate::i18n::fmt(tl!("nothing on the clipboard can be pasted here (it holds {formats})"), &[("formats", &list)])
 }
@@ -316,6 +317,11 @@ mod tests {
         }
         let a = app(Services { clipboard_formats: Some(Box::new(|| vec!["image/x-unknown".into()])), ..Default::default() });
         assert_eq!(nothing_to_paste(&a), "Không thể dán nội dung bảng tạm vào đây (bảng tạm chứa image/x-unknown).");
+        let many = Services { clipboard_formats: Some(Box::new(|| (0..20).map(|i| format!("f{i}")).collect())), ..Default::default() };
+        assert_eq!(
+            nothing_to_paste(&app(many)),
+            "Không thể dán nội dung bảng tạm vào đây (bảng tạm chứa f0, f1, f2, f3, f4, f5 và 14 định dạng khác)."
+        );
         crate::i18n::set_current(previous);
     }
 

@@ -677,7 +677,7 @@ fn fmt_of(doc: &Document, cp: &CharProps, in_code: bool) -> Fmt {
     Fmt {
         bold: e.bold.unwrap_or(false),
         italic: e.italic.unwrap_or(false),
-        underline: e.underline.is_some_and(|u| u != Underline::None) && e.link.is_none(),
+        underline: e.underline.is_some_and(|u| u != Underline::None),
         strike: e.strike.unwrap_or(false) || e.double_strike.unwrap_or(false),
         code,
         sup: e.vert_align == Some(VertAlign::Superscript),

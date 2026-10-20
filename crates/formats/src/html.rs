@@ -950,10 +950,9 @@ impl<'r> Builder<'r> {
                     fmt.color = Some(c);
                 }
                 if let Some(face) = attr(attrs, "face") {
-                    let fam = face.split(',').next().unwrap_or("").trim().to_string();
-                    if model::is_mono(&fam) {
-                        fmt.code = true;
-                    } else if !fam.is_empty() {
+                    let fam = face.split(',').next().unwrap_or("").trim().trim_matches(['"', '\'']).to_string();
+                    if !fam.is_empty() {
+                        fmt.code = false;
                         fmt.font = Some(fam);
                     }
                 }
