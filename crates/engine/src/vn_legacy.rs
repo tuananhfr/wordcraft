@@ -39,7 +39,7 @@ pub(crate) fn tcvn3_uppercase_to_unicode(text: &str) -> String {
     text.chars()
         .map(|c| {
             let decoded = tcvn3_char(c);
-            if c.is_ascii_lowercase() || decoded != c { decoded.to_uppercase().next().unwrap_or(decoded) } else { decoded }
+            if c.is_ascii_lowercase() || (('\u{a1}'..='\u{fe}').contains(&c) && decoded.is_lowercase()) { decoded.to_uppercase().next().unwrap_or(decoded) } else { decoded }
         })
         .nfc()
         .collect()
