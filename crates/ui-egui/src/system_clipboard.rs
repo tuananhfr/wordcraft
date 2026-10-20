@@ -16,6 +16,10 @@ pub(crate) fn is_paste(id: &str) -> bool {
     matches!(id, "edit.paste" | "edit.pasteText" | "edit.pasteMerge" | "edit.pasteSpecial")
 }
 
+pub(crate) fn request(app: &WordApp, id: &str, params: &Value) -> bool {
+    is_paste(id) && params.as_object().is_some_and(|p| p.is_empty()) && app.services.request_clipboard.as_ref().is_some_and(|request| request(id))
+}
+
 /// Most format names an error lists.
 const MAX_NAMES: usize = 6;
 /// Longest format name shown.
@@ -30,8 +34,10 @@ pub(crate) fn fill(app: &mut WordApp, id: &str, params: &mut Value) -> Option<Re
         return None;
     }
     let o = params.as_object_mut()?;
+    // An empty web read must not fall back to an older fragment in the engine's clipboard.
+    let keep_empty = app.services.request_clipboard.is_some();
     if !o.contains_key("text")
-        && let Some(text) = app.services.clipboard_text.as_ref().and_then(|f| f()).filter(|t| !t.is_empty())
+        && let Some(text) = app.services.clipboard_text.as_ref().and_then(|f| f()).filter(|t| !t.is_empty() || keep_empty)
     {
         // Picture files copied in a file manager reach us as their paths: paste the pictures,
         // as Ctrl+V does.
@@ -150,6 +156,57 @@ mod tests {
     fn bold_at(a: &WordApp, off: usize) -> bool {
         let focus = a.session.sel.focus.clone();
         a.session.doc.para_at(&focus).and_then(|p| p.props_of_char(off).bold).unwrap_or(false)
+    }
+
+    #[test]
+    fn menu_paste_defers_for_async_clipboard_but_explicit_payloads_do_not() {
+        let requested = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let sink = requested.clone();
+        let mut a = app(Services {
+            request_clipboard: Some(Box::new(move |id| {
+                sink.borrow_mut().push(id.to_string());
+                true
+            })),
+            ..Default::default()
+        });
+        for id in ["edit.paste", "edit.pasteText", "edit.pasteMerge", "edit.pasteSpecial"] {
+            assert_eq!(a.run(id, json!({})).unwrap()["pending"], "clipboard");
+        }
+        assert_eq!(requested.borrow().len(), 4);
+        assert!(first_para(&a).is_empty());
+        a.run("edit.paste", json!({"text": "fresh"})).unwrap();
+        assert_eq!(first_para(&a), "fresh");
+        assert_eq!(requested.borrow().len(), 4);
+        assert!(!request(&a, "edit.copy", &json!({})));
+        assert!(!request(&a, "edit.pasteSpecial", &json!({"as": "html", "html": "<b>x</b>"})));
+    }
+
+    #[test]
+    fn empty_web_clipboard_does_not_paste_an_older_internal_copy() {
+        let mut a = app(Services {
+            clipboard_text: Some(Box::new(|| Some(String::new()))),
+            clipboard_formats: Some(Box::new(|| vec!["application/x-unknown".into()])),
+            request_clipboard: Some(Box::new(|_| false)),
+            ..Default::default()
+        });
+        a.run("document.setText", json!({"text": "older copy"})).unwrap();
+        a.run("select.all", json!({})).unwrap();
+        a.run("edit.copy", json!({})).unwrap();
+        a.run("caret.docEnd", json!({})).unwrap();
+        let error = a.run("edit.paste", json!({})).unwrap_err();
+        assert!(error.contains("application/x-unknown"), "{error}");
+        assert_eq!(first_para(&a), "older copy");
+    }
+
+    #[test]
+    fn rich_clipboard_write_suppresses_egui_plain_text_output() {
+        let a = app(Services { set_clipboard_html: Some(Box::new(|_, _| true)), ..Default::default() });
+        let ctx = egui::Context::default();
+        put(&a, &ctx, "strong", "<b>strong</b>");
+        assert!(ctx.output(|o| o.commands.is_empty()));
+        let fallback = app(Services { set_clipboard_html: Some(Box::new(|_, _| false)), ..Default::default() });
+        put(&fallback, &ctx, "strong", "<b>strong</b>");
+        assert!(!ctx.output(|o| o.commands.is_empty()));
     }
 
     /// Ctrl+V (a paste event with the text) and the ribbon's Paste keep another program's

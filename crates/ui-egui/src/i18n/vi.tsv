@@ -2480,3 +2480,6 @@ preview	Title	Tiêu đề
 	Save “{name}”	Lưu “{name}”
 	{name} — Saved	{name} — Đã lưu
 	{name} — Saving…	{name} — Đang lưu…
+	The browser cannot read the clipboard — use Ctrl+V	Trình duyệt không cho đọc bảng tạm — hãy dùng Ctrl+V
+	Could not write to the clipboard	Không ghi được vào bảng tạm
+	Some clipboard content is too large and was skipped	Một phần nội dung bảng tạm quá lớn nên đã được bỏ qua

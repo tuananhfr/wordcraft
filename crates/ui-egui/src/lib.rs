@@ -154,6 +154,8 @@ pub struct Services {
     /// names), where the platform lists them, so a paste that finds nothing it can use says what
     /// is there instead of "empty" (#833).
     pub clipboard_formats: Option<Box<dyn Fn() -> Vec<String>>>,
+    /// Web: start an asynchronous menu paste; true defers the command until data arrives.
+    pub request_clipboard: Option<Box<dyn Fn(&str) -> bool>>,
     /// Web: keep a font the user added (stored file name, original bytes) for the next visit
     /// (#582). Desktop fonts are stored by the font database itself, in the app's font folder.
     pub store_font: Option<Box<dyn Fn(&str, &[u8])>>,
@@ -676,6 +678,9 @@ impl WordApp {
     /// Close, Envelopes, Labels and Finish & Merge on a document with unsaved changes first ask
     /// Save / Don't Save / Cancel, and the command runs once that is answered (`ui.saveChanges`).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if system_clipboard::request(self, id, &params) {
+            return Ok(json!({"pending": "clipboard"}));
+        }
         // A button whose command needs input the user hasn't given yet opens its dialog (#240).
         if let Some(name) = input_dialog(id, &params)
             && widgets::enabled(self, id)

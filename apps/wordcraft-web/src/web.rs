@@ -8,6 +8,8 @@ use wasm_bindgen::JsCast as _;
 use wordcraft_engine::Session;
 use wordcraft_ui_egui::{Download, Inbox, PickerAnswer, Services, WordApp};
 
+use crate::clipboard::ClipboardBridge;
+
 const DOC_EXTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
 const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
 const RECIPIENT_EXTS: &[&str] = &["csv", "tsv", "txt", "xlsx", "xlsm", "ods"];
@@ -50,9 +52,7 @@ pub fn start() {
                     // Fonts the user added on an earlier visit (#582); the app notices them arrive.
                     font_store::load_all(cc.egui_ctx.clone());
                     let inbox: Inbox = Inbox::default();
-                    if let Err(e) = listen_for_pasted_pictures(inbox.clone(), cc.egui_ctx.clone()) {
-                        log::error!("pasting pictures is unavailable: {e}");
-                    }
+                    let clipboard = ClipboardBridge::install(cc.egui_ctx.clone()).map_err(std::io::Error::other)?;
                     // The browser's locale picks the new document's paper, the units and the
                     // decimal separator (#838).
                     let region = wordcraft_ui_egui::i18n::system_region();
@@ -61,7 +61,7 @@ pub fn start() {
                     let mut session = Session::new(doc);
                     session.system_region = region;
                     let (bridge, drafts) = drafts::connect().unzip();
-                    let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves);
+                    let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves, &clipboard);
                     services.drafts = bridge;
                     let mut app = WordApp::new(session, services);
                     app.autosave = false;
@@ -71,7 +71,7 @@ pub fn start() {
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox, drafts, language }))
+                    Ok(Box::new(WebShell { app, inbox, drafts, language, clipboard }))
                 }),
             )
             .await;
@@ -93,6 +93,7 @@ fn query() -> String {
 struct WebShell {
     app: WordApp,
     inbox: Inbox,
+    clipboard: ClipboardBridge,
     /// The office shell's draft storage, unless the page is embedded.
     drafts: Option<drafts::Drafts>,
     /// The language setting last remembered for the site.
@@ -129,6 +130,9 @@ impl eframe::App for WebShell {
             drafts.announce_ready(ctx);
         }
         self.app.logic(ctx);
+        for notice in self.clipboard.take_notices() {
+            self.app.status(notice.message());
+        }
         if self.app.ui.language != self.language {
             self.language.clone_from(&self.app.ui.language);
             language::remember(&self.language);
@@ -136,6 +140,9 @@ impl eframe::App for WebShell {
     }
 
     fn raw_input_hook(&mut self, _ctx: &egui::Context, raw: &mut egui::RawInput) {
+        if let Some(command) = self.clipboard.begin_frame(raw, &self.inbox) {
+            let _ = self.app.run(&command, serde_json::json!({}));
+        }
         self.app.raw_input_hook(raw);
     }
 
@@ -144,57 +151,11 @@ impl eframe::App for WebShell {
     }
 }
 
-/// Largest picture pasted from the browser's clipboard (as `insert.picture` allows).
-const MAX_PASTED_BYTES: f64 = (200u32 << 20) as f64;
-/// Most pictures one paste inserts.
-const MAX_PASTED_PICTURES: u32 = 20;
-
-/// Pasting a picture (#45): eframe's paste handler only reads text, so a clipboard holding just
-/// pictures (a screenshot, a browser's Copy Image) is read here and the pictures arrive through
-/// the inbox like dropped ones. A clipboard with text is left to eframe.
-fn listen_for_pasted_pictures(inbox: Inbox, ctx: egui::Context) -> Result<(), String> {
-    let document = web_sys::window().and_then(|w| w.document()).ok_or("no document")?;
-    let on_paste = wasm_bindgen::closure::Closure::<dyn FnMut(web_sys::ClipboardEvent)>::new(move |e: web_sys::ClipboardEvent| {
-        let Some(data) = e.clipboard_data() else { return };
-        if !data.get_data("text").unwrap_or_default().is_empty() {
-            return;
-        }
-        let Some(files) = data.files() else { return };
-        for i in 0..files.length().min(MAX_PASTED_PICTURES) {
-            let Some(file) = files.get(i) else { continue };
-            if !file.type_().starts_with("image/") {
-                continue;
-            }
-            if file.size() > MAX_PASTED_BYTES {
-                log::warn!("pasted picture is larger than 200 MB; not inserted");
-                continue;
-            }
-            let inbox = inbox.clone();
-            let ctx = ctx.clone();
-            wasm_bindgen_futures::spawn_local(async move {
-                match wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await {
-                    Ok(buf) => {
-                        let bytes = js_sys::Uint8Array::new(&buf).to_vec();
-                        // The inbox inserts files named like pictures; the engine reads the format from the bytes.
-                        inbox.lock().unwrap_or_else(|e| e.into_inner()).push(("pasted.png".into(), bytes));
-                        ctx.request_repaint();
-                    }
-                    Err(e) => log::error!("couldn't read the pasted picture: {e:?}"),
-                }
-            });
-        }
-    });
-    document.add_event_listener_with_callback("paste", on_paste.as_ref().unchecked_ref()).map_err(|e| format!("{e:?}"))?;
-    // The listener lives as long as the page.
-    on_paste.forget();
-    Ok(())
-}
-
 /// `dirty` is the flag the `beforeunload` guard reads ([`guard_unload`]).
-fn services(inbox: Inbox, ctx: egui::Context, dirty: Rc<Cell<bool>>, saves: Rc<PickerSaves>) -> Services {
+fn services(inbox: Inbox, ctx: egui::Context, dirty: Rc<Cell<bool>>, saves: Rc<PickerSaves>, clipboard: &ClipboardBridge) -> Services {
     let open_inbox = inbox.clone();
     let save_ctx = ctx.clone();
-    Services {
+    let mut services = Services {
         open_async: Some(Box::new(move |purpose: &str| {
             let inbox = open_inbox.clone();
             let ctx = ctx.clone();
@@ -226,7 +187,9 @@ fn services(inbox: Inbox, ctx: egui::Context, dirty: Rc<Cell<bool>>, saves: Rc<P
         store_font: Some(Box::new(font_store::store)),
         forget_font: Some(Box::new(font_store::forget)),
         ..Default::default()
-    }
+    };
+    clipboard.connect(&mut services);
+    services
 }
 
 /// Whether the system has animation effects on, as the browser passes it on: off while the
