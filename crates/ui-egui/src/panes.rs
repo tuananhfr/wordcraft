@@ -11,81 +11,93 @@ use crate::theme::{Tokens, regular, semibold};
 
 pub fn show(app: &mut WordApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
+    let dock = Dock { region: ui.available_rect_before_wrap(), narrow: app.narrow.is_narrow(), t };
     // SmartArt Design › Text Pane, while a SmartArt graphic WordCraft can edit is selected.
     if app.session.view.smart_art_pane && wordcraft_engine::cmd::smart_art::selected_smart_art(&app.session).is_some() {
-        egui::Panel::left("smart_art_pane")
-            .default_size(250.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| {
-                if header(ui, "Text Pane") {
-                    let _ = app.run("smartArt.textPane", json!({"value": false}));
-                    return;
-                }
-                crate::dialogs_smart_art::text_pane(app, ui);
-            });
+        dock.pane(ui, "smart_art_pane", Side::Left, 250.0, |ui| {
+            if header(ui, "Text Pane") {
+                let _ = app.run("smartArt.textPane", json!({"value": false}));
+                return;
+            }
+            crate::dialogs_smart_art::text_pane(app, ui);
+        });
     }
     if app.session.view.nav_pane {
-        egui::Panel::left("nav_pane")
-            .default_size(260.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| nav(app, ui));
+        dock.pane(ui, "nav_pane", Side::Left, 260.0, |ui| nav(app, ui));
     }
     if app.session.view.clipboard_pane {
-        egui::Panel::left("clipboard_pane")
-            .default_size(250.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| clipboard(app, ui));
+        dock.pane(ui, "clipboard_pane", Side::Left, 250.0, |ui| clipboard(app, ui));
     }
     if app.session.view.styles_pane {
-        egui::Panel::right("styles_pane")
-            .default_size(250.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| styles(app, ui));
+        dock.pane(ui, "styles_pane", Side::Right, 250.0, |ui| styles(app, ui));
     }
     if app.session.view.style_inspector {
-        egui::Panel::right("style_inspector")
-            .default_size(240.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| inspector(app, ui));
+        dock.pane(ui, "style_inspector", Side::Right, 240.0, |ui| inspector(app, ui));
     }
     if app.session.view.accessibility_pane {
-        egui::Panel::right("accessibility_pane")
-            .default_size(280.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| crate::a11y_pane::accessibility(app, ui));
+        dock.pane(ui, "accessibility_pane", Side::Right, 280.0, |ui| crate::a11y_pane::accessibility(app, ui));
     }
     if app.session.view.alt_text_pane {
-        egui::Panel::right("alt_text_pane")
-            .default_size(260.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| crate::a11y_pane::alt_text(app, ui));
+        dock.pane(ui, "alt_text_pane", Side::Right, 260.0, |ui| crate::a11y_pane::alt_text(app, ui));
     }
     if app.restrict.open {
-        egui::Panel::right("restrict_pane")
-            .default_size(270.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| {
-                if header(ui, "Restrict Editing") {
-                    app.restrict.open = false;
-                    return;
-                }
-                crate::dialogs_review::restrict_pane(app, ui);
-            });
+        dock.pane(ui, "restrict_pane", Side::Right, 270.0, |ui| {
+            if header(ui, "Restrict Editing") {
+                app.restrict.open = false;
+                return;
+            }
+            crate::dialogs_review::restrict_pane(app, ui);
+        });
     }
     if app.session.view.comments_pane {
-        egui::Panel::right("comments_pane")
-            .default_size(290.0)
-            .resizable(true)
-            .frame(egui::Frame::NONE.fill(t.panel).inner_margin(10).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| comments(app, ui));
+        dock.pane(ui, "comments_pane", Side::Right, 290.0, |ui| comments(app, ui));
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Side {
+    Left,
+    Right,
+}
+
+/// Where side panes go: docked beside the page, or over it in a narrow window, where a docked
+/// pane would leave the page next to no width.
+struct Dock {
+    /// The space under the ribbon and above the status bar.
+    region: egui::Rect,
+    narrow: bool,
+    t: Tokens,
+}
+
+impl Dock {
+    fn pane(&self, ui: &mut Ui, id: &'static str, side: Side, width: f32, add: impl FnOnce(&mut Ui)) {
+        let frame = egui::Frame::NONE.fill(self.t.panel).inner_margin(10).stroke(Stroke::new(1.0, self.t.border));
+        if !self.narrow {
+            let panel = match side {
+                Side::Left => egui::Panel::left(id),
+                Side::Right => egui::Panel::right(id),
+            };
+            panel.default_size(width).resizable(true).frame(frame).show(ui, add);
+            return;
+        }
+        let w = width.min(self.region.width());
+        let x = match side {
+            Side::Left => self.region.left(),
+            Side::Right => self.region.right() - w,
+        };
+        let inner = (vec2(w, self.region.height()) - frame.total_margin().sum()).max(egui::Vec2::ZERO);
+        let ctx = ui.ctx().clone();
+        egui::Area::new(egui::Id::new(id).with("over_page"))
+            .order(egui::Order::Middle)
+            .fixed_pos(egui::pos2(x, self.region.top()))
+            .constrain(false)
+            .show(&ctx, |ui| {
+                frame.shadow(ui.style().visuals.popup_shadow).show(ui, |ui| {
+                    ui.set_min_size(inner);
+                    ui.set_max_size(inner);
+                    add(ui);
+                });
+            });
     }
 }
 

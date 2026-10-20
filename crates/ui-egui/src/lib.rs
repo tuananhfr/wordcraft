@@ -61,6 +61,7 @@ pub mod ink;
 pub mod keys;
 pub mod keytips;
 pub mod mini_toolbar;
+pub mod narrow;
 pub mod objects;
 pub mod open_documents;
 pub mod options;
@@ -71,6 +72,7 @@ pub mod print_page;
 pub mod printing;
 pub mod read_aloud;
 pub mod ribbon;
+pub mod ribbon_strip;
 pub mod scroll;
 pub mod system_clipboard;
 pub mod table_mouse;
@@ -78,6 +80,7 @@ pub mod table_pen;
 pub mod table_resize;
 pub mod table_ruler;
 pub mod theme;
+pub mod touch;
 pub mod widgets;
 pub mod window_geometry;
 pub mod wordart_menus;
@@ -392,6 +395,12 @@ pub struct WordApp {
     queued_shots: Vec<(u64, f64, u32)>,
     pending_shots: Vec<(u64, Option<String>, std::sync::mpsc::Sender<Value>, f64)>,
     pub(crate) synthetic: Vec<egui::Event>,
+    /// One tap's doubled press and release, dropped before egui sees them.
+    press_dedup: touch::PressDedup,
+    /// Phone-width layout: the ribbon's folded state while narrow.
+    pub narrow: narrow::Narrow,
+    /// The folded ribbon is shown over the page for one command (a tab was clicked).
+    pub(crate) ribbon_peek: bool,
     /// Badge rects recorded during layout for the current keytip phase (cleared by `logic`, painted by `show`).
     pub(crate) keytip_rects: Vec<(egui::Rect, String)>,
     /// The Navigation pane's search box takes the keyboard on its next frame (Ctrl+F, #712).
@@ -521,6 +530,9 @@ impl WordApp {
             queued_shots: Vec::new(),
             pending_shots: Vec::new(),
             synthetic: Vec::new(),
+            press_dedup: Default::default(),
+            narrow: Default::default(),
+            ribbon_peek: false,
             keytip_rects: Vec::new(),
             nav_search_focus: false,
             styled: false,
@@ -1125,8 +1137,9 @@ impl WordApp {
                 json!({"pending": "contextMenu"})
             }
             "ui.collapseRibbon" => {
-                self.ui.ribbon_collapsed = !self.ui.ribbon_collapsed;
-                json!({"collapsed": self.ui.ribbon_collapsed})
+                let collapsed = self.narrow.toggle_ribbon(&mut self.ui.ribbon_collapsed);
+                self.ribbon_peek = false;
+                json!({"collapsed": collapsed})
             }
             "ui.keytips" => {
                 if let Some(v) = p.get("value") {
@@ -1627,8 +1640,19 @@ impl WordApp {
         }
     }
 
-    /// Inject synthetic input events from the control channel (one pointer event per frame).
+    /// Whether the ribbon is folded away now: the user's choice, or the narrow window's.
+    pub fn ribbon_collapsed(&self) -> bool {
+        self.narrow.ribbon_collapsed(self.ui.ribbon_collapsed)
+    }
+
+    /// Inject synthetic input events from the control channel (one pointer event per frame), and
+    /// drop the second copy of a touch's press and release.
     pub fn raw_input_hook(&mut self, raw: &mut egui::RawInput) {
+        self.inject_synthetic(raw);
+        self.press_dedup.filter(raw);
+    }
+
+    fn inject_synthetic(&mut self, raw: &mut egui::RawInput) {
         if self.synthetic.is_empty() {
             return;
         }
@@ -1660,6 +1684,7 @@ impl WordApp {
             return;
         }
         let t = theme::Tokens::get(&ctx);
+        self.narrow.update(ctx.content_rect().width());
         // Keytips are read before layout so the frame paints the new state; badges paint after
         // the ribbon so they sit on top of it.
         crate::keytips::logic(self, &ctx);
@@ -2027,6 +2052,9 @@ pub fn now_ms() -> f64 {
 
 #[cfg(test)]
 mod tests_perf;
+
+#[cfg(test)]
+mod tests_touch;
 
 #[cfg(test)]
 mod tests {

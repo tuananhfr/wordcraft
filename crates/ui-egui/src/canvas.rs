@@ -139,6 +139,8 @@ pub struct CanvasState {
     pub(crate) a11y: crate::a11y::A11yCache,
     /// A press on a table's selection area or move handle, held (`table_mouse`).
     pub(crate) table_drag: Option<crate::table_mouse::TableDrag>,
+    /// A finger on the page: pan, tap or long press (`touch`).
+    pub(crate) touch: crate::touch::PageTouch<wordcraft_engine::Selection>,
 }
 
 impl CanvasState {
@@ -211,6 +213,7 @@ impl Default for CanvasState {
             link_from: None,
             a11y: Default::default(),
             table_drag: None,
+            touch: Default::default(),
         }
     }
 }
@@ -238,6 +241,16 @@ impl CanvasState {
     /// True while a mouse drag-select is in progress (the mini toolbar waits for mouse-up).
     pub fn drag_selecting(&self) -> bool {
         self.dragging
+    }
+
+    /// Drop what a press started (drag-select, an object, table or column drag) without applying it.
+    fn cancel_pointer_drags(&mut self) {
+        self.dragging = false;
+        self.column_drag = None;
+        self.unit_drag = None;
+        self.obj_drag = None;
+        self.table_resize = None;
+        self.table_drag = None;
     }
 }
 
@@ -848,6 +861,17 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             app.canvas.scroll_to_caret = true;
         }
     }
+    // A finger dragging the page scrolls it; a pen or Draw Table keeps its drag (`touch`).
+    let may_pan = app.session.view.draw.mode == wordcraft_engine::cmd::draw::DrawMode::Select && app.canvas.table_tool.is_none();
+    let max_click_dist = ui.ctx().options(|o| o.input_options.max_click_dist);
+    let pan = ui.input(|i| app.canvas.touch.pan(i, may_pan, max_click_dist));
+    if let Some(before) = pan.started {
+        app.session.sel = before;
+        app.canvas.cancel_pointer_drags();
+        app.canvas.scroll_to_caret = false;
+    }
+    // Read Mode turns whole columns, on the swipe's release.
+    let touch_delta = if app.session.view.read_mode { egui::Vec2::ZERO } else { pan.delta };
     // Where the selection really ends, also when it took whole table cells.
     let caret = layout.caret_on(&app.session.sel_ends().focus, app.session.page_hint);
     // Editing a header/footer (or a note) dims the body; once per frame, for every page.
@@ -942,7 +966,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     } else {
         app.canvas.auto_scroll.update(ui, area)
     };
-    let delta = wheel_delta + auto_delta + middle_delta;
+    let delta = wheel_delta + auto_delta + middle_delta + touch_delta;
     let mut scroll_area = egui::ScrollArea::both()
         // Each document keeps its own scroll position while another one is shown.
         .id_salt(("canvas_scroll", app.session.document_id()))
@@ -1308,8 +1332,15 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     app.canvas.focused = resp.has_focus();
     // Screen readers: the document under the canvas, with the caret (#488).
     crate::a11y::expose(app, ui.ctx(), resp.id, &layout, &rects, area);
+    // A finger pan or long press owns the rest of its touch; the press itself went the mouse's way.
+    let pressed_on_page = ui.input(|i| i.pointer.primary_pressed()) && resp.contains_pointer();
+    let touch_owned = ui.input(|i| app.canvas.touch.after(i, pressed_on_page, resp.long_touched(), || app.session.sel.clone()));
+    if resp.long_touched() {
+        app.canvas.cancel_pointer_drags();
+    }
     // The buttons that start or stop middle-click scrolling don't also click the page.
     let middle_gesture = app.canvas.auto_scroll.blocks_input();
+    let pointer_owned = middle_gesture || touch_owned;
     // Double-click the space between two pages (or the line between them) to hide or show it.
     if resp.double_clicked()
         && app.session.view.mode == wordcraft_layout::ViewMode::Print
@@ -1320,11 +1351,11 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         let _ = app.run("view.hideWhiteSpace", json!({"value": !app.session.view.hide_white_space}));
     } else
     // Draw Table / Eraser own the mouse while on (no caret moves); else the usual editing.
-    if !middle_gesture && !crate::table_pen::pointer(app, ui, &resp, &rects, &layout, geo.scale) {
+    if !pointer_owned && !crate::table_pen::pointer(app, ui, &resp, &rects, &layout, geo.scale) {
         mouse(app, ui, &resp, &rects, &layout, geo.scale);
     }
     // A click on a check box ticks it; on a list's button opens the list.
-    if !middle_gesture {
+    if !pointer_owned {
         crate::content_controls::clicks(app, &resp);
     }
     let secondary_clicked = resp.secondary_clicked() && !middle_gesture;
@@ -1374,6 +1405,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 app.session.sel = wordcraft_engine::Selection::caret(pos);
             }
             context_suggestions(app);
+            // A long press stands for the right-click a finger can't make, and selects the word too.
+            if resp.long_touched() && app.session.sel.is_collapsed() {
+                let _ = app.run("select.word", json!({}));
+            }
         }
     }
     // Shift+F10 opens the same menu below the caret, for the selection or the word there (#821).
@@ -1400,6 +1435,11 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     // Stand down while the context menu owns the pointer so the two never double up; the open
     // state also covers the click that dismisses the menu.
     app.canvas.context_menu_open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
+    if let Some(direction) = ui.input(|i| app.canvas.touch.end(i))
+        && app.session.view.read_mode
+    {
+        turn_read_page(app, direction);
+    }
     if let Some(c) = crate::ink::cursor(app).filter(|_| resp.hovered() || app.canvas.ink.is_some()) {
         ui.ctx().set_cursor_icon(c);
     } else if resp.hovered() || app.canvas.obj_drag.is_some() {
