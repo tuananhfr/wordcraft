@@ -134,10 +134,10 @@ mod tests {
         assert_eq!(a.save_status(), Some(SaveStatus::Saving));
         tx.send(Err(Some("NotAllowedError".into()))).unwrap();
         frame(&mut a);
-        assert_eq!(a.save_status(), Some(SaveStatus::Failed("NotAllowedError")));
+        assert_eq!(a.save_status(), Some(SaveStatus::Failed("Couldn't write the file. The document is still unsaved.")));
         // A download that fails outright fails too.
         assert!(a.run("file.save", json!({})).is_err());
-        assert_eq!(a.save_status(), Some(SaveStatus::Failed("disk full")));
+        assert_eq!(a.save_status(), Some(SaveStatus::Failed("Couldn't write the file. The document is still unsaved.")));
     }
 
     #[test]

@@ -43,20 +43,6 @@ pub enum Download {
 /// user cancelled, `Err(Some(reason))` when it failed.
 pub type PickerAnswer = Result<(), Option<String>>;
 
-/// A save still in the browser's picker, about the document it saved.
-pub(crate) struct PickerSave {
-    rx: Receiver<PickerAnswer>,
-    name: String,
-    document: u64,
-    /// The save marked the document saved, so a save that didn't happen marks it unsaved again.
-    marked_saved: bool,
-    /// A save rather than an export: the status bar shows how it goes.
-    save: bool,
-    /// "Save changes?" answered Save: the command it held back (New, Open, Close…), run once the
-    /// file is written.
-    then: Option<(String, Value)>,
-}
-
 const PICTURES: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
 const DOCUMENTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
 
@@ -163,89 +149,6 @@ impl WordApp {
             FileDialogRequest::Save { name } => self.services.pick_save.as_ref().and_then(|f| f(name)),
         };
         Asked::Done(self.finish_pick(after, picked))
-    }
-
-    /// Remember a save the browser's picker finishes later ([`Download::Pending`]).
-    pub(crate) fn track_picker_save(&mut self, rx: Receiver<PickerAnswer>, name: &str, marked_saved: bool, save: bool) {
-        let document = self.session.document_id();
-        self.picker_saves.push(PickerSave { rx, name: name.to_string(), document, marked_saved, save, then: None });
-    }
-
-    /// Whether a save of `document` is still in the browser's save picker.
-    pub(crate) fn picker_save_pending(&self, document: u64) -> bool {
-        self.picker_saves.iter().any(|s| s.document == document)
-    }
-
-    /// Whether a save (not an export) of `document` is still being written by the browser's picker.
-    pub(crate) fn picker_saving(&self, document: u64) -> bool {
-        self.picker_saves.iter().any(|s| s.document == document && s.save)
-    }
-
-    /// Hold `then` back until the save just started in the picker has written the file.
-    pub(crate) fn continue_after_picker_save(&mut self, then: String, params: Value) {
-        if let Some(crate::dialogs::Dialog::LossWarning(pending)) = &mut self.dialog {
-            pending.after = Some(AfterSave::Continue { then, params, document: pending.document_id() });
-            return;
-        }
-        if let Some(save) = self.picker_saves.last_mut() {
-            save.then = Some((then, params));
-        }
-    }
-
-    /// Finish the picker saves that have been answered (every frame, from `logic`).
-    pub(crate) fn poll_picker_saves(&mut self) {
-        let mut i = 0;
-        while let Some(save) = self.picker_saves.get(i) {
-            let answer = match save.rx.try_recv() {
-                Err(TryRecvError::Empty) => {
-                    i += 1;
-                    continue;
-                }
-                Ok(answer) => answer,
-                // The host dropped the save without an answer: as good as cancelled.
-                Err(TryRecvError::Disconnected) => Err(None),
-            };
-            let save = self.picker_saves.remove(i);
-            self.finish_picker_save(save, answer);
-        }
-    }
-
-    /// The answer is about the document that was saved, shown or not: the others are left alone.
-    fn finish_picker_save(&mut self, save: PickerSave, answer: PickerAnswer) {
-        match answer {
-            Ok(()) => {
-                if save.marked_saved {
-                    let _ = self.in_document(save.document, |app| app.session.doc.passthrough.remove("wordcraft:package.signed"));
-                }
-                if save.save {
-                    self.save_failures.saved(save.document);
-                }
-                // Unsaved again (changed since, or a format that doesn't keep everything):
-                // carrying on would lose the changes. Closing goes by document; the mailings act
-                // on the shown document, so only while that is still the one saved.
-                if let Some((then, params)) = save.then {
-                    let clean = self.find_document(save.document).is_some_and(|(s, _)| !s.dirty);
-                    let by_document = then == "ui.closeDocument" || then == crate::close_many::CLOSE_DOCUMENTS;
-                    if clean && (by_document || save.document == self.session.document_id()) {
-                        let _ = self.execute_user(&then, params);
-                    } else {
-                        self.stop_save_all(save.document);
-                    }
-                }
-            }
-            Err(error) => {
-                self.stop_save_all(save.document);
-                if save.marked_saved {
-                    self.mark_document_unsaved(save.document);
-                }
-                if let Some(error) = error {
-                    if save.save {
-                        self.note_save_failed(save.document, &error);
-                    }
-                    self.status(crate::i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &save.name), ("error", &error)]));
-                }
-            }
-        }
     }
 
     /// Pick up the answer of an open file dialog, if it has arrived (every frame, from `logic`),
@@ -388,12 +291,12 @@ impl WordApp {
                 Ok(result)
             }
             AfterSave::Continue { then, params, document } => {
+                if result.get("pending").and_then(Value::as_bool) == Some(true) {
+                    self.continue_after_picker_save(document, then, params);
+                    return Ok(result);
+                }
                 if !self.in_document(document, |app| app.safely_saved(saved)).unwrap_or(false) {
                     return Ok(json!({"done": false}));
-                }
-                if result.get("pending").and_then(Value::as_bool) == Some(true) {
-                    self.continue_after_picker_save(then, params);
-                    return Ok(result);
                 }
                 self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))
             }

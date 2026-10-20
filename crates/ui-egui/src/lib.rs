@@ -24,6 +24,7 @@ pub mod a11y;
 pub mod a11y_pane;
 pub mod autoscroll;
 pub mod backstage;
+mod browser_save;
 pub mod canvas;
 pub mod caret_glide;
 pub mod chrome;
@@ -469,8 +470,8 @@ pub struct WordApp {
     autosave_path: Option<std::path::PathBuf>,
     /// The file dialog the host is showing, and what its answer is for ([`file_dialogs`]).
     file_dialog: Option<file_dialogs::PendingDialog>,
-    /// Web: saves still in the browser's save picker ([`file_dialogs`]).
-    picker_saves: Vec<file_dialogs::PickerSave>,
+    /// Web: saves still in the browser's save picker ([`browser_save`]).
+    picker_saves: Vec<browser_save::PickerSave>,
     /// The built-in file browser, when it is open, and the folder it showed last (#576).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) file_browser: file_browser::State,
@@ -696,8 +697,12 @@ impl WordApp {
         }
         if let Some((document, then, then_params)) = self.discards(id, &params)
             && let Some((session, untitled)) = self.find_document(document)
-            && session.dirty
+            && (session.dirty || self.picker_saving(document))
         {
+            if self.picker_saving(document) {
+                self.continue_after_picker_save(document, then, then_params);
+                return Ok(json!({"pending": "save"}));
+            }
             let name = open_documents::prompt_name_of(session, untitled);
             self.dialog = Some(dialogs::Dialog::SaveChanges { name, then, params: then_params, document });
             return Ok(json!({"pending": "saveChanges"}));
@@ -765,67 +770,8 @@ impl WordApp {
             }
             return r;
         }
-        // Web: saving and exporting become downloads.
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
-            let name = params.get("path").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| self.default_save_name());
-            let name = if id == "file.exportPdf" && !name.ends_with(".pdf") { format!("{name}.pdf") } else { name };
-            // A save with a password encrypts this and later saves (`file.save`'s `password`).
-            if matches!(id, "file.save" | "file.saveAs")
-                && let Some(pw) = params.get("password").filter(|v| !v.is_null())
-            {
-                if !wordcraft_engine::io::can_encrypt(&name) || pw.as_str().is_none_or(str::is_empty) {
-                    return Err("only Word documents (.docx, .docm, .dotx, .dotm) can be saved with a password, and it can't be empty".into());
-                }
-                self.session.run("file.encrypt", &json!({"password": pw})).map_err(|e| e.to_string())?;
-            }
-            // A save is a save, download or not: advance the revision and modified stamp (#262).
-            if matches!(id, "file.save" | "file.saveAs") {
-                self.session.stamp_save();
-            }
-            // Word documents are encrypted with the document's password, if it has one.
-            let password =
-                if matches!(id, "file.save" | "file.saveAs") { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
-            let opts = wordcraft_engine::cmd::file::export_options(&self.session, &params);
-            let saving = matches!(id, "file.save" | "file.saveAs");
-            let document = self.session.document_id();
-            let bytes = match wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts) {
-                Ok(bytes) => bytes,
-                Err(e) => {
-                    if saving {
-                        self.note_save_failed(document, &e);
-                    }
-                    return Err(e);
-                }
-            };
-            let picker = match self.services.download.as_ref().map(|d| d(&name, &bytes)) {
-                Some(Err(e)) => {
-                    let msg = i18n::fmt(tl!("Couldn't download {name}: {error}"), &[("name", &name), ("error", &e)]);
-                    log::error!("download of {name} failed: {e}");
-                    if saving {
-                        self.note_save_failed(document, &e);
-                    }
-                    self.status(msg.clone());
-                    return Err(msg);
-                }
-                Some(Ok(Download::Pending(rx))) => Some(rx),
-                Some(Ok(Download::Done)) | None => None,
-            };
-            // An export is a copy, and so is a save in a format that doesn't keep everything (a
-            // page image, plain text): the document itself still has unsaved changes.
-            let marked_saved = matches!(id, "file.save" | "file.saveAs") && keeps_everything(&name);
-            if marked_saved {
-                self.session.dirty = false;
-                if picker.is_none() {
-                    let _ = self.session.doc.passthrough.remove("wordcraft:package.signed");
-                }
-            }
-            let pending = picker.is_some();
-            if let Some(rx) = picker {
-                self.track_picker_save(rx, &name, marked_saved, saving);
-            } else if saving {
-                self.save_failures.saved(document);
-            }
-            return Ok(json!({"downloaded": name, "bytes": bytes.len(), "pending": pending}));
+            return self.browser_save(id, &params);
         }
         let document = self.session.document_id();
         let r = if open_documents::opens_document(id, &params) {
@@ -937,7 +883,7 @@ impl WordApp {
                 Some(saved) => saved,
                 // Web: the browser's save picker is still open; carry on once it has written the file.
                 None => {
-                    self.continue_after_picker_save(then, params);
+                    self.continue_after_picker_save(document, then, params);
                     return Ok(json!({"pending": "save"}));
                 }
             },
@@ -986,6 +932,9 @@ impl WordApp {
     /// the command is cancelled and the document stays. `None` while the browser's save picker
     /// hasn't written the file yet.
     fn save_for_prompt(&mut self) -> Option<bool> {
+        if self.picker_saving(self.session.document_id()) {
+            return None;
+        }
         let (saved, pending) = match self.execute_user("file.save", json!({})) {
             Ok(v) if v.get("pending").and_then(Value::as_str) == Some("lossWarning") => return None,
             Ok(v) => (
@@ -994,8 +943,7 @@ impl WordApp {
             ),
             Err(_) => (false, false),
         };
-        let safe = self.safely_saved(saved);
-        if safe && pending { None } else { Some(safe) }
+        if pending { None } else { Some(self.safely_saved(saved)) }
     }
 
     /// Whether a save before New/Open/Close counts: it happened, and kept everything.
@@ -3922,7 +3870,7 @@ mod tests {
         assert!(body_text(&a).contains(UNSAVED));
         assert!(a.session.dirty);
         let msg = a.status_msg.as_ref().map(|(m, _)| m.clone()).unwrap_or_default();
-        assert!(msg.contains("blocked by the browser"), "the status bar says why: {msg:?}");
+        assert_eq!(msg, "Couldn't write the file. The document is still unsaved.");
     }
 
     /// Web (Chromium): a save goes through the browser's save picker, which answers later. Save
@@ -3968,7 +3916,7 @@ mod tests {
         answer(Err(Some("disk full".into())));
         frame(&mut a);
         assert!(body_text(&a).contains(UNSAVED) && a.session.dirty && !a.quit_requested);
-        assert!(a.status_msg.as_ref().is_some_and(|(m, _)| m.contains("disk full")), "the status bar says why");
+        assert!(a.status_msg.as_ref().is_some_and(|(m, _)| m == "Couldn't write the file. The document is still unsaved."));
 
         // Written: the held-back Close runs then, and only then.
         a.run("file.close", json!({})).unwrap();

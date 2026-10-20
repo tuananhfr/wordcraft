@@ -48,6 +48,11 @@ impl WordApp {
     /// The user closes `targets`; `quit` closes the window once they are. Unsaved ones are asked
     /// about first, all in one question.
     pub(crate) fn ask_close(&mut self, targets: Vec<u64>, quit: bool) -> Result<Value, String> {
+        if let Some(document) = targets.iter().copied().find(|d| self.picker_saving(*d)) {
+            let params = json!({"documents": targets, "quit": quit, "ask": true});
+            self.continue_after_picker_save(document, CLOSE_DOCUMENTS.into(), params);
+            return Ok(json!({"pending": "save"}));
+        }
         let unsaved: Vec<u64> = targets.iter().copied().filter(|d| self.find_document(*d).is_some_and(|(s, _)| s.dirty)).collect();
         match unsaved.as_slice() {
             [] => self.close_documents(&json!({"documents": targets, "quit": quit})),
@@ -106,6 +111,9 @@ impl WordApp {
     pub(crate) fn close_documents(&mut self, p: &Value) -> Result<Value, String> {
         let (targets, mut save, discard) = (ids(p, "documents"), ids(p, "save"), ids(p, "discard"));
         let quit = p.get("quit").and_then(Value::as_bool) == Some(true);
+        if p.get("ask").and_then(Value::as_bool) == Some(true) {
+            return self.ask_close(targets, quit);
+        }
         let unsaved = Some(ids(p, "unsaved")).filter(|u| !u.is_empty()).unwrap_or_else(|| save.clone());
         let mut saved = ids(p, "saved");
         if let Some(waited) = p.get("wait").and_then(Value::as_u64) {
@@ -143,12 +151,12 @@ impl WordApp {
                 Some(false) => return Ok(json!({"done": false})),
                 None => {
                     if matches!(self.dialog, Some(Dialog::LossWarning(_))) {
-                        self.continue_after_picker_save(CLOSE_DOCUMENTS.into(), rest);
+                        self.continue_after_picker_save(next, CLOSE_DOCUMENTS.into(), rest);
                         return Ok(json!({"pending": "lossWarning"}));
                     }
                     let mut rest = rest;
                     rest["wait"] = json!(next);
-                    self.continue_after_picker_save(CLOSE_DOCUMENTS.into(), rest);
+                    self.continue_after_picker_save(next, CLOSE_DOCUMENTS.into(), rest);
                     self.show_save_all(targets, quit, Progress { unsaved, saved, saving: Some(next) });
                     return Ok(json!({"pending": "save"}));
                 }
@@ -377,6 +385,7 @@ mod tests {
         assert_eq!(a.run("ui.saveChanges", json!({"answer": "save"})).unwrap()["pending"], "save");
         assert_eq!(answers.borrow().len(), 1, "one picker at a time");
         assert_eq!(progress(&a), Some((vec![], Some(first))), "the question stays up, its row saving");
+        assert!(a.find_document(first).is_some_and(|(s, _)| s.dirty), "not saved before the write completes");
         assert!(a.run("ui.saveChanges", json!({"answer": "save"})).is_err(), "no second picker while one is open");
         frame(&mut a);
         assert_eq!(answers.borrow().len(), 1);

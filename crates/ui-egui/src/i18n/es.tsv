@@ -2441,3 +2441,4 @@ preview	Title	Título
 	Leave out the date and time of comments and tracked changes when saving	Omitir la fecha y la hora de los comentarios y los cambios controlados al guardar
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	El documento que editas conserva los nombres y las fechas; solo el archivo guardado los omite.
 	Privacy Settings	Configuración de privacidad actual
+	Couldn't write the file. The document is still unsaved.	No se pudo escribir el archivo. El documento sigue sin guardarse.

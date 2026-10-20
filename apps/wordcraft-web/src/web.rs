@@ -101,8 +101,8 @@ struct WebShell {
 }
 
 /// Saves the browser's save picker finishes after `download` has returned (#728). Each one's
-/// answer goes back to the app ([`Download::Pending`]), which marks the document it saved unsaved
-/// again when it didn't happen; the `beforeunload` guard keeps warning while one is in flight.
+/// answer goes back to the app ([`Download::Pending`]), which marks the document saved only on
+/// completion; the `beforeunload` guard keeps warning while one is in flight.
 #[derive(Default)]
 struct PickerSaves {
     /// Picker saves started and not yet written and closed.
@@ -231,7 +231,8 @@ fn download(saves: &Rc<PickerSaves>, ctx: &egui::Context, path: &str, bytes: &[u
         match trigger_save_file_picker(saves, ctx, &window, &picker_fn, &name, bytes) {
             Ok(answer) => return Ok(Download::Pending(answer)),
             Err(e) => {
-                log::warn!("showSaveFilePicker failed: {e}; falling back to anchor download");
+                log::error!("showSaveFilePicker failed: {e}");
+                return Err(e);
             }
         }
     }

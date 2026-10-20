@@ -68,6 +68,9 @@ impl WordApp {
         if !matches!(command, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng" | "file.printPdf") {
             return false;
         }
+        if matches!(command, "file.save" | "file.saveAs") && self.picker_saving(self.session.document_id()) {
+            return false;
+        }
         let web = self.services.download.is_some();
         let name = params.get("path").and_then(Value::as_str).map(str::to_string).or_else(|| {
             if web { Some(self.default_save_name()) } else { self.session.path.as_ref().map(|p| p.to_string_lossy().into_owned()) }
@@ -167,7 +170,7 @@ impl WordApp {
             let password = app.session.password.as_ref().map(wordcraft_engine::Password::as_str);
             if let Some(download) = &app.services.download {
                 let bytes = wordcraft_engine::io::save_bytes_with(&path, &app.session.doc, password, &opts)?;
-                let answer = download(&path, &bytes)?;
+                let answer = download(&path, &bytes).map_err(|error| app.browser_write_failed(None, &error))?;
                 if let crate::Download::Pending(rx) = answer {
                     app.track_picker_save(rx, &path, false, false);
                 }

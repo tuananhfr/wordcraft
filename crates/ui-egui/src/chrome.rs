@@ -319,7 +319,9 @@ fn title(app: &WordApp, ui: &Ui, full: Rect, qat_end: f32, right_start: f32, nar
         format!(
             "{} — {}",
             app.title_stem(),
-            if app.session.dirty {
+            if app.picker_saving(app.session.document_id()) {
+                tl!("Saving…")
+            } else if app.session.dirty {
                 tl!("Edited")
             } else if app.session.path.is_some() {
                 tl!("Saved")

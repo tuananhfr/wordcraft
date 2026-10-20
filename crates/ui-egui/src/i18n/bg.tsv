@@ -2464,3 +2464,4 @@
 	Leave out the date and time of comments and tracked changes when saving	Без дата и час на коментарите и проследените промени при запазване
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Документът, който редактирате, запазва имената и датите; само записаният файл ги пропуска.
 	Privacy Settings	Текущи настройки за поверителност
+	Couldn't write the file. The document is still unsaved.	Файлът не може да бъде записан. Документът все още не е запазен.

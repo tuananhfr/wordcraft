@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Browser Save keeps the document unsaved and shows Saving until the file write and close finish successfully; Close, Close All and exit-with-Save wait for the document's in-flight write, cancellation or failure keeps it open, later edits remain unsaved, and write errors show a translated message instead of JavaScript debug text (web).
+
 - Saves and exports warn before dropping comments, tracked changes, VBA macros or document signatures; the shared Vietnamese dialog can cancel, continue or save a copy in the chosen format while preserving the original document and name (both).
 
 - HTML paste preserves allow-listed Word, Google Docs and LibreOffice stylesheet classes, paragraph indents and spacing, real lists, cell borders/shading/alignment and column widths, and run fonts; bounded input, CSS, nesting and cell expansion fall back to inert plain text, with scripts and remote images discarded (both).
