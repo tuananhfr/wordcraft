@@ -2499,3 +2499,10 @@ preview	Title	Tiêu đề
 	Couldn't write the file. The document is still unsaved.	Không ghi được tệp. Tài liệu vẫn chưa được lưu.
 	Close document	Đóng tài liệu
 	Press Esc to exit Focus mode	Nhấn Esc để thoát chế độ Tập trung
+
+	Legacy .doc file	Tệp .doc cũ
+	Cannot open legacy .doc format	Không mở được định dạng .doc cũ
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Tệp này dùng định dạng Word cũ (.doc) mà Văn bản chưa đọc được. Hãy mở nó bằng Word hoặc LibreOffice, lưu thành .docx rồi mở lại.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Tệp .doc cũ đã được mở. Khi lưu, tệp sẽ được lưu thành .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Các phông {fonts} chưa có trên máy này nên được hiển thị bằng phông tương tự.
+	{fonts} and {count} others	{fonts} và {count} khác

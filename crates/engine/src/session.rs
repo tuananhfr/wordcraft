@@ -335,6 +335,8 @@ pub struct Session {
     /// Formatting picked with a collapsed caret, applied to the next typed text.
     pub pending: Option<CharProps>,
     pub path: Option<std::path::PathBuf>,
+    /// A converted import needs a separate destination; `path` still identifies its source.
+    pub suggested_save_path: Option<std::path::PathBuf>,
     pub dirty: bool,
     /// Where the custom dictionary is kept on disk, if the host wired one up. Only the desktop
     /// app does: headless sessions (MCP, `wordcraft-cli run`), tests and the web build leave
@@ -579,6 +581,7 @@ impl Session {
             view: ViewState::default(),
             pending: None,
             path: None,
+            suggested_save_path: None,
             user_dict_path: None,
             dirty: false,
             clipboard: None,
@@ -970,6 +973,7 @@ impl Session {
         self.doc = doc;
         self.doc.ensure_nonempty();
         self.password = None;
+        self.suggested_save_path = None;
         self.sel = Selection::caret(self.doc.start_of(StoryRef::Body));
         self.pending = None;
         self.also_selected.clear();
@@ -1023,6 +1027,7 @@ impl Session {
             view,
             pending: _,
             path: _,
+            suggested_save_path: _,
             dirty: _,
             user_dict_path,
             clipboard,
@@ -1130,6 +1135,7 @@ impl Session {
             view: _,
             pending: _,
             path: _,
+            suggested_save_path: _,
             // The custom dictionary file, like the file path: host wiring, not an edit.
             user_dict_path: _,
             dirty,

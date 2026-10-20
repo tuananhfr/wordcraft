@@ -2088,3 +2088,10 @@
 	Couldn't write the file. The document is still unsaved.	Nije moguće upisati datoteku. Dokument i dalje nije sačuvan.
 	Close document	Zatvori dokument
 	Press Esc to exit Focus mode	Pritisnite Esc da napustite režim fokusa
+
+	Legacy .doc file	Stari .doc dokument
+	Cannot open legacy .doc format	Nije moguće otvoriti stari .doc format
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Ova datoteka koristi stari Word format (.doc), koji Văn bản još ne može da čita. Otvorite je u programu Word ili LibreOffice, sačuvajte kao .docx, pa je ponovo otvorite.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Stari .doc dokument je otvoren. Pri čuvanju će biti sačuvan kao .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Fontovi {fonts} nisu dostupni na ovom uređaju, pa se prikazuju pomoću sličnih fontova.
+	{fonts} and {count} others	{fonts}; ostalih: {count}

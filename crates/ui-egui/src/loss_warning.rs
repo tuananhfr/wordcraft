@@ -73,7 +73,11 @@ impl WordApp {
         }
         let web = self.services.download.is_some();
         let name = params.get("path").and_then(Value::as_str).map(str::to_string).or_else(|| {
-            if web { Some(self.default_save_name()) } else { self.session.path.as_ref().map(|p| p.to_string_lossy().into_owned()) }
+            if web {
+                Some(self.default_save_name())
+            } else {
+                self.session.suggested_save_path.as_ref().or(self.session.path.as_ref()).map(|p| p.to_string_lossy().into_owned())
+            }
         });
         let Some(mut name) = name else { return false };
         // Desktop Save As without a path opens the picker before its target is known.

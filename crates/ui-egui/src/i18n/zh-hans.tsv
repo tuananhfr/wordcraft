@@ -2090,3 +2090,10 @@
 	Couldn't write the file. The document is still unsaved.	无法写入文件。文档仍未保存。
 	Close document	关闭文档
 	Press Esc to exit Focus mode	按 Esc 退出专注模式
+
+	Legacy .doc file	旧版 .doc 文件
+	Cannot open legacy .doc format	无法打开旧版 .doc 格式
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	此文件使用旧版 Word 格式（.doc），Văn bản 暂时无法读取。请用 Word 或 LibreOffice 打开，将其另存为 .docx 后再打开。
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	已打开旧版 .doc 文件。保存时将使用 .docx 格式
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	此设备上没有字体 {fonts}，因此使用相似字体显示。
+	{fonts} and {count} others	{fonts}，以及其他 {count} 种字体

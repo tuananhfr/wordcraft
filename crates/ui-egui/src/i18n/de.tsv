@@ -2077,3 +2077,10 @@
 	Couldn't write the file. The document is still unsaved.	Die Datei konnte nicht geschrieben werden. Das Dokument ist weiterhin ungespeichert.
 	Close document	Dokument schließen
 	Press Esc to exit Focus mode	Esc drücken, um den Fokusmodus zu verlassen
+
+	Legacy .doc file	Ältere .doc-Datei
+	Cannot open legacy .doc format	Älteres .doc-Format kann nicht geöffnet werden
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Diese Datei verwendet das ältere Word-Format (.doc), das Văn bản noch nicht lesen kann. Öffnen Sie sie in Word oder LibreOffice, speichern Sie sie als .docx und öffnen Sie sie erneut.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Die ältere .doc-Datei wurde geöffnet. Beim Speichern wird sie als .docx gespeichert
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Die Schriftarten {fonts} sind auf diesem Gerät nicht verfügbar und werden daher durch ähnliche Schriftarten ersetzt.
+	{fonts} and {count} others	{fonts} und {count} weitere

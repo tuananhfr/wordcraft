@@ -2112,3 +2112,10 @@
 	Couldn't write the file. The document is still unsaved.	Faili ei saanud kirjutada. Dokument on endiselt salvestamata.
 	Close document	Sulge dokument
 	Press Esc to exit Focus mode	Fookusrežiimist väljumiseks vajuta Esc
+
+	Legacy .doc file	Vana .doc-fail
+	Cannot open legacy .doc format	Vana .doc-vormingut ei saa avada
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	See fail kasutab vana Wordi vormingut (.doc), mida Văn bản veel lugeda ei oska. Avage see Wordis või LibreOffice’is, salvestage .docx-vormingus ja avage uuesti.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Vana .doc-fail on avatud. Salvestamisel kasutatakse .docx-vormingut
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Fonte {fonts} pole selles seadmes saadaval, seega kuvatakse neid sarnaste fontidega.
+	{fonts} and {count} others	{fonts} ja veel {count}

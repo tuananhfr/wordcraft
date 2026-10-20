@@ -61,12 +61,14 @@ pub mod file_browser;
 pub mod file_dialogs;
 pub mod fling;
 mod focus;
+mod font_notice;
 pub mod frame;
 pub mod i18n;
 pub mod icons;
 pub mod ink;
 pub mod keys;
 pub mod keytips;
+mod legacy_notice;
 pub mod loss_warning;
 pub mod mini_toolbar;
 pub mod narrow;
@@ -498,6 +500,7 @@ pub struct WordApp {
     /// Saves that failed, shown in the status bar until saved or edited ([`save_status`]).
     pub(crate) save_failures: save_status::SaveFailures,
     focus: focus::State,
+    font_notice: font_notice::State,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -594,6 +597,7 @@ impl WordApp {
             closed: Default::default(),
             save_failures: Default::default(),
             focus: Default::default(),
+            font_notice: Default::default(),
         }
     }
 
@@ -813,9 +817,14 @@ impl WordApp {
         if let Ok(v) = &r {
             self.keep_web_font(id, &params, v);
         }
+        if id == "file.open" && r.is_ok() && self.session.document_id() != document {
+            font_notice::opened(self);
+        }
         self.after_command(id);
         if let Err(e) = &r {
-            if wordcraft_engine::io::too_large(e) {
+            if wordcraft_engine::io::legacy::refused(e) {
+                self.status(tl!("Cannot open legacy .doc format"));
+            } else if wordcraft_engine::io::too_large(e) {
                 // File › Open is on the File tab, which hides the status bar that says why.
                 self.ui.backstage = false;
                 self.status(tl!("The file is too large or abnormally compressed, so it can't be opened."));
@@ -923,6 +932,9 @@ impl WordApp {
         }
         let retry = (id == "file.open").then(|| params.clone());
         let r = self.execute(id, params);
+        if id == "file.open" {
+            legacy_notice::after_open(self, &r);
+        }
         if let (Err(e), Some(params)) = (&r, retry)
             && wordcraft_engine::io::needs_password(e)
         {
@@ -1730,6 +1742,7 @@ impl WordApp {
                 panes::show(self, ui);
             }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
+                font_notice::show(self, ui);
                 canvas::show(self, ui);
             });
         }

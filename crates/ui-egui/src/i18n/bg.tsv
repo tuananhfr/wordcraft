@@ -2467,3 +2467,10 @@
 	Couldn't write the file. The document is still unsaved.	Файлът не може да бъде записан. Документът все още не е запазен.
 	Close document	Затваряне на документа
 	Press Esc to exit Focus mode	Натиснете Esc, за да излезете от режим Фокус
+
+	Legacy .doc file	Стар файл .doc
+	Cannot open legacy .doc format	Старият формат .doc не може да бъде отворен
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Този файл използва стария формат на Word (.doc), който Văn bản все още не може да чете. Отворете го с Word или LibreOffice, запишете го като .docx и го отворете отново.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Старият файл .doc е отворен. При записване ще бъде записан като .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Шрифтовете {fonts} не са налични на това устройство, затова се показват с подобни шрифтове.
+	{fonts} and {count} others	{fonts} и още {count}

@@ -93,6 +93,25 @@ fn close_and_focus_hint_are_translated_in_every_catalog() {
 }
 
 #[test]
+fn legacy_and_font_notices_are_translated_in_every_catalog() {
+    let keys = [
+        "Legacy .doc file",
+        "Cannot open legacy .doc format",
+        "This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.",
+        "The legacy .doc file has been opened. When saved, it will be saved as .docx",
+        "The fonts {fonts} are not available on this device, so similar fonts are used to display them.",
+        "{fonts} and {count} others",
+    ];
+    for l in &LANGUAGES {
+        if l.code != "en" {
+            for key in keys {
+                assert!(has(lang(l.code), key), "{}: {key}", l.code);
+            }
+        }
+    }
+}
+
+#[test]
 fn current_language_is_per_thread() {
     set_current(lang("ja"));
     assert_eq!(t("Insert"), "挿入");

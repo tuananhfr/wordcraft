@@ -86,6 +86,9 @@ pub(crate) fn title_of(session: &Session, untitled: u32) -> String {
 
 /// The file name a save suggests: the title, keeping a Word package's own extension.
 pub(crate) fn save_name_of(session: &Session, untitled: u32) -> String {
+    if let Some(name) = session.suggested_save_path.as_ref().and_then(|p| p.file_name()) {
+        return name.to_string_lossy().into_owned();
+    }
     let ext = session.path.as_ref().and_then(|p| p.extension()).map(|e| e.to_string_lossy().to_string());
     match ext {
         Some(e) if wordcraft_engine::io::is_word_package(&e) => format!("{}.{e}", title_of(session, untitled)),

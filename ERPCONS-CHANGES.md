@@ -1,5 +1,8 @@
 # ERPCons changes
 
+- Legacy Word files are detected by .doc/.dot names and OLE2 content even with another extension; readable files open with a conversion notice and a separate .docx save name, while refused files show one translated dialog explaining how to convert them (both).
+- Opened documents show one dismissible notice listing unavailable fonts replaced for display, with at most three names and a remaining count; dismissal is kept across edits and document tabs, and all interface catalogs include the new wording (both).
+
 - Browser Save keeps the document unsaved and shows Saving until the file write and close finish successfully; Close, Close All and exit-with-Save wait for the document's in-flight write, cancellation or failure keeps it open, later edits remain unsaved, and write errors show a translated message instead of JavaScript debug text (web).
 
 - Saves and exports warn before dropping comments, tracked changes, VBA macros or document signatures; the shared Vietnamese dialog can cancel, continue or save a copy in the chosen format while preserving the original document and name (both).

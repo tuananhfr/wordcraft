@@ -172,11 +172,11 @@ fn open(s: &mut Session, v: &Value) -> CmdResult {
         return sel_result(s);
     };
     let password = p::str(v, "password");
-    let (mut doc, encrypted) = if let Some(data) = p::str(v, "data") {
+    let crate::io::legacy::OpenedDocument { mut doc, encrypted, legacy } = if let Some(data) = p::str(v, "data") {
         let bytes = super::insert::base64_decode(data).ok_or_else(|| CmdError::Params("bad base64".into()))?;
-        crate::io::open_bytes_with(path, &bytes, password).map_err(CmdError::Failed)?
+        crate::io::open_bytes_detailed(path, &bytes, password).map_err(CmdError::Failed)?
     } else {
-        crate::io::open_path_with(std::path::Path::new(path), password).map_err(CmdError::Failed)?
+        crate::io::open_path_detailed(std::path::Path::new(path), password).map_err(CmdError::Failed)?
     };
     // Plain text and Markdown carry no language: they are in the editing language.
     let ext = std::path::Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
@@ -187,11 +187,13 @@ fn open(s: &mut Session, v: &Value) -> CmdResult {
     }
     s.set_document(doc);
     s.path = Some(path.into());
+    s.suggested_save_path = legacy.then(|| crate::io::legacy::save_path(path));
+    s.dirty = legacy;
     // Like Word, a document opened with a password is saved with it again.
     if encrypted {
         s.password = password.map(crate::io::Password::new);
     }
-    Ok(json!({"path": path, "paragraphs": s.doc.paragraph_count(), "words": s.doc.word_count(), "encrypted": encrypted}))
+    Ok(json!({"path": path, "paragraphs": s.doc.paragraph_count(), "words": s.doc.word_count(), "encrypted": encrypted, "legacy": legacy}))
 }
 
 /// File › Info › Protect Document › Encrypt with Password: the password Word documents are saved
@@ -214,6 +216,10 @@ fn encrypt(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn save(s: &mut Session, v: &Value) -> CmdResult {
+    if s.suggested_save_path.is_some() && p::str(v, "path").is_none() {
+        s.ui_requests.push(json!({"open": "saveAs"}));
+        return Ok(json!({"saved": false}));
+    }
     let path = match p::str(v, "path").map(std::path::PathBuf::from).or_else(|| s.path.clone()) {
         Some(p) => p,
         None => {
@@ -250,6 +256,7 @@ fn save(s: &mut Session, v: &Value) -> CmdResult {
     if ["docx", "docm", "dotx", "dotm", "odt", "rtf", "json", "xml"].contains(&ext.as_str()) {
         s.path = Some(path.clone());
         s.dirty = false;
+        s.suggested_save_path = None;
         let _ = s.doc.passthrough.remove("wordcraft:package.signed");
     }
     Ok(json!({"saved": true, "path": path.to_string_lossy(), "encrypted": encrypted}))

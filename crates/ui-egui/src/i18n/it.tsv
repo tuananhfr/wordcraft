@@ -2462,3 +2462,10 @@ preview	Title	Esempio
 	Couldn't write the file. The document is still unsaved.	Impossibile scrivere il file. Il documento non è ancora stato salvato.
 	Close document	Chiudi documento
 	Press Esc to exit Focus mode	Premi Esc per uscire dalla modalità Concentrazione
+
+	Legacy .doc file	File .doc precedente
+	Cannot open legacy .doc format	Impossibile aprire il vecchio formato .doc
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Questo file usa il vecchio formato Word (.doc), che Văn bản non è ancora in grado di leggere. Aprilo con Word o LibreOffice, salvalo come .docx e riaprilo.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Il file .doc precedente è stato aperto. Al salvataggio verrà usato il formato .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	I caratteri {fonts} non sono disponibili su questo dispositivo e vengono quindi visualizzati usando caratteri simili.
+	{fonts} and {count} others	{fonts} e altri {count}

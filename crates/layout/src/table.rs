@@ -910,6 +910,14 @@ fn region_text(st: &TableStyleProps, (header, total, first_col, last_col, band, 
     CellText { para: st.para.clone(), chr }
 }
 
+/// The table style's text formatting for a cell, including conditional regions.
+pub fn cell_text_style(t: &Table, style: &TableStyleProps, row: usize, column: usize, span: usize, columns: usize) -> CellText {
+    let columns = columns.max(1);
+    let row = row.min(t.rows.len().saturating_sub(1));
+    let column = column.min(columns.saturating_sub(1));
+    region_text(style, region_of(t, Some(style), row, column, span.clamp(1, columns), columns))
+}
+
 /// Each column's narrowest and widest content, cell margins included: its longest word and its
 /// longest line. A cell spanning columns shares what they lack between them; nested tables count
 /// with their own. `None` when every cell is empty.

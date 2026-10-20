@@ -2086,3 +2086,10 @@
 	Couldn't write the file. The document is still unsaved.	Impossible d’écrire le fichier. Le document n’est toujours pas enregistré.
 	Close document	Fermer le document
 	Press Esc to exit Focus mode	Appuyez sur Échap pour quitter le mode Concentration
+
+	Legacy .doc file	Ancien fichier .doc
+	Cannot open legacy .doc format	Impossible d’ouvrir l’ancien format .doc
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Ce fichier utilise l’ancien format Word (.doc), que Văn bản ne peut pas encore lire. Ouvrez-le dans Word ou LibreOffice, enregistrez-le au format .docx, puis ouvrez-le à nouveau.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	L’ancien fichier .doc a été ouvert. Il sera enregistré au format .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Les polices {fonts} ne sont pas disponibles sur cet appareil et sont donc remplacées à l’affichage par des polices similaires.
+	{fonts} and {count} others	{fonts} et {count} autres

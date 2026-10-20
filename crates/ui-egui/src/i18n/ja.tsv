@@ -2078,3 +2078,10 @@
 	Couldn't write the file. The document is still unsaved.	ファイルに書き込めませんでした。文書はまだ保存されていません。
 	Close document	文書を閉じる
 	Press Esc to exit Focus mode	Esc キーでフォーカスモードを終了
+
+	Legacy .doc file	旧形式の .doc ファイル
+	Cannot open legacy .doc format	旧形式の .doc ファイルを開けません
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	このファイルは古い Word 形式（.doc）を使用しており、Văn bản ではまだ読み込めません。Word または LibreOffice で開き、.docx として保存してから、もう一度開いてください。
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	旧形式の .doc ファイルを開きました。保存時は .docx 形式で保存されます
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	フォント {fonts} はこの端末にないため、類似のフォントで表示されています。
+	{fonts} and {count} others	{fonts}、ほか {count} 件

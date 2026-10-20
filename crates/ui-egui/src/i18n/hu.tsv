@@ -2476,3 +2476,10 @@
 	Couldn't write the file. The document is still unsaved.	Nem sikerült írni a fájlt. A dokumentum továbbra sincs mentve.
 	Close document	Dokumentum bezárása
 	Press Esc to exit Focus mode	A Fókusz módból az Esc billentyűvel léphet ki
+
+	Legacy .doc file	Régi .doc-fájl
+	Cannot open legacy .doc format	A régi .doc-formátum nem nyitható meg
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Ez a fájl a régi Word-formátumot (.doc) használja, amelyet a Văn bản még nem tud olvasni. Nyissa meg Wordben vagy LibreOffice-ban, mentse .docx formátumban, majd nyissa meg újra.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	A régi .doc-fájl megnyílt. Mentéskor .docx formátumban lesz mentve
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	A(z) {fonts} betűtípusok nem érhetők el ezen az eszközön, ezért hasonló betűtípusokkal jelennek meg.
+	{fonts} and {count} others	{fonts} és további {count}

@@ -2,6 +2,8 @@
 
 use wordcraft_doc::Document;
 
+pub mod legacy;
+
 #[cfg(not(target_arch = "wasm32"))]
 mod safe_save;
 
@@ -113,11 +115,18 @@ pub fn open_bytes(name: &str, bytes: &[u8]) -> Result<Document, String> {
 /// whether the file was encrypted. Without the password needed the error satisfies
 /// [`needs_password`]; with a wrong one, [`wrong_password`].
 pub fn open_bytes_with(name: &str, bytes: &[u8], password: Option<&str>) -> Result<(Document, bool), String> {
+    open_bytes_detailed(name, bytes, password).map(|opened| (opened.doc, opened.encrypted))
+}
+
+/// Open bytes with encryption and legacy-conversion metadata.
+pub fn open_bytes_detailed(name: &str, bytes: &[u8], password: Option<&str>) -> Result<legacy::OpenedDocument, String> {
+    legacy::opened(name, bytes, open_bytes_inner(name, bytes, password))
+}
+
+fn open_bytes_inner(name: &str, bytes: &[u8], password: Option<&str>) -> Result<(Document, bool), String> {
     let ext = ext_of(name);
-    if matches!(ext.as_str(), "docx" | "docm" | "dotx" | "dotm" | "doc" | "dot") && wordcraft_docx::is_encrypted(bytes) {
-        let mut doc = wordcraft_docx::read_with_password(bytes, password).map_err(|e| e.to_string())?;
-        doc.ensure_nonempty();
-        return Ok((doc, true));
+    if legacy::has_ole2_header(bytes) {
+        return open_by_content(name, &ext, bytes, password);
     }
     if ext.is_empty() || signature_contradicts(&ext, bytes) {
         return open_by_content(name, &ext, bytes, password);
@@ -267,6 +276,12 @@ pub fn open_path(path: &std::path::Path) -> Result<Document, String> {
 /// [`open_path`] for a file that may be password-protected (see [`open_bytes_with`]).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn open_path_with(path: &std::path::Path, password: Option<&str>) -> Result<(Document, bool), String> {
+    open_path_detailed(path, password).map(|opened| (opened.doc, opened.encrypted))
+}
+
+/// Open a path with encryption and legacy-conversion metadata.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn open_path_detailed(path: &std::path::Path, password: Option<&str>) -> Result<legacy::OpenedDocument, String> {
     crate::file_access::check_read(&path.to_string_lossy())?;
     let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
     if meta.len() > 2 << 30 {
@@ -274,15 +289,15 @@ pub fn open_path_with(path: &std::path::Path, password: Option<&str>) -> Result<
     }
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let name = path.to_string_lossy();
-    if matches!(ext_of(&name).as_str(), "html" | "htm" | "xhtml") {
+    if matches!(ext_of(&name).as_str(), "html" | "htm" | "xhtml") && !legacy::has_ole2_header(&bytes) {
         // Pictures referenced by a relative path load from beside the HTML file.
         let images = LocalImages::new(path.parent().unwrap_or(std::path::Path::new("")));
         let mut doc = wordcraft_formats::html::import_with(&wordcraft_formats::html::decode(&bytes), &|src| images.load(src));
         fit_pictures(&mut doc);
         doc.ensure_nonempty();
-        return Ok((doc, false));
+        return Ok(legacy::OpenedDocument { doc, encrypted: false, legacy: false });
     }
-    open_bytes_with(&name, &bytes, password)
+    open_bytes_detailed(&name, &bytes, password)
 }
 
 /// The pictures an HTML file names by a path relative to its folder.
@@ -431,6 +446,11 @@ pub fn write_file(path: &str, _bytes: &[u8]) -> Result<(), String> {
 
 #[cfg(target_arch = "wasm32")]
 pub fn open_path_with(path: &std::path::Path, _password: Option<&str>) -> Result<(Document, bool), String> {
+    Err(format!("{}: files are opened through the browser on the web", path.display()))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn open_path_detailed(path: &std::path::Path, _password: Option<&str>) -> Result<legacy::OpenedDocument, String> {
     Err(format!("{}: files are opened through the browser on the web", path.display()))
 }
 

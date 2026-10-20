@@ -2083,3 +2083,10 @@
 	Couldn't write the file. The document is still unsaved.	Soubor se nepodařilo zapsat. Dokument stále není uložen.
 	Close document	Zavřít dokument
 	Press Esc to exit Focus mode	Stisknutím Esc ukončíte režim soustředění
+
+	Legacy .doc file	Starší soubor .doc
+	Cannot open legacy .doc format	Starší formát .doc nelze otevřít
+	This file uses the legacy Word format (.doc), which Văn bản cannot read yet. Open it in Word or LibreOffice, save it as .docx, then open it again.	Tento soubor používá starší formát Wordu (.doc), který Văn bản zatím neumí číst. Otevřete jej ve Wordu nebo LibreOffice, uložte jako .docx a znovu jej otevřete.
+	The legacy .doc file has been opened. When saved, it will be saved as .docx	Starší soubor .doc byl otevřen. Při uložení bude uložen jako .docx
+	The fonts {fonts} are not available on this device, so similar fonts are used to display them.	Písma {fonts} nejsou v tomto zařízení dostupná, proto se zobrazují pomocí podobných písem.
+	{fonts} and {count} others	{fonts} a další ({count})
