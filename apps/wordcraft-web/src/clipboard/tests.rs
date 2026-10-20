@@ -153,11 +153,11 @@ fn next_frame_clears_all_hooks_and_next_paste_cannot_reuse_rich_data() {
 
 #[test]
 fn html_inputs_are_left_to_the_browser_except_for_the_egui_text_agent() {
-    assert!(native_text_target("INPUT", "search", false));
-    assert!(native_text_target("TEXTAREA", "notes", false));
-    assert!(native_text_target("DIV", "editor", true));
-    assert!(!native_text_target("TEXTAREA", "egui_text_agent", false));
-    assert!(!native_text_target("CANVAS", "wordcraft_canvas", false));
+    assert!(native_text_target("INPUT", false, false));
+    assert!(native_text_target("TEXTAREA", false, false));
+    assert!(native_text_target("DIV", false, true));
+    assert!(!native_text_target("INPUT", true, false));
+    assert!(!native_text_target("CANVAS", false, false));
 }
 
 #[test]

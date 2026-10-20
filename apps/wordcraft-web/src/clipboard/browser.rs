@@ -28,7 +28,15 @@ fn focused_html_editor() -> bool {
         return false;
     };
     let editable = element.dyn_ref::<web_sys::HtmlElement>().is_some_and(|e| e.is_content_editable());
-    native_text_target(&element.tag_name(), &element.id(), editable)
+    // eframe inserts its IME input right after the canvas, hidden as a 1px absolute box.
+    let agent = element.tag_name() == "INPUT"
+        && element.previous_element_sibling().is_some_and(|s| s.tag_name() == "CANVAS")
+        && element.dyn_ref::<web_sys::HtmlElement>().is_some_and(|e| {
+            let style = e.style();
+            style.get_property_value("position").ok().as_deref() == Some("absolute")
+                && style.get_property_value("width").ok().as_deref() == Some("1px")
+        });
+    native_text_target(&element.tag_name(), agent, editable)
 }
 
 async fn bytes(blob: &web_sys::Blob) -> Result<Vec<u8>, JsValue> {

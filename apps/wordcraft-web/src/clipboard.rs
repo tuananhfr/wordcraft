@@ -172,8 +172,9 @@ pub fn html_to_plain(html: &str) -> String {
     out.trim().to_string()
 }
 
-fn native_text_target(tag: &str, id: &str, editable: bool) -> bool {
-    id != "egui_text_agent" && (matches!(tag, "INPUT" | "TEXTAREA") || editable)
+// eframe 0.36 gives its hidden IME input no id; the browser glue recognises it by position.
+fn native_text_target(tag: &str, egui_text_agent: bool, editable: bool) -> bool {
+    !egui_text_agent && (matches!(tag, "INPUT" | "TEXTAREA") || editable)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
