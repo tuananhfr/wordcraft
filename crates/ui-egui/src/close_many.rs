@@ -142,6 +142,10 @@ impl WordApp {
                 Some(true) => saved.push(next),
                 Some(false) => return Ok(json!({"done": false})),
                 None => {
+                    if matches!(self.dialog, Some(Dialog::LossWarning(_))) {
+                        self.continue_after_picker_save(CLOSE_DOCUMENTS.into(), rest);
+                        return Ok(json!({"pending": "lossWarning"}));
+                    }
                     let mut rest = rest;
                     rest["wait"] = json!(next);
                     self.continue_after_picker_save(CLOSE_DOCUMENTS.into(), rest);

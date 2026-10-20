@@ -151,6 +151,15 @@ pub struct Package {
 }
 
 impl Package {
+    pub fn has_signature_part(&self) -> bool {
+        let types = ContentTypes::read(self);
+        self.files.keys().any(|name| {
+            let lower = name.to_ascii_lowercase();
+            (lower.starts_with("_xmlsignatures/") && lower.ends_with(".xml") && !lower.contains("/_rels/"))
+                || types.of(name) == Some("application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml")
+        })
+    }
+
     pub fn open(bytes: &[u8]) -> Result<Package, DocxError> {
         Package::open_limited(bytes, MAX_PART, MAX_TOTAL)
     }

@@ -130,6 +130,10 @@ pub(crate) fn read_opened(pkg: &Package) -> Result<Document, DocxError> {
     }
     let rels = pkg.rels(&main);
     let mut doc = Document::new();
+    // Signatures cannot survive reserialization; retain the fact so saving can warn first.
+    if pkg.has_signature_part() {
+        doc.passthrough.insert("wordcraft:package.signed".into(), Arc::new(Vec::new()));
+    }
     doc.body.clear();
     let mut r = Reader {
         pkg,

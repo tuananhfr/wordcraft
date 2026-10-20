@@ -74,6 +74,7 @@ pub fn open_filters(purpose: &str) -> &'static [(&'static str, &'static [&'stati
 
 /// What to do with the path picked in a dialog.
 pub(crate) enum AfterPick {
+    LossCopy(crate::loss_warning::PendingSave),
     /// Open the picked document.
     OpenDocument,
     /// Insert the picked picture, or replace the pending Change Picture target.
@@ -96,6 +97,7 @@ pub(crate) enum AfterPick {
 }
 
 /// What to do once Save As has written the document.
+#[derive(Clone, Debug, serde::Serialize)]
 pub(crate) enum AfterSave {
     Nothing,
     /// The AutoSave switch asked for the save: turn AutoSave on.
@@ -181,6 +183,10 @@ impl WordApp {
 
     /// Hold `then` back until the save just started in the picker has written the file.
     pub(crate) fn continue_after_picker_save(&mut self, then: String, params: Value) {
+        if let Some(crate::dialogs::Dialog::LossWarning(pending)) = &mut self.dialog {
+            pending.after = Some(AfterSave::Continue { then, params, document: pending.document_id() });
+            return;
+        }
         if let Some(save) = self.picker_saves.last_mut() {
             save.then = Some((then, params));
         }
@@ -208,6 +214,9 @@ impl WordApp {
     fn finish_picker_save(&mut self, save: PickerSave, answer: PickerAnswer) {
         match answer {
             Ok(()) => {
+                if save.marked_saved {
+                    let _ = self.in_document(save.document, |app| app.session.doc.passthrough.remove("wordcraft:package.signed"));
+                }
                 if save.save {
                     self.save_failures.saved(save.document);
                 }
@@ -283,6 +292,7 @@ impl WordApp {
     /// Do what the dialog was for with the picked path (`None`: the user cancelled).
     pub(crate) fn finish_pick(&mut self, after: AfterPick, picked: Option<String>) -> Result<Value, String> {
         match after {
+            AfterPick::LossCopy(pending) => self.write_loss_copy(pending, picked),
             AfterPick::OpenDocument => {
                 let Some(path) = picked else { return Ok(json!({"cancelled": true})) };
                 let r = self.run("file.open", json!({"path": path}));
@@ -324,7 +334,7 @@ impl WordApp {
                 } else {
                     self.run("file.saveAs", json!({"path": path}))
                 };
-                if r.is_ok() {
+                if r.as_ref().is_ok_and(|v| v.get("pending").is_none()) {
                     self.status(crate::i18n::fmt(tl!("Exported {path}"), &[("path", &path)]));
                 }
                 r
@@ -334,7 +344,7 @@ impl WordApp {
                 let mut params = settings;
                 params["path"] = json!(path);
                 let r = self.run("file.printPdf", params);
-                if r.is_ok() {
+                if r.as_ref().is_ok_and(|v| v.get("pending").is_none()) {
                     self.status(crate::i18n::fmt(tl!("Exported {path}"), &[("path", &path)]));
                 }
                 r
@@ -345,32 +355,47 @@ impl WordApp {
                     AfterSave::Continue { document, .. } => *document,
                     _ => self.session.document_id(),
                 };
-                let saved = picked.is_some_and(|path| {
-                    self.in_document(target, |app| {
-                        app.run("file.save", json!({"path": path}))
-                            .is_ok_and(|v| v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some())
-                    })
-                    .unwrap_or(false)
-                });
+                let result = match picked {
+                    Some(path) => self.in_document(target, |app| app.run("file.save", json!({"path": path})))
+                        .unwrap_or_else(|| Ok(json!({"saved": false}))),
+                    None => Ok(json!({"saved": false})),
+                };
+                self.finish_save(after, result)
+            }
+        }
+    }
+
+    pub(crate) fn finish_save(&mut self, after: AfterSave, result: Result<Value, String>) -> Result<Value, String> {
+        let result = result?;
+        if result.get("pending").and_then(Value::as_str) == Some("lossWarning") {
+            if let Some(crate::dialogs::Dialog::LossWarning(pending)) = &mut self.dialog {
+                pending.after = Some(after);
+            }
+            return Ok(result);
+        }
+        let saved = result.get("saved").and_then(Value::as_bool) == Some(true) || result.get("downloaded").is_some();
+        if saved {
+            self.ui.backstage = false;
+            self.canvas.want_focus = true;
+        }
+        match after {
+            AfterSave::Nothing if result.get("downloaded").is_none() => Ok(json!({"saved": saved})),
+            AfterSave::Nothing => Ok(result),
+            AfterSave::AutoSave => {
                 if saved {
-                    self.ui.backstage = false;
-                    self.canvas.want_focus = true;
+                    self.autosave = true;
                 }
-                match after {
-                    AfterSave::Nothing => Ok(json!({"saved": saved})),
-                    AfterSave::AutoSave => {
-                        if saved {
-                            self.autosave = true;
-                        }
-                        Ok(json!({"saved": saved}))
-                    }
-                    AfterSave::Continue { then, params, document } => {
-                        if !self.in_document(document, |app| app.safely_saved(saved)).unwrap_or(false) {
-                            return Ok(json!({"done": false}));
-                        }
-                        self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))
-                    }
+                Ok(result)
+            }
+            AfterSave::Continue { then, params, document } => {
+                if !self.in_document(document, |app| app.safely_saved(saved)).unwrap_or(false) {
+                    return Ok(json!({"done": false}));
                 }
+                if result.get("pending").and_then(Value::as_bool) == Some(true) {
+                    self.continue_after_picker_save(then, params);
+                    return Ok(result);
+                }
+                self.execute_user(&then, params).map(|r| json!({"done": true, "result": r}))
             }
         }
     }

@@ -531,14 +531,25 @@ fn resolve_sel(s: &mut Session, accept: bool) -> CmdResult {
 }
 
 fn changes(s: &Session) -> Vec<Change> {
+    changes_in_story(s, StoryRef::Body)
+}
+
+pub(crate) fn tracked_change_counts(s: &Session) -> (usize, usize) {
+    std::iter::once(StoryRef::Body).chain(s.doc.parts.keys().map(|id| StoryRef::Part(*id))).fold((0usize, 0usize), |(all, formatting), story| {
+        let changes = changes_in_story(s, story);
+        (all.saturating_add(changes.len()), formatting.saturating_add(changes.iter().filter(|c| c.kind == "format").count()))
+    })
+}
+
+fn changes_in_story(s: &Session, story: StoryRef) -> Vec<Change> {
     let mut out: Vec<Change> = Vec::new();
-    let mk = |path: &wordcraft_doc::Path, off| Pos { story: StoryRef::Body, path: path.clone(), off };
-    for path in s.doc.para_paths(StoryRef::Body) {
-        let Some(p) = s.doc.para(StoryRef::Body, &path) else { continue };
+    let mk = |path: &wordcraft_doc::Path, off| Pos { story, path: path.clone(), off };
+    for path in s.doc.para_paths(story) {
+        let Some(p) = s.doc.para(story, &path) else { continue };
         // A table's, row's and cell's changes sit at the start of the cell's first paragraph.
         if path.last() == 0
             && let Some((tp, r, c)) = path.cell()
-            && let Some(t) = s.doc.table(StoryRef::Body, &tp)
+            && let Some(t) = s.doc.table(story, &tp)
         {
             let row = t.rows.get(r);
             let cell = row.and_then(|x| x.cells.get(c));
@@ -574,14 +585,14 @@ fn changes(s: &Session) -> Vec<Change> {
             let end = mk(&path, p.len());
             out.push(Change::format(end.clone(), end, ch.rev, fmt_revisions::char_diff(&p.mark)));
         }
-        out.extend(mark_change(s, StoryRef::Body, &path));
+        out.extend(mark_change(s, story, &path));
         if let Some(ch) = p.section.as_ref().and_then(|x| x.fmt_change.as_ref().map(|ch| (ch.rev, x))) {
             let end = mk(&path, p.len());
             out.push(Change::format(end.clone(), end, ch.0, fmt_revisions::section_diff(ch.1)));
         }
     }
-    if let Some(ch) = &s.doc.last_section.fmt_change {
-        let end = s.doc.end_of(StoryRef::Body);
+    if story == StoryRef::Body && let Some(ch) = &s.doc.last_section.fmt_change {
+        let end = s.doc.end_of(story);
         out.push(Change::format(end.clone(), end, ch.rev, fmt_revisions::section_diff(&s.doc.last_section)));
     }
     out

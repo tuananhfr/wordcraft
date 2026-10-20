@@ -250,13 +250,14 @@ fn save(s: &mut Session, v: &Value) -> CmdResult {
     if ["docx", "docm", "dotx", "dotm", "odt", "rtf", "json", "xml"].contains(&ext.as_str()) {
         s.path = Some(path.clone());
         s.dirty = false;
+        let _ = s.doc.passthrough.remove("wordcraft:package.signed");
     }
     Ok(json!({"saved": true, "path": path.to_string_lossy(), "encrypted": encrypted}))
 }
 
 /// Does `path` hold a Word 2003 XML Document already (so a plain save keeps that format)?
 #[cfg(not(target_arch = "wasm32"))]
-fn is_word_2003_file(path: &std::path::Path) -> bool {
+pub fn is_word_2003_file(path: &std::path::Path) -> bool {
     use std::io::Read;
     if crate::file_access::check_read(&path.to_string_lossy()).is_err() {
         return false;
@@ -271,7 +272,7 @@ fn is_word_2003_file(path: &std::path::Path) -> bool {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn is_word_2003_file(_path: &std::path::Path) -> bool {
+pub fn is_word_2003_file(_path: &std::path::Path) -> bool {
     false
 }
 

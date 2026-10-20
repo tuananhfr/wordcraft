@@ -2497,3 +2497,11 @@ preview	Title	Tytuł
 	and {count} more	oraz inne formaty: {count}
 	The clipboard content is too large to paste.	Zawartość schowka jest zbyt duża, aby ją wkleić.
 	The clipboard content cannot be pasted here.	Nie można tu wkleić zawartości schowka.
+	Saving will lose some content	Zapisanie spowoduje utratę części zawartości
+	Comments ({count})	Komentarze ({count})
+	Tracked changes ({count})	Śledzone zmiany ({count})
+	VBA macros	Makra VBA
+	Digital signature (removed or invalidated)	Podpis cyfrowy (usunięty lub unieważniony)
+	Save anyway	Zapisz mimo to
+	Save a copy	Zapisz kopię
+	Choose a different name for the copy.	Wybierz inną nazwę dla kopii.

@@ -8,6 +8,7 @@
 
 pub mod catalog;
 pub mod cmd;
+pub mod compatibility;
 pub mod file_access;
 pub mod io;
 mod io_ext;

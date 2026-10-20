@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Saves and exports warn before dropping comments, tracked changes, VBA macros or document signatures; the shared Vietnamese dialog can cancel, continue or save a copy in the chosen format while preserving the original document and name (both).
+
 - HTML paste preserves allow-listed Word, Google Docs and LibreOffice stylesheet classes, paragraph indents and spacing, real lists, cell borders/shading/alignment and column widths, and run fonts; bounded input, CSS, nesting and cell expansion fall back to inert plain text, with scripts and remote images discarded (both).
 
 This branch (`erpcons`) is the ERPCons Văn phòng fork of [WordCraft](https://github.com/storytold/wordcraft), based on WordCraft by the ArtCraft team, licensed MIT OR Apache-2.0 (see `LICENSE-MIT`, `LICENSE-APACHE`, `NOTICE`). Changes from upstream `main` (Apache-2.0 §4b):

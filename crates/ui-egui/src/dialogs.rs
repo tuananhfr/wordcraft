@@ -140,6 +140,7 @@ fn special_menu(ui: &mut Ui, extra: &FindExtra) -> Option<&'static str> {
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "dialog", rename_all = "camelCase")]
 pub enum Dialog {
+    LossWarning(crate::loss_warning::PendingSave),
     Font {
         /// The font (Latin text) and the Asian text font, as the font lists name them, and their
         /// values when the dialog opened: OK changes only the ones changed (#505).
@@ -920,6 +921,7 @@ impl Dialog {
             Dialog::Icons { .. } => "icons",
             Dialog::PasteSpecial { .. } => "pasteSpecial",
             Dialog::About { .. } => "about",
+            Dialog::LossWarning(_) => "lossWarning",
             Dialog::SaveChanges { .. } => "saveChanges",
             Dialog::SaveAll { .. } => "saveAll",
             Dialog::RecipientList { .. } => "recipientList",
@@ -1372,6 +1374,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Icons { .. } => "Icons",
         Dialog::PasteSpecial { .. } => "Paste Special",
         Dialog::About { .. } => "About WordCraft",
+        Dialog::LossWarning(_) => "Saving will lose some content",
         Dialog::SaveChanges { .. } | Dialog::SaveAll { .. } => "WordCraft",
         Dialog::RecipientList { .. } => "Recipient List",
         Dialog::SelectTable { .. } => "Select Table",
@@ -1400,7 +1403,9 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
     };
     let id = egui::Id::new(("dialog", title));
     let shown = place_dialog(ctx, id, egui::Window::new(tl!(title)).id(id).collapsible(false).resizable(false)).open(&mut open).show(ctx, |ui| {
-        ui.set_min_width(340.0);
+        if !matches!(d, Dialog::LossWarning(_)) {
+            ui.set_min_width(340.0);
+        }
         close = body(app, ui, &mut d);
     });
     if shown.is_some() {
@@ -1500,6 +1505,7 @@ fn apply_font(app: &mut WordApp, d: &Dialog) {
 /// Returns true to close.
 fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
     match d {
+        Dialog::LossWarning(pending) => crate::loss_warning::body(app, ui, pending),
         Dialog::Font { font, font_ea, asian, size, bold, italic, underline, strike, sup, sub, small_caps, caps, hidden, color, spacing, .. } => {
             // Build the sample text format for the preview pane below.
             let preview_size = size.trim().parse::<f32>().unwrap_or(12.0).clamp(6.0, 72.0);

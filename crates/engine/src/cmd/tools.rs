@@ -450,7 +450,7 @@ pub fn specs() -> Vec<CommandSpec> {
             {
                 issues.push("Some embedded objects from the original file are shown as text only.");
             }
-            Ok(json!({"issues": issues}))
+            Ok(json!({"issues": issues, "facts": crate::compatibility::DocFacts::of(s)}))
         })
         .pure(),
         CommandSpec::new("file.share", "Share", "File", |s, _| {

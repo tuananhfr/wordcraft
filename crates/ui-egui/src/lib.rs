@@ -64,6 +64,7 @@ pub mod icons;
 pub mod ink;
 pub mod keys;
 pub mod keytips;
+pub mod loss_warning;
 pub mod mini_toolbar;
 pub mod narrow;
 pub mod objects;
@@ -814,6 +815,9 @@ impl WordApp {
             let marked_saved = matches!(id, "file.save" | "file.saveAs") && keeps_everything(&name);
             if marked_saved {
                 self.session.dirty = false;
+                if picker.is_none() {
+                    let _ = self.session.doc.passthrough.remove("wordcraft:package.signed");
+                }
             }
             let pending = picker.is_some();
             if let Some(rx) = picker {
@@ -960,6 +964,9 @@ impl WordApp {
     /// [`WordApp::execute`] for something the user did: a document that turns out to be
     /// password-protected asks for the password (and opens with it) instead of failing (#55).
     pub(crate) fn execute_user(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if self.warn_before_save(id, &params) {
+            return Ok(json!({"pending": "lossWarning"}));
+        }
         let retry = (id == "file.open").then(|| params.clone());
         let r = self.execute(id, params);
         if let (Err(e), Some(params)) = (&r, retry)
@@ -979,7 +986,8 @@ impl WordApp {
     /// the command is cancelled and the document stays. `None` while the browser's save picker
     /// hasn't written the file yet.
     fn save_for_prompt(&mut self) -> Option<bool> {
-        let (saved, pending) = match self.execute("file.save", json!({})) {
+        let (saved, pending) = match self.execute_user("file.save", json!({})) {
+            Ok(v) if v.get("pending").and_then(Value::as_str) == Some("lossWarning") => return None,
             Ok(v) => (
                 v.get("saved").and_then(Value::as_bool) == Some(true) || v.get("downloaded").is_some(),
                 v.get("pending").and_then(Value::as_bool) == Some(true),
@@ -1683,6 +1691,13 @@ impl WordApp {
     fn autosave_tick(&mut self, now: f64) {
         if self.autosaves() && self.session.dirty && now - self.last_autosave > 2500.0 && now - self.canvas.caret_visible_since > 1500.0 {
             self.last_autosave = now;
+            if self.dialog.is_some() {
+                return;
+            }
+            if self.warn_before_save("file.save", &json!({})) {
+                self.autosave_path = None;
+                return;
+            }
             if let Err(e) = self.session.run("file.save", &json!({})) {
                 log::warn!("AutoSave failed: {e}");
                 self.note_save_failed(self.session.document_id(), &e.to_string());
@@ -4333,6 +4348,9 @@ mod tests {
         {
             a.session.path = Some(opened.into());
             a.run("file.save", json!({})).unwrap();
+            if let Some(dialogs::Dialog::LossWarning(pending)) = a.dialog.take() {
+                a.accept_loss(pending).unwrap();
+            }
             let (name, bytes) = got.borrow_mut().pop().unwrap();
             assert_eq!(name, expect);
             let back = wordcraft_engine::io::open_bytes(&name, &bytes).unwrap();
@@ -4344,6 +4362,8 @@ mod tests {
         // Save As with an explicit name is a conversion: a .docx can't hold macros.
         a.session.path = Some("m.docm".into());
         a.run("file.saveAs", json!({"path": "m.docx"})).unwrap();
+        let Some(dialogs::Dialog::LossWarning(pending)) = a.dialog.take() else { panic!("expected macro loss warning") };
+        a.accept_loss(pending).unwrap();
         let (name, bytes) = got.borrow_mut().pop().unwrap();
         assert_eq!(name, "m.docx");
         assert!(!wordcraft_engine::io::open_bytes(&name, &bytes).unwrap().passthrough.contains_key("word/vbaProject.bin"));

@@ -237,6 +237,11 @@ pub fn save_bytes_opts(name: &str, doc: &Document, opts: &ExportOptions) -> Resu
             let bytes = wordcraft_formats::txt::export(doc);
             Ok(if opts.markup && opts.comments { wordcraft_formats::comments::append("txt", doc, bytes) } else { bytes })
         }
+        "json" if doc.passthrough.contains_key("wordcraft:package.signed") => {
+            let mut unsigned = doc.clone();
+            let _ = unsigned.passthrough.remove("wordcraft:package.signed");
+            serde_json::to_vec_pretty(&unsigned).map_err(|e| e.to_string())
+        }
         "json" => serde_json::to_vec_pretty(doc).map_err(|e| e.to_string()),
         other => match crate::io_ext::save(other, doc, opts) {
             Some(r) => r,

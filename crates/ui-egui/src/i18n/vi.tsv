@@ -2488,3 +2488,11 @@ preview	Title	Tiêu đề
 	and {count} more	và {count} định dạng khác
 	The clipboard content is too large to paste.	Nội dung bảng tạm quá lớn nên không thể dán.
 	The clipboard content cannot be pasted here.	Không thể dán nội dung bảng tạm vào đây.
+	Saving will lose some content	Lưu sẽ mất một số nội dung
+	Comments ({count})	Bình luận ({count})
+	Tracked changes ({count})	Thay đổi đã theo dõi ({count})
+	VBA macros	Macro VBA
+	Digital signature (removed or invalidated)	Chữ ký số (bị xóa hoặc mất hiệu lực)
+	Save anyway	Vẫn lưu
+	Save a copy	Lưu bản sao
+	Choose a different name for the copy.	Hãy chọn tên khác cho bản sao.
