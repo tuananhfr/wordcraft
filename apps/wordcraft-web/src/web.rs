@@ -148,6 +148,7 @@ impl eframe::App for WebShell {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.app.ui(ui);
+        crate::editor_closed::after_frame(&mut self.app);
     }
 }
 

@@ -2081,3 +2081,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Upravovaný dokument si jména a data ponechá; vynechá je jen uložený soubor.
 	Privacy Settings	Aktuální nastavení soukromí
 	Couldn't write the file. The document is still unsaved.	Soubor se nepodařilo zapsat. Dokument stále není uložen.
+	Close document	Zavřít dokument
+	Press Esc to exit Focus mode	Stisknutím Esc ukončíte režim soustředění

@@ -80,6 +80,19 @@ fn lookups_fall_back_to_english() {
 }
 
 #[test]
+fn close_and_focus_hint_are_translated_in_every_catalog() {
+    for l in &LANGUAGES {
+        if l.code != "en" {
+            let language = lang(l.code);
+            assert!(has(language, "Close document"), "{}", l.code);
+            assert!(has(language, "Press Esc to exit Focus mode"), "{}", l.code);
+        }
+    }
+    assert_eq!(tr(lang("vi"), "Close document"), "Đóng tài liệu");
+    assert_eq!(tr(lang("vi"), "Press Esc to exit Focus mode"), "Nhấn Esc để thoát chế độ Tập trung");
+}
+
+#[test]
 fn current_language_is_per_thread() {
     set_current(lang("ja"));
     assert_eq!(t("Insert"), "挿入");

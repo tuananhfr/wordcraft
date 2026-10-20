@@ -2442,3 +2442,5 @@ preview	Title	Título
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	El documento que editas conserva los nombres y las fechas; solo el archivo guardado los omite.
 	Privacy Settings	Configuración de privacidad actual
 	Couldn't write the file. The document is still unsaved.	No se pudo escribir el archivo. El documento sigue sin guardarse.
+	Close document	Cerrar documento
+	Press Esc to exit Focus mode	Pulsa Esc para salir del modo Concentración

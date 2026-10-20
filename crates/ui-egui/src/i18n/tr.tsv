@@ -2474,3 +2474,5 @@ preview	Title	Örnek
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Düzenlediğiniz belge adları ve tarihleri korur; yalnızca kaydedilen dosya bunları içermez.
 	Privacy Settings	Geçerli gizlilik ayarları
 	Couldn't write the file. The document is still unsaved.	Dosya yazılamadı. Belge hâlâ kaydedilmedi.
+	Close document	Belgeyi kapat
+	Press Esc to exit Focus mode	Odak modundan çıkmak için Esc tuşuna basın

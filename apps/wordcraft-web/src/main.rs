@@ -12,6 +12,9 @@
 #[cfg(any(target_arch = "wasm32", test))]
 mod clipboard;
 
+#[cfg(any(target_arch = "wasm32", test))]
+mod editor_closed;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
 

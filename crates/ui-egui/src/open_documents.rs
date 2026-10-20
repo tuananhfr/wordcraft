@@ -326,6 +326,31 @@ impl WordApp {
         }
     }
 
+    /// Complete a last-document close in a host that keeps the editor window open.
+    pub fn finish_document_close(&mut self) -> bool {
+        if !self.quit_requested || !self.has_document() || self.docs.count() != 1 {
+            return false;
+        }
+        self.keep_closed(0);
+        let mut empty = self.session.sibling();
+        self.session.swap_document(&mut empty);
+        self.session.view.focus_mode = false;
+        self.no_document = Some(self.session.document_id());
+        self.autosave_path = None;
+        self.save_failures = Default::default();
+        self.document_switched();
+        self.quit_requested = false;
+        self.ui.backstage = true;
+        self.ui.backstage_page = "home".into();
+        if let Some(ctx) = self.ctx.clone() {
+            self.drafts_tick(&ctx, crate::now_ms());
+            ctx.request_repaint();
+        }
+        self.report_dirty();
+        self.refresh_draft_snapshot();
+        true
+    }
+
     /// The tab a `ui.activateDocument` / `ui.closeDocument` call means: `index`, or `document`
     /// (its id); neither is the shown one.
     pub(crate) fn document_param(&self, p: &Value) -> Result<usize, String> {

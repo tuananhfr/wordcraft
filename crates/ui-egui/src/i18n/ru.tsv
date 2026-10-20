@@ -2475,3 +2475,5 @@ preview	Title	Пример
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Редактируемый документ сохраняет имена и даты; их не будет только в сохранённом файле.
 	Privacy Settings	Текущие параметры конфиденциальности
 	Couldn't write the file. The document is still unsaved.	Не удалось записать файл. Документ по-прежнему не сохранён.
+	Close document	Закрыть документ
+	Press Esc to exit Focus mode	Нажмите Esc, чтобы выйти из режима фокусировки

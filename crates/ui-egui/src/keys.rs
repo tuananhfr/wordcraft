@@ -446,12 +446,24 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
                     let _ = app.run("insert.closeHeader", json!({}));
                     continue;
                 }
+                if focus_escape(app, ctx, key, modifiers) {
+                    continue;
+                }
                 app.canvas.swallow_text = dispatch(app, key, modifiers) && modifiers.alt;
             }
             _ => {}
         }
     }
     take_back_now(app, &mut take_back);
+}
+
+fn focus_escape(app: &mut WordApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) -> bool {
+    // Escape keeps its selection command and any user binding before it can leave Focus.
+    key == Key::Escape
+        && modifiers.is_none()
+        && app.session.sel.is_collapsed()
+        && command_for(app, key, modifiers).is_none_or(|(id, _)| id == "select.collapse")
+        && crate::focus::escape(app, ctx)
 }
 
 /// `text.insert` / `equation.type` params for `text`, deleting first what the input method took
@@ -492,6 +504,11 @@ pub fn global_shortcuts(app: &mut WordApp, ctx: &egui::Context) {
     }
     let events = ctx.input(|i| i.events.clone());
     for e in events {
+        if let egui::Event::Key { key, pressed: true, modifiers, .. } = &e
+            && focus_escape(app, ctx, *key, *modifiers)
+        {
+            continue;
+        }
         if let egui::Event::Key { key, pressed: true, modifiers, .. } = e
             && is_global_shortcut(key, modifiers)
         {

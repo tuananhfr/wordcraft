@@ -2088,3 +2088,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	正在编辑的文档保留姓名和日期；只有保存的文件中不包含它们。
 	Privacy Settings	当前隐私设置
 	Couldn't write the file. The document is still unsaved.	无法写入文件。文档仍未保存。
+	Close document	关闭文档
+	Press Esc to exit Focus mode	按 Esc 退出专注模式

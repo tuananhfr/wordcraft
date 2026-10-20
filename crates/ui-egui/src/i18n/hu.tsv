@@ -2474,3 +2474,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	A szerkesztett dokumentum megtartja a neveket és a dátumokat; csak a mentett fájlból maradnak ki.
 	Privacy Settings	Jelenlegi adatvédelmi beállítások
 	Couldn't write the file. The document is still unsaved.	Nem sikerült írni a fájlt. A dokumentum továbbra sincs mentve.
+	Close document	Dokumentum bezárása
+	Press Esc to exit Focus mode	A Fókusz módból az Esc billentyűvel léphet ki

@@ -2084,3 +2084,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Le document en cours de modification garde les noms et les dates ; seul le fichier enregistré les omet.
 	Privacy Settings	Paramètres de confidentialité actuels
 	Couldn't write the file. The document is still unsaved.	Impossible d’écrire le fichier. Le document n’est toujours pas enregistré.
+	Close document	Fermer le document
+	Press Esc to exit Focus mode	Appuyez sur Échap pour quitter le mode Concentration

@@ -2086,3 +2086,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Dokument koji uređujete zadržava imena i datume; izostavlja ih samo sačuvana datoteka.
 	Privacy Settings	Trenutna podešavanja privatnosti
 	Couldn't write the file. The document is still unsaved.	Nije moguće upisati datoteku. Dokument i dalje nije sačuvan.
+	Close document	Zatvori dokument
+	Press Esc to exit Focus mode	Pritisnite Esc da napustite režim fokusa

@@ -2076,3 +2076,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	編集中のドキュメントには名前と日時が残ります。保存したファイルにだけ含まれません。
 	Privacy Settings	現在のプライバシー設定
 	Couldn't write the file. The document is still unsaved.	ファイルに書き込めませんでした。文書はまだ保存されていません。
+	Close document	文書を閉じる
+	Press Esc to exit Focus mode	Esc キーでフォーカスモードを終了

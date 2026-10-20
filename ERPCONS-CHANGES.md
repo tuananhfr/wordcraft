@@ -27,3 +27,7 @@ This branch (`erpcons`) is the ERPCons Văn phòng fork of [WordCraft](https://g
 - Clipboard command keys are filtered before egui input to avoid running Copy, Cut and Paste twice; Paste Special uses the paste event, while Shift formatting and other Alt shortcuts are preserved (web only).
 - Rich clipboard bridge preserves available HTML/RTF, pastes image-only clipboards, reads menu Paste asynchronously, and reports browser clipboard failures; rich data expires after its paste frame (web only).
 - Copy and Cut always export selection HTML with a bounded internal fragment marker; cross-document paste adopts styles, numbering and media in one undo step, preserves destination style rules unless Keep Source is requested, and translates clipboard failures into Vietnamese (both).
+
+- Close document button: show the existing close icon below the compact breakpoint, including at 390 px, using the normal unsaved-changes flow (both).
+- Focus mode: hide editor chrome and rulers, preserve typing and Escape priority, and show a one-time translated exit hint (both).
+- Closed hook: finish the browser's last-document close and call the optional window.erpEditorClosed callback once, after no document remains (web).

@@ -2110,3 +2110,5 @@
 	The document you are editing keeps the names and dates; only the saved file leaves them out.	Redigeeritav dokument säilitab nimed ja kuupäevad; need jäetakse välja ainult salvestatud failist.
 	Privacy Settings	Praegused privaatsussätted
 	Couldn't write the file. The document is still unsaved.	Faili ei saanud kirjutada. Dokument on endiselt salvestamata.
+	Close document	Sulge dokument
+	Press Esc to exit Focus mode	Fookusrežiimist väljumiseks vajuta Esc

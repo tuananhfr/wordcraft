@@ -51,6 +51,7 @@ pub mod dialogs_ribbon;
 pub mod dialogs_smart_art;
 pub mod dialogs_templates;
 pub mod doc_tabs;
+mod document_close;
 pub mod draft_bridge;
 pub mod drafts;
 pub mod equation_tab;
@@ -59,6 +60,7 @@ pub mod equation_tab;
 pub mod file_browser;
 pub mod file_dialogs;
 pub mod fling;
+mod focus;
 pub mod frame;
 pub mod i18n;
 pub mod icons;
@@ -495,6 +497,7 @@ pub struct WordApp {
     pub(crate) closed: closed_documents::ClosedDocuments,
     /// Saves that failed, shown in the status bar until saved or edited ([`save_status`]).
     pub(crate) save_failures: save_status::SaveFailures,
+    focus: focus::State,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -590,6 +593,7 @@ impl WordApp {
             docs: Default::default(),
             closed: Default::default(),
             save_failures: Default::default(),
+            focus: Default::default(),
         }
     }
 
@@ -773,12 +777,16 @@ impl WordApp {
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
             return self.browser_save(id, &params);
         }
+        let was_focus = self.session.view.focus_mode;
         let document = self.session.document_id();
         let r = if open_documents::opens_document(id, &params) {
             self.run_opening(id, &params)
         } else {
             self.session.run(id, &params).map_err(|e| e.to_string())
         };
+        if r.is_ok() {
+            focus::changed(self, was_focus);
+        }
         // When the document has been replaced (not when Open only showed its picker), a pending
         // "Save changes?" and AutoSave's go-ahead were both about the old one.
         if self.session.document_id() != document {
@@ -1701,6 +1709,7 @@ impl WordApp {
         }
         let t = theme::Tokens::get(&ctx);
         narrow::follow_width(self, ctx.content_rect().width());
+        focus::begin_frame(self, &ctx);
         // Keytips are read before layout so the frame paints the new state; badges paint after
         // the ribbon so they sit on top of it.
         crate::keytips::logic(self, &ctx);
@@ -1713,15 +1722,18 @@ impl WordApp {
             chrome::status_bar(self, ui);
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |_| {});
         } else {
-            chrome::title_bar(self, ui);
-            doc_tabs::show(self, ui);
-            ribbon::show(self, ui);
-            chrome::status_bar(self, ui);
-            panes::show(self, ui);
+            if !self.session.view.focus_mode {
+                chrome::title_bar(self, ui);
+                doc_tabs::show(self, ui);
+                ribbon::show(self, ui);
+                chrome::status_bar(self, ui);
+                panes::show(self, ui);
+            }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
                 canvas::show(self, ui);
             });
         }
+        focus::hint(self, &ctx);
         content_controls::popup(self, &ctx);
         dialogs::show(self, &ctx);
         #[cfg(not(target_arch = "wasm32"))]
@@ -2075,6 +2087,9 @@ mod tests_touch;
 
 #[cfg(test)]
 mod tests_narrow;
+
+#[cfg(test)]
+mod tests_focus;
 
 #[cfg(test)]
 mod tests {
