@@ -1,5 +1,5 @@
-//! Documents closed in this session, kept so Reopen Closed Document (Ctrl+Shift+T, File › Open, a
-//! document tab's menu) brings the last one back as it was when closed: a "Don't Save" keeps its
+//! Documents closed in this session, kept so Reopen Closed Document (File › Open, a document
+//! tab's menu) brings the last one back as it was when closed: a "Don't Save" keeps its
 //! unsaved changes, which is the point. Each is kept as the bytes its draft would be, encrypted
 //! when it has a password, so no decrypted copy of a protected document stays in memory.
 
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn ctrl_shift_t_reopens_and_is_listed_in_the_shortcuts() {
+    fn ctrl_shift_t_keeps_reduce_hanging_indent() {
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).build_ui_state(
             |ui, app: &mut WordApp| {
                 let ctx = ui.ctx().clone();
@@ -343,10 +343,12 @@ mod tests {
         let ctrl_shift = egui::Modifiers { shift: true, command: true, ctrl: !mac, mac_cmd: mac, alt: false };
         h.event(egui::Event::Key { key: egui::Key::T, physical_key: None, pressed: true, repeat: false, modifiers: ctrl_shift });
         h.run_steps(3);
-        assert_eq!(h.state().document_count(), 2);
-        assert!(body(h.state()).contains("Gone"));
+        assert_eq!(h.state().document_count(), 1, "the key is Word's, not a browser tab's");
         let rows = crate::keys::shortcut_rows(h.state());
-        assert!(rows.iter().any(|r| r.id == "ui.reopenDocument" && r.key == "Mod+Shift+T"), "listed in F1");
+        assert!(rows.iter().any(|r| r.id == "para.removeHanging" && r.key == "Mod+Shift+T"));
+        assert!(!rows.iter().any(|r| r.id == "ui.reopenDocument"), "no key of its own");
+        h.state_mut().run("ui.reopenDocument", json!({})).unwrap();
+        assert!(body(h.state()).contains("Gone"));
         let vi = crate::i18n::Lang::from_code("vi").unwrap();
         assert_eq!(crate::i18n::tr(vi, "Reopen Closed Document"), "Mở lại tài liệu vừa đóng");
     }

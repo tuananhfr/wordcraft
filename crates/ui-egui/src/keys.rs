@@ -104,31 +104,18 @@ pub fn combo(m: Modifiers, key: &str, with_shift: bool) -> String {
     s
 }
 
-/// An interface shortcut: `key` (in the registry's canonical spelling) runs `ui.*` command `id`,
-/// or opens dialog `dialog` when it has one.
+/// An interface shortcut: `key` (in the registry's canonical spelling) opens dialog `dialog`.
 pub(crate) struct UiShortcut {
     pub key: &'static str,
     pub label: &'static str,
-    pub id: &'static str,
-    pub dialog: Option<&'static str>,
-}
-
-impl UiShortcut {
-    fn command(&self) -> (&'static str, Value) {
-        match self.dialog {
-            Some(name) => ("ui.dialog", json!({"name": name})),
-            None => (self.id, json!({})),
-        }
-    }
+    pub dialog: &'static str,
 }
 
 /// Shortcuts for interface commands (`ui.*`), which aren't in the engine's keymap: Alt+Q moves
-/// to "Tell me" command search, as in Word for Windows (#819); F1 lists every shortcut. Reopen
-/// Closed Document takes the browsers' Ctrl+Shift+T, which Word gives Reduce Hanging Indent.
+/// to "Tell me" command search, as in Word for Windows (#819); F1 lists every shortcut.
 const UI_SHORTCUTS: &[UiShortcut] = &[
-    UiShortcut { key: "Alt+Q", label: "Search Commands", id: "ui.dialog", dialog: Some("commands") },
-    UiShortcut { key: "F1", label: "Keyboard Shortcuts", id: "ui.dialog", dialog: Some("shortcuts") },
-    UiShortcut { key: "Mod+Shift+T", label: "Reopen Closed Document", id: "ui.reopenDocument", dialog: None },
+    UiShortcut { key: "Alt+Q", label: "Search Commands", dialog: "commands" },
+    UiShortcut { key: "F1", label: "Keyboard Shortcuts", dialog: "shortcuts" },
 ];
 
 /// The interface shortcuts on this platform: none with Alt on macOS, where Option+letter types a
@@ -139,7 +126,7 @@ fn ui_shortcuts() -> impl Iterator<Item = &'static UiShortcut> {
 
 fn ui_shortcut(key: Key, m: Modifiers) -> Option<(&'static str, Value)> {
     let pressed = combo(m, key_name(key)?, true);
-    ui_shortcuts().find(|s| s.key == pressed).map(UiShortcut::command)
+    ui_shortcuts().find(|s| s.key == pressed).map(|s| ("ui.dialog", json!({"name": s.dialog})))
 }
 
 /// The command (and params) a key press runs: an interface shortcut, else the keymap's command
@@ -185,10 +172,7 @@ pub struct ShortcutRow {
 /// the keyboard can't produce or that something else takes first never show.
 pub(crate) fn shortcut_rows(app: &WordApp) -> Vec<ShortcutRow> {
     let reg = &app.session.registry;
-    let ui = ui_shortcuts().map(|s| {
-        let (id, params) = s.command();
-        ShortcutRow { key: s.key.to_string(), label: s.label, id, params }
-    });
+    let ui = ui_shortcuts().map(|s| ShortcutRow { key: s.key.to_string(), label: s.label, id: "ui.dialog", params: json!({"name": s.dialog}) });
     let commands = reg.all().iter().flat_map(|spec| {
         app.session.keymap.keys_for(reg, spec.id).into_iter().map(|key| ShortcutRow { key, label: spec.label, id: spec.id, params: json!({}) })
     });

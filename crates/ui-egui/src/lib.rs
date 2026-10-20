@@ -1343,7 +1343,7 @@ impl WordApp {
                 return Some(self.close_documents(&json!({"documents": targets, "discard": targets})));
             }
             close_many::CLOSE_DOCUMENTS => return Some(self.close_documents(p)),
-            // Reopen Closed Document (Ctrl+Shift+T): the last document closed, as it was.
+            // Reopen Closed Document: the last document closed, as it was.
             "ui.reopenDocument" => return Some(self.reopen_document()),
             // Shape Format › Text › Create Link: the next click on an empty text box links the
             // selected box to it (`shape.link` with that box as the target); Esc cancels.
