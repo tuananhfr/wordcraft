@@ -535,10 +535,19 @@ fn changes(s: &Session) -> Vec<Change> {
 }
 
 pub(crate) fn tracked_change_counts(s: &Session) -> (usize, usize) {
-    std::iter::once(StoryRef::Body).chain(s.doc.parts.keys().map(|id| StoryRef::Part(*id))).fold((0usize, 0usize), |(all, formatting), story| {
-        let changes = changes_in_story(s, story);
-        (all.saturating_add(changes.len()), formatting.saturating_add(changes.iter().filter(|c| c.kind == "format").count()))
-    })
+    let mut revisions = std::collections::BTreeSet::new();
+    let mut formatting = std::collections::BTreeSet::new();
+    for story in std::iter::once(StoryRef::Body).chain(s.doc.parts.keys().map(|id| StoryRef::Part(*id))) {
+        for change in changes_in_story(s, story) {
+            let Some(rev) = change.rev else { continue };
+            // A revision can span runs, paragraph marks and multiple stories.
+            revisions.insert(rev);
+            if change.kind == "format" {
+                formatting.insert(rev);
+            }
+        }
+    }
+    (revisions.len(), formatting.len())
 }
 
 fn changes_in_story(s: &Session, story: StoryRef) -> Vec<Change> {

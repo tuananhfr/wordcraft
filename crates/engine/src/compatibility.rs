@@ -63,6 +63,35 @@ mod tests {
     }
 
     #[test]
+    fn revisions_count_once_per_id_within_and_across_stories() {
+        use wordcraft_doc::props::{CharProps, PropChange};
+        use wordcraft_doc::{Paragraph, PartKind, Revision, RevisionKind, para_block};
+
+        for kind in [PartKind::Header, PartKind::Footer, PartKind::Footnote, PartKind::Endnote, PartKind::Comment, PartKind::TextBox] {
+            let mut doc = wordcraft_doc::Document::new();
+            for revision_kind in [RevisionKind::Insert, RevisionKind::Delete, RevisionKind::Format, RevisionKind::Format] {
+                doc.revisions.push(Revision::new(revision_kind, "Reviewer", "2026-10-21T00:00:00Z"));
+            }
+            let inserted = Paragraph::with_text("Inserted", CharProps { ins: Some(0), ..Default::default() });
+            let deleted = Paragraph::with_text("Deleted", CharProps { del: Some(1), ..Default::default() });
+            let formatted = Paragraph::with_text(
+                "Formatted",
+                CharProps { bold: Some(true), fmt_change: PropChange::boxed(2, CharProps::default()), ..Default::default() },
+            );
+            let blocks = vec![para_block(inserted), para_block(deleted), para_block(formatted)];
+            doc.add_part(kind, blocks.clone());
+            let mut s = Session::new(doc);
+            let facts = DocFacts::of(&s);
+            assert_eq!(facts.tracked_changes, 3, "{kind:?}");
+            assert_eq!(facts.tracked_formatting, 1, "{kind:?}");
+
+            s.doc.body = blocks.clone();
+            s.doc.add_part(PartKind::Header, blocks);
+            assert_eq!(DocFacts::of(&s), facts, "{kind:?}");
+        }
+    }
+
+    #[test]
     fn json_copy_does_not_claim_to_keep_the_original_signature() {
         let mut doc = wordcraft_doc::Document::new();
         doc.passthrough.insert("wordcraft:package.signed".into(), std::sync::Arc::new(Vec::new()));
