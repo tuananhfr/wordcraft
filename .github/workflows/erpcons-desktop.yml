@@ -1,0 +1,223 @@
+name: ERPCons desktop installers
+
+on:
+  push:
+    tags: ["erpcons-v*"]
+    # Dry runs without a release: workflow_dispatch needs the file on the default branch (upstream's main).
+    branches: ["installers/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+  CARGO_INCREMENTAL: "0"
+  CRAFT_FONTS_REF: 8dcdacd5153e64560d109541a47d806f26f048c0
+  CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+  CRAFT_FONTS_REQUIRED: "1"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate package version and tag
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(cargo pkgid -p wordcraft | sed 's/.*[#@]//')
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$TAG" != "erpcons-v$version" ]; then
+            echo "::error::Tag must be exactly erpcons-v$version (got $TAG)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "WORDCRAFT_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package unsigned Windows installers
+        run: pwsh packaging/windows/package.ps1 -Arch x64
+      - name: Collect Windows installers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts | Out-Null
+          Copy-Item "dist/release/ERPCons-VanBan-$env:WORDCRAFT_VERSION-x64.msi" artifacts/ERPCons-VanBan-windows-x64.msi
+          Copy-Item "dist/release/ERPCons-VanBan-$env:WORDCRAFT_VERSION-x64.zip" artifacts/ERPCons-VanBan-windows-x64-portable.zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: erpcons-desktop-windows
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate package version and tag
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(cargo pkgid -p wordcraft | sed 's/.*[#@]//')
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$TAG" != "erpcons-v$version" ]; then
+            echo "::error::Tag must be exactly erpcons-v$version (got $TAG)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "WORDCRAFT_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install Linux build dependencies (winit, wgpu, rfd)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libasound2-dev libgl1-mesa-dev libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev \
+            libxi-dev libgtk-3-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
+          sudo apt-get install -y --no-install-recommends zsync
+      - name: Install pinned packaging tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/packaging-tools"
+          cd "$RUNNER_TEMP/packaging-tools"
+          curl -fL --retry 3 -o nfpm.tar.gz https://github.com/goreleaser/nfpm/releases/download/v2.43.4/nfpm_2.43.4_Linux_x86_64.tar.gz
+          echo 'cafb544650cb0305d1b164fc0ab261eb77a81af324e18011282d326b326d20fb  nfpm.tar.gz' | sha256sum -c -
+          tar -xzf nfpm.tar.gz nfpm
+          curl -fL --retry 3 -o appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool' | sha256sum -c -
+          chmod +x nfpm appimagetool
+          echo "$PWD" >> "$GITHUB_PATH"
+          echo "APPIMAGETOOL=$PWD/appimagetool" >> "$GITHUB_ENV"
+      - name: Package Linux installers
+        run: bash packaging/linux/package.sh --formats "appimage deb rpm"
+      - name: Collect Linux installers
+        run: |
+          mkdir artifacts
+          cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.AppImage" artifacts/ERPCons-VanBan-linux-x86_64.AppImage
+          cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.deb" artifacts/erpcons-vanban_amd64.deb
+          cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.rpm" artifacts/erpcons-vanban.x86_64.rpm
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: erpcons-desktop-linux
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate package version and tag
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(cargo pkgid -p wordcraft | sed 's/.*[#@]//')
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$TAG" != "erpcons-v$version" ]; then
+            echo "::error::Tag must be exactly erpcons-v$version (got $TAG)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "WORDCRAFT_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install universal Rust targets
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+      - name: Package ad-hoc signed macOS installer
+        run: bash packaging/macos/package.sh --arch universal
+      - name: Collect macOS installer
+        run: |
+          mkdir artifacts
+          cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-macos-universal.dmg" artifacts/ERPCons-VanBan-macos-universal.dmg
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: erpcons-desktop-macos
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/erpcons-v')
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: erpcons-desktop-*
+          merge-multiple: true
+          path: artifacts
+      - name: Publish installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.windows.outputs.version }}
+        run: |
+          cd artifacts
+          sha256sum -- * > SHA256SUMS.txt
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Bộ cài Văn bản – ERPCons dành cho máy tính:
+
+          - Windows x64: tải `ERPCons-VanBan-windows-x64.msi` để cài đặt, hoặc `ERPCons-VanBan-windows-x64-portable.zip` để giải nén và chạy.
+          - Linux x86_64: tải `ERPCons-VanBan-linux-x86_64.AppImage` (cấp quyền thực thi trước khi chạy), `erpcons-vanban_amd64.deb` cho Debian/Ubuntu, hoặc `erpcons-vanban.x86_64.rpm` cho Fedora/openSUSE.
+          - macOS Intel và Apple Silicon: tải `ERPCons-VanBan-macos-universal.dmg`, mở và kéo ứng dụng vào Applications.
+          - `SHA256SUMS.txt` chứa mã SHA-256 để kiểm tra các tệp tải về.
+
+          Bản dựng chưa có chứng thư ký mã: Windows không được ký; macOS chỉ ký ad-hoc và chưa được Apple notarize.
+          Windows SmartScreen: chọn "More info" → "Run anyway".
+          macOS: nhấp chuột phải vào ứng dụng → Open, hoặc chạy:
+
+          ```sh
+          xattr -dr com.apple.quarantine "/Applications/Văn bản – ERPCons.app"
+          ```
+
+          Dùng phiên bản web tại https://office.erpcons.vn.
+          NOTES
+          gh release create "$TAG" --verify-tag --latest --title "Văn bản – ERPCons $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" ./*
