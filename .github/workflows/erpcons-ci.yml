@@ -1,0 +1,116 @@
+name: ERPCons CI
+
+# Full gate for the ERPCons fork: Linux quality checks of the desktop app, the shared crates and the web app,
+# plus a Windows release build of the desktop app. Upstream's ci.yml/release.yml stay untouched (main/release only).
+on:
+  push:
+    branches: [tuananhfr, "wip/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erpcons-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CRAFT_FONTS_REF: 8dcdacd5153e64560d109541a47d806f26f048c0
+
+jobs:
+  linux:
+    name: Linux gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install Linux build dependencies (winit, wgpu, rfd)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcursor-dev libxrandr-dev \
+            libxi-dev libgtk-3-dev libfontconfig1-dev libfreetype-dev mesa-vulkan-drivers
+      - name: Install Rust (stable + clippy, rustfmt, wasm32)
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt --target wasm32-unknown-unknown
+          rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      # The tree is not rustfmt-clean upstream, so only the Rust files this push changed are checked.
+      - name: rustfmt (changed files)
+        if: ${{ !cancelled() }}
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base="$BEFORE"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            base=$(git merge-base HEAD origin/tuananhfr 2>/dev/null || git rev-parse HEAD~1)
+          fi
+          changed=$(git diff --name-only --diff-filter=AM "$base" HEAD -- '*.rs' | sort -u)
+          echo "changed: ${changed:-none}"
+          unformatted=$(cargo fmt --all -- --check 2>/dev/null | sed -n "s|^Diff in $PWD/\(.*\):[0-9]*:$|\1|p" | sort -u)
+          bad=$(comm -12 <(echo "$changed") <(echo "$unformatted") | sed '/^$/d')
+          if [ -n "$bad" ]; then echo "::error::not rustfmt-clean: $bad"; exit 1; fi
+      - name: clippy (desktop app, ui-egui, engine)
+        if: ${{ !cancelled() }}
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+        run: cargo clippy -p wordcraft -p wordcraft-ui-egui -p wordcraft-engine --all-targets -- -D warnings
+      - name: tests (desktop app, ui-egui, engine)
+        if: ${{ !cancelled() }}
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+        run: |
+          set -o pipefail
+          cargo test --no-fail-fast -p wordcraft -p wordcraft-ui-egui -p wordcraft-engine 2>&1 | tee test.log
+      - name: clippy (web app, wasm32)
+        if: ${{ !cancelled() }}
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+        run: cargo clippy -p wordcraft-web --target wasm32-unknown-unknown -- -D warnings
+      - name: Summary of failing tests
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "### Failing tests"
+            grep -E '^test .* \.\.\. FAILED$' test.log | sed 's/^test /- /; s/ \.\.\. FAILED$//' || echo "none"
+            grep -E '^test result' test.log | awk '{p+=$4; f+=$6} END {print "\npassed=" p " failed=" f}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/craft-fonts
+          ref: ${{ env.CRAFT_FONTS_REF }}
+          path: craft-fonts
+      - name: Install Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Build the desktop app (release)
+        env:
+          CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+          CRAFT_FONTS_REQUIRED: "1"
+        run: cargo build --release -p wordcraft
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wordcraft-windows-x64
+          path: target/release/wordcraft.exe
+          if-no-files-found: error
+          retention-days: 14
