@@ -19,6 +19,7 @@ mod file_dialogs;
 #[cfg(any(target_os = "windows", test))]
 mod graphics;
 mod logging;
+mod preferences;
 mod print;
 mod region;
 
@@ -43,7 +44,9 @@ impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         #[cfg(target_os = "macos")]
         apple_events::poll(&self.4, &mut self.0, ctx);
+        let language = self.0.ui.language.clone();
         self.0.logic(ctx);
+        preferences::language_changed(&language, &self.0.ui.language, || save_prefs(&self.0));
         self.3.show(frame);
         let prev = self.0.ui.window;
         self.0.ui.window = ctx.input(|i| WindowGeometry::track(prev, i.viewport(), i.viewport_rect().size()));
@@ -74,7 +77,9 @@ impl eframe::App for App {
         self.0.raw_input_hook(raw);
     }
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        let language = self.0.ui.language.clone();
         self.0.ui(ui);
+        preferences::language_changed(&language, &self.0.ui.language, || save_prefs(&self.0));
         self.3.show(frame);
     }
     fn on_exit(&mut self) {
@@ -154,12 +159,9 @@ fn load_prefs(app: &mut WordApp) {
     if !prefs_enabled() {
         return;
     }
-    if let Some(p) = prefs_path()
-        && let Ok(bytes) = std::fs::read(&p)
-        && let Some(ui) = UiState::from_json(&bytes)
-    {
-        app.apply_prefs(ui);
-    }
+    let bytes = prefs_path().and_then(|p| std::fs::read(p).ok());
+    let language_override = std::env::var("WORDCRAFT_LANGUAGE").ok();
+    app.apply_prefs(preferences::resolve(bytes.as_deref(), language_override.as_deref()));
 }
 
 /// Fonts the user added (#582) live in `fonts` in the settings folder: load them, and store fonts
@@ -188,13 +190,13 @@ fn save_prefs(app: &WordApp) {
     if !prefs_enabled() {
         return;
     }
-    if let Some(p) = prefs_path() {
-        if let Some(dir) = p.parent() {
-            let _ = std::fs::create_dir_all(dir);
+    match prefs_path() {
+        Some(path) => {
+            if let Err(e) = preferences::save(&path, &app.prefs()) {
+                log::warn!("could not save UI preferences {}: {e}", path.display());
+            }
         }
-        if let Ok(bytes) = serde_json::to_vec_pretty(&app.prefs()) {
-            let _ = std::fs::write(&p, bytes);
-        }
+        None => log::warn!("could not save UI preferences: settings directory unavailable"),
     }
 }
 

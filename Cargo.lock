@@ -5139,6 +5139,7 @@ dependencies = [
  "pollster 0.4.0",
  "rfd",
  "serde_json",
+ "tempfile",
  "windows",
  "winit",
  "winresource",
