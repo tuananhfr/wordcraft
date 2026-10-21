@@ -45,7 +45,7 @@ jobs:
           rustup toolchain install stable --profile minimal --component clippy,rustfmt --target wasm32-unknown-unknown
           rustup default stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      # The tree is not rustfmt-clean upstream, so only the Rust files this push changed are checked.
+      # The tree is not rustfmt-clean upstream: fail only for changed files that were clean at the base and are not now.
       - name: rustfmt (changed files)
         if: ${{ !cancelled() }}
         env:
@@ -57,8 +57,13 @@ jobs:
           fi
           changed=$(git diff --name-only --diff-filter=AM "$base" HEAD -- '*.rs' | sort -u)
           echo "changed: ${changed:-none}"
-          unformatted=$(cargo fmt --all -- --check 2>/dev/null | sed -n "s|^Diff in $PWD/\(.*\):[0-9]*:$|\1|p" | sort -u)
-          bad=$(comm -12 <(echo "$changed") <(echo "$unformatted") | sed '/^$/d')
+          [ -n "$changed" ] || exit 0
+          unformatted() { (cd "$1" && cargo fmt --all -- --check 2>/dev/null | sed -n "s|^Diff in $1/\(.*\):[0-9]*:$|\1|p" | sort -u); }
+          now=$(unformatted "$PWD")
+          git worktree add -q --detach "$RUNNER_TEMP/fmt-base" "$base"
+          before=$(unformatted "$RUNNER_TEMP/fmt-base")
+          git worktree remove --force "$RUNNER_TEMP/fmt-base"
+          bad=$(comm -12 <(echo "$changed") <(echo "$now") | comm -23 - <(echo "$before") | sed '/^$/d')
           if [ -n "$bad" ]; then echo "::error::not rustfmt-clean: $bad"; exit 1; fi
       - name: clippy (desktop app, ui-egui, engine)
         if: ${{ !cancelled() }}
