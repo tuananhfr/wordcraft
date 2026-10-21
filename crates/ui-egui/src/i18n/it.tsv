@@ -2478,3 +2478,30 @@ preview	Title	Esempio
 	Next Document	Documento successivo
 	Previous Document	Documento precedente
 	Context Menu	Menu contestuale
+
+# Desktop recovery and native services
+	Recovered — {name}	Ripristinato — {name}
+	Recovered {n} unsaved documents	Documenti non salvati ripristinati: {n}
+	Could not recover {name}: {error}	Impossibile ripristinare {name}: {error}
+	Some recovery drafts could not be read: {error}	Impossibile leggere alcune bozze di recupero: {error}
+	Recovery storage is unavailable: {error}	Archivio di recupero non disponibile: {error}
+	The system clipboard could not be opened: {error}	Impossibile aprire gli appunti di sistema: {error}
+	The clipboard picture format could not be decoded.	Impossibile decodificare il formato dell’immagine negli appunti.
+	Could not open Settings: {error}	Impossibile aprire le impostazioni: {error}
+	The Flatpak sandbox cannot change default apps. Choose this app under Open With in your file manager or system settings.	L’ambiente Flatpak non può modificare le applicazioni predefinite. Scegli questa applicazione in Apri con nel gestore di file o nelle impostazioni di sistema.
+	Desktop integration is not installed. Install it before changing default apps.	L’integrazione con il desktop non è installata. Installala prima di modificare le applicazioni predefinite.
+	xdg-mime is not installed (it comes with xdg-utils)	xdg-mime non è installato (è incluso in xdg-utils)
+	Could not run xdg-mime: {error}	Impossibile eseguire xdg-mime: {error}
+	xdg-mime failed: {error}	xdg-mime non riuscito: {error}
+	No system file picker is available. Install a file chooser portal or zenity.	La finestra di selezione file di sistema non è disponibile. Installa un portale di selezione file o zenity.
+	Invalid recovery draft key.	Chiave della bozza di recupero non valida.
+	Recovery storage exceeds its document limit.	L’archivio di recupero supera il limite di documenti.
+	The recovery draft exceeds its size limit.	La bozza di recupero supera il limite di dimensione.
+	Recovery storage is full.	L’archivio di recupero è pieno.
+	Invalid recovery draft header.	Intestazione della bozza di recupero non valida.
+	The recovery draft has no name.	La bozza di recupero non ha un nome.
+	The recovery draft has no format.	La bozza di recupero non ha un formato.
+	Invalid recovery draft content.	Contenuto della bozza di recupero non valido.
+	Recovery storage exceeds its size limit.	L’archivio di recupero supera il limite di dimensione.
+	Invalid recovery draft metadata.	Metadati della bozza di recupero non validi.
+	Settings directory is unavailable.	La cartella delle impostazioni non è disponibile.

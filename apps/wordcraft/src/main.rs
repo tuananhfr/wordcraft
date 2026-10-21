@@ -15,6 +15,7 @@ mod apple_events;
 mod clipboard;
 mod control_server;
 mod default_apps;
+mod drafts;
 mod file_dialogs;
 #[cfg(any(target_os = "windows", test))]
 mod graphics;
@@ -58,6 +59,7 @@ impl eframe::App for App {
         if closing && !self.0.close_requested() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         } else if (closing || self.0.quit_requested) && !self.0.printing.busy() {
+            self.0.discard_desktop_drafts();
             // On macOS, letting eframe drop the window inside `-[NSApplication run]` aborts in
             // `-[_NSTouchBarFinderObservation invalidate]`. Command-Q calls `terminate:`. Once
             // the close is allowed, take that path instead of dropping the window on this turn.
@@ -322,6 +324,24 @@ fn main() -> eframe::Result {
             session.system_region = region;
             let mut app = WordApp::new(session, services(file_dialog, &cc.egui_ctx));
             load_prefs(&mut app);
+            wordcraft_ui_egui::i18n::set_current(wordcraft_ui_egui::i18n::Lang::from_pref(&app.ui.language));
+            match wordcraft_control_key::settings_dir()
+                .ok_or_else(|| wordcraft_ui_egui::i18n::t("Settings directory is unavailable.").to_string())
+                .and_then(|d| drafts::connect(d.join("drafts")))
+            {
+                Ok((bridge, errors)) => {
+                    app.services.drafts = Some(bridge);
+                    if !errors.is_empty() {
+                        app.report_desktop_recovery_errors(vec![wordcraft_ui_egui::i18n::fmt(
+                            wordcraft_ui_egui::i18n::t("Some recovery drafts could not be read: {error}"),
+                            &[("error", &errors.join("; "))],
+                        )]);
+                    }
+                }
+                Err(e) => {
+                    app.status(wordcraft_ui_egui::i18n::fmt(wordcraft_ui_egui::i18n::t("Recovery storage is unavailable: {error}"), &[("error", &e)]))
+                }
+            }
             load_user_dictionary(&mut app);
             // A region chosen in File › Options replaces the system's for the first blank
             // document too (#838).

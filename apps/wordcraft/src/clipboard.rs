@@ -15,6 +15,7 @@
 //! with OMML, #1297) it can't, so they aren't offered.
 
 use wordcraft_engine::cmd::paste::MAX_PASTE_BYTES;
+use wordcraft_ui_egui::i18n::{fmt, t};
 use wordcraft_ui_egui::paste_picture::ClipboardPicture;
 
 fn open() -> Option<arboard::Clipboard> {
@@ -85,7 +86,7 @@ pub fn picture() -> Option<ClipboardPicture> {
         Ok(c) => c,
         Err(e) => {
             log::warn!("clipboard: {e}");
-            return Some(ClipboardPicture::Unreadable(format!("the system clipboard couldn't be opened ({e})")));
+            return Some(ClipboardPicture::Unreadable(fmt(t("The system clipboard could not be opened: {error}"), &[("error", &e.to_string())])));
         }
     };
     if let Ok(files) = clipboard.get().file_list()
@@ -99,7 +100,7 @@ pub fn picture() -> Option<ClipboardPicture> {
         Err(arboard::Error::ConversionFailure) => Some(
             platform::encoded_picture()
                 .map(ClipboardPicture::Encoded)
-                .unwrap_or_else(|| ClipboardPicture::Unreadable("WordCraft can't decode its format".into())),
+                .unwrap_or_else(|| ClipboardPicture::Unreadable(t("The clipboard picture format could not be decoded.").into())),
         ),
         Err(e) => {
             log::warn!("clipboard picture: {e}");

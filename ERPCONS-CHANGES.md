@@ -42,3 +42,6 @@ This branch (`erpcons`) is the ERPCons Văn phòng fork of [WordCraft](https://g
 - Close document button: show the existing close icon below the compact breakpoint, including at 390 px, using the normal unsaved-changes flow (both).
 - Focus mode: hide editor chrome and rulers, preserve typing and Escape priority, and show a one-time translated exit hint (both).
 - Closed hook: finish the browser's last-document close and call the optional window.erpEditorClosed callback once, after no document remains (web).
+
+- Desktop recovery keeps bounded, atomically replaced DOCX drafts for unsaved work in per-instance directories with Windows-safe sibling lock files, recovers only exited instances, restores them as clearly marked unsaved documents on startup, and removes them after save, discard or approved shutdown (desktop).
+- Native file filters, clipboard errors, default-app messages and print queue document labels use the interface catalog, with Vietnamese translations (desktop).

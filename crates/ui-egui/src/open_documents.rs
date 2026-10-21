@@ -77,6 +77,12 @@ pub(crate) fn untitled_name(number: u32) -> String {
 /// The title a document is shown and saved under: its file's name, else its title property, else
 /// its untitled name.
 pub(crate) fn title_of(session: &Session, untitled: u32) -> String {
+    #[cfg(not(target_arch = "wasm32"))]
+    if session.path.is_none()
+        && let Some(name) = session.suggested_save_path.as_ref().and_then(|p| p.file_stem())
+    {
+        return name.to_string_lossy().into_owned();
+    }
     match &session.path {
         Some(p) => p.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| untitled_name(untitled)),
         None if session.doc.core.title.is_empty() => untitled_name(untitled),

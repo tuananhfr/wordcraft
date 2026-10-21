@@ -25,6 +25,9 @@ pub type PutDraft = Box<dyn Fn(&str, &str, &str, &[u8]) -> Result<(), String>>;
 
 /// The page's draft storage ([`crate::Services::drafts`]).
 pub struct DraftBridge {
+    /// Desktop storage restores copies through Save As; the web shell owns its recovery UI.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub desktop_recovery: bool,
     /// Whether the page offers draft storage right now; asked every frame, so it must be cheap.
     pub available: Box<dyn Fn() -> bool>,
     pub put: PutDraft,
@@ -89,6 +92,10 @@ pub fn flush_hidden(cell: &RefCell<HiddenFlush>, put: &dyn Fn(&str, &str, &str, 
 #[derive(Debug, Default)]
 pub(crate) struct DraftState {
     planner: Planner,
+    #[cfg(not(target_arch = "wasm32"))]
+    recovered: usize,
+    #[cfg(not(target_arch = "wasm32"))]
+    recovery_errors: Vec<String>,
     /// A restored draft waiting for its password (the open happens in the Password dialog).
     restoring: Option<PendingRestore>,
 }
@@ -111,6 +118,36 @@ fn draft_version(session: &Session, untitled: u32) -> Version {
 }
 
 impl WordApp {
+    /// Keep startup failures visible alongside successful recoveries.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn report_desktop_recovery_errors(&mut self, errors: Vec<String>) {
+        self.drafts.recovery_errors.extend(errors);
+        self.desktop_recovery_status();
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn desktop_recovery_status(&mut self) {
+        let mut message = crate::i18n::fmt(tl!("Recovered {n} unsaved documents"), &[("n", &self.drafts.recovered.to_string())]);
+        if !self.drafts.recovery_errors.is_empty() {
+            message.push('\n');
+            message.push_str(&self.drafts.recovery_errors.join("\n"));
+        }
+        self.status(message);
+    }
+
+    /// Remove recovery copies only after the user has approved desktop shutdown.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn discard_desktop_drafts(&mut self) {
+        let plan = self.drafts.planner.plan(crate::now_ms(), &[]);
+        if let Some(bridge) = &self.services.drafts {
+            for key in plan.remove {
+                if let Err(e) = (bridge.remove)(&key) {
+                    log::warn!("couldn't remove recovery draft: {e}");
+                }
+            }
+        }
+    }
+
     /// Draft the open documents when they are due, remove drafts no longer needed and open
     /// restored ones (every frame, from `logic`).
     pub(crate) fn drafts_tick(&mut self, ctx: &egui::Context, now: f64) {
@@ -241,6 +278,11 @@ impl WordApp {
     fn restore_draft(&mut self, draft: RestoredDraft, now: f64) {
         if draft.format != FORMAT {
             log::warn!("the draft {} is {}, not a Word document; not restored", draft.key, draft.format);
+            #[cfg(not(target_arch = "wasm32"))]
+            self.report_desktop_recovery_errors(vec![crate::i18n::fmt(
+                tl!("Could not recover {name}: {error}"),
+                &[("name", &draft.name), ("error", &draft.format)],
+            )]);
             return;
         }
         // The bytes are a Word package whatever the name says; the engine reads the name's format.
@@ -253,13 +295,37 @@ impl WordApp {
                 self.drafts.restoring = Some(PendingRestore { key: draft.key, name: draft.name, document });
             }
             Ok(_) => self.adopt_restored(draft.key, draft.name, now),
-            Err(e) => log::warn!("couldn't restore the draft {}: {e}", draft.name),
+            Err(e) => {
+                log::warn!("couldn't restore the draft {}: {e}", draft.name);
+                #[cfg(not(target_arch = "wasm32"))]
+                self.report_desktop_recovery_errors(vec![crate::i18n::fmt(
+                    tl!("Could not recover {name}: {error}"),
+                    &[("name", &draft.name), ("error", &e)],
+                )]);
+            }
         }
     }
 
     /// The restored document is unsaved, named as the draft was, and already drafted under its key.
     fn adopt_restored(&mut self, key: String, name: String, now: f64) {
-        self.session.path = Some(name.into());
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.session.path = Some(name.into());
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.services.drafts.as_ref().is_some_and(|b| b.desktop_recovery) {
+            let stem = std::path::Path::new(&name).file_stem().map(|s| s.to_string_lossy()).unwrap_or_default();
+            let title = crate::i18n::fmt(tl!("Recovered — {name}"), &[("name", &stem)]);
+            self.session.path = None;
+            self.session.suggested_save_path = Some(format!("{title}.docx").into());
+            self.autosave_path = None;
+            self.drafts.recovered = self.drafts.recovered.saturating_add(1);
+            self.desktop_recovery_status();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.services.drafts.as_ref().is_some_and(|b| b.desktop_recovery) {
+            self.session.path = Some(name.into());
+        }
         self.session.dirty = true;
         self.ui.backstage = false;
         let version = draft_version(&self.session, self.untitled);
@@ -289,6 +355,8 @@ mod tests {
         let restores: Rc<RefCell<Vec<RestoredDraft>>> = Rc::default();
         let (p, r) = (puts.clone(), removes.clone());
         let bridge = DraftBridge {
+            #[cfg(not(target_arch = "wasm32"))]
+            desktop_recovery: false,
             available: Box::new(|| true),
             put: Box::new(move |key, name, format, bytes| {
                 p.borrow_mut().push((key.into(), name.into(), format.into(), bytes.to_vec()));
@@ -424,6 +492,56 @@ mod tests {
         page.restores.borrow_mut().push(RestoredDraft { key: "k".into(), name: "Book1.xlsx".into(), format: "xlsx".into(), bytes: vec![1, 2, 3] });
         app.drafts_tick(&ctx, 0.0);
         assert_eq!(app.session.document_id(), document);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn desktop_startup_recovers_copies_and_shutdown_removes_their_drafts() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        app.services.drafts.as_mut().unwrap().desktop_recovery = true;
+        for name in ["/real/Report.docx", "Other.docx"] {
+            page.restores.borrow_mut().push(RestoredDraft {
+                key: name.into(),
+                name: name.into(),
+                format: FORMAT.into(),
+                bytes: docx("Recovered content"),
+            });
+        }
+        app.drafts_tick(&ctx, 0.0);
+        assert!(app.session.path.is_none());
+        assert!(app.autosave_path.is_none());
+        assert_eq!(app.title_stem(), "Recovered — Report");
+        assert!(app.session.dirty);
+        app.drafts_tick(&ctx, 1.0);
+        assert_eq!(app.document_count(), 2);
+        assert!(app.document_tabs().iter().all(|t| t.title.starts_with("Recovered — ") && t.dirty));
+        assert_eq!(app.status_msg.as_ref().map(|s| s.0.as_str()), Some("Recovered 2 unsaved documents"));
+        app.execute_user("file.save", json!({})).unwrap();
+        assert!(app.session.path.is_none(), "Save asks for a destination rather than overwriting the source");
+        app.discard_desktop_drafts();
+        assert_eq!(page.removes.borrow().len(), 2);
+        app.discard_desktop_drafts();
+        assert_eq!(page.removes.borrow().len(), 2);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn desktop_corrupt_recovery_reports_failure_and_keeps_the_draft() {
+        let ctx = egui::Context::default();
+        let (mut app, page) = app_with_page();
+        app.services.drafts.as_mut().unwrap().desktop_recovery = true;
+        let document = app.session.document_id();
+        page.restores.borrow_mut().push(RestoredDraft {
+            key: "broken".into(),
+            name: "Broken.docx".into(),
+            format: FORMAT.into(),
+            bytes: vec![0, 1, 2],
+        });
+        app.drafts_tick(&ctx, 0.0);
+        assert_eq!(app.session.document_id(), document);
+        assert!(app.status_msg.as_ref().is_some_and(|s| s.0.contains("Could not recover Broken.docx")));
+        assert!(page.removes.borrow().is_empty());
     }
 
     #[test]

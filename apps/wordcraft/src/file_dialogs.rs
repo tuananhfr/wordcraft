@@ -18,6 +18,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
+use wordcraft_ui_egui::i18n::t;
 use wordcraft_ui_egui::{FileDialogAnswer, FileDialogRequest};
 
 /// A dialog the app asked for, with the channel its answer goes back through.
@@ -59,14 +60,18 @@ impl Launcher {
                 FileDialogRequest::Open { purpose } => Box::pin(open_filters(dialog, &purpose).pick_file()),
                 FileDialogRequest::Save { name } => {
                     let exts = save_exts(&name);
-                    Box::pin(dialog.set_file_name(name).add_filter("Documents", &exts).save_file())
+                    Box::pin(dialog.set_file_name(name).add_filter(t("Documents"), &exts).save_file())
                 }
             };
             let ctx = self.ctx.clone();
+            let missing = t("No system file picker is available. Install a file chooser portal or zenity.").to_string();
             let waiting = std::thread::Builder::new().name("file dialog".into()).spawn(move || {
                 // The picker only starts when first polled: without a system dialog it never does.
                 let picked = match no_system_dialog() {
-                    Some(reason) => Err(reason),
+                    Some(reason) => {
+                        log::warn!("file dialog: {reason}");
+                        Err(missing)
+                    }
                     None => Ok(pollster::block_on(picking).map(|f| f.path().to_string_lossy().to_string())),
                 };
                 let _ = answer.send(picked);
@@ -83,7 +88,7 @@ impl Launcher {
 /// The file types Open offers (shared with the built-in browser).
 fn open_filters(mut d: rfd::AsyncFileDialog, purpose: &str) -> rfd::AsyncFileDialog {
     for (name, exts) in wordcraft_ui_egui::open_filters(purpose) {
-        d = d.add_filter(*name, exts);
+        d = d.add_filter(t(name), exts);
     }
     d
 }

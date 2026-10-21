@@ -87,7 +87,9 @@ mod windows {
     const SETTINGS_URI: &str = "ms-settings:defaultapps?registeredAppMachine=WordCraft";
 
     pub(super) fn open_default_apps() -> Result<DefaultApp, String> {
-        open::that_detached(SETTINGS_URI).map_err(|e| format!("couldn't open Settings: {e}"))?;
+        open::that_detached(SETTINGS_URI).map_err(|e| {
+            wordcraft_ui_egui::i18n::fmt(wordcraft_ui_egui::i18n::t("Could not open Settings: {error}"), &[("error", &e.to_string())])
+        })?;
         Ok(DefaultApp::SettingsOpened)
     }
 }
@@ -95,6 +97,7 @@ mod windows {
 #[cfg(all(unix, not(target_os = "macos")))]
 mod xdg {
     use std::process::Command;
+    use wordcraft_ui_egui::i18n::{fmt, t};
 
     use wordcraft_ui_egui::DefaultApp;
 
@@ -105,18 +108,19 @@ mod xdg {
 
     pub(super) fn make_default() -> Result<DefaultApp, String> {
         if std::env::var_os("FLATPAK_ID").is_some() || std::path::Path::new("/.flatpak-info").exists() {
-            return Err(
-                "the Flatpak sandbox can't change default apps; choose WordCraft under Open With in your file manager or system settings".into()
-            );
+            return Err(t(
+                "The Flatpak sandbox cannot change default apps. Choose this app under Open With in your file manager or system settings.",
+            )
+            .into());
         }
         let var = |k: &str| std::env::var(k).ok();
         let dirs = application_dirs(var("XDG_DATA_HOME").as_deref(), var("XDG_DATA_DIRS").as_deref(), var("HOME").as_deref());
         if !dirs.iter().any(|d| d.join(DESKTOP_ID).is_file()) {
-            return Err(format!("{DESKTOP_ID} isn't installed (an AppImage needs desktop integration first)"));
+            return Err(t("Desktop integration is not installed. Install it before changing default apps.").into());
         }
         let out = Command::new("xdg-mime").args(xdg_mime_args(DESKTOP_ID)).output().map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => "xdg-mime isn't installed (it comes with xdg-utils)".to_string(),
-            _ => format!("couldn't run xdg-mime: {e}"),
+            std::io::ErrorKind::NotFound => t("xdg-mime is not installed (it comes with xdg-utils)").to_string(),
+            _ => fmt(t("Could not run xdg-mime: {error}"), &[("error", &e.to_string())]),
         })?;
         if out.status.success() {
             return Ok(DefaultApp::MadeDefault);
@@ -124,7 +128,11 @@ mod xdg {
         let stderr = String::from_utf8_lossy(&out.stderr);
         let first = stderr.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
         let message: String = first.chars().take(MAX_ERROR).collect();
-        Err(if message.is_empty() { format!("xdg-mime failed ({})", out.status) } else { format!("xdg-mime failed: {message}") })
+        Err(if message.is_empty() {
+            fmt(t("xdg-mime failed: {error}"), &[("error", &out.status.to_string())])
+        } else {
+            fmt(t("xdg-mime failed: {error}"), &[("error", &message)])
+        })
     }
 }
 

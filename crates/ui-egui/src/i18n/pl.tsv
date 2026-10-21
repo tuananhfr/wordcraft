@@ -2524,3 +2524,30 @@ preview	Title	Tytuł
 	Next Document	Następny dokument
 	Previous Document	Poprzedni dokument
 	Context Menu	Menu kontekstowe
+
+# Desktop recovery and native services
+	Recovered — {name}	Odzyskano — {name}
+	Recovered {n} unsaved documents	Odzyskano niezapisane dokumenty: {n}
+	Could not recover {name}: {error}	Nie można odzyskać {name}: {error}
+	Some recovery drafts could not be read: {error}	Nie można odczytać niektórych kopii odzyskiwania: {error}
+	Recovery storage is unavailable: {error}	Magazyn odzyskiwania jest niedostępny: {error}
+	The system clipboard could not be opened: {error}	Nie można otworzyć schowka systemowego: {error}
+	The clipboard picture format could not be decoded.	Nie można odczytać formatu obrazu w schowku.
+	Could not open Settings: {error}	Nie można otworzyć ustawień: {error}
+	The Flatpak sandbox cannot change default apps. Choose this app under Open With in your file manager or system settings.	Środowisko Flatpak nie może zmieniać aplikacji domyślnych. Wybierz tę aplikację w menu Otwórz za pomocą w menedżerze plików lub ustawieniach systemu.
+	Desktop integration is not installed. Install it before changing default apps.	Integracja z pulpitem nie jest zainstalowana. Zainstaluj ją przed zmianą aplikacji domyślnych.
+	xdg-mime is not installed (it comes with xdg-utils)	xdg-mime nie jest zainstalowany (jest częścią xdg-utils)
+	Could not run xdg-mime: {error}	Nie można uruchomić xdg-mime: {error}
+	xdg-mime failed: {error}	Błąd xdg-mime: {error}
+	No system file picker is available. Install a file chooser portal or zenity.	Systemowe okno wyboru pliku jest niedostępne. Zainstaluj portal wyboru plików lub zenity.
+	Invalid recovery draft key.	Nieprawidłowy klucz kopii odzyskiwania.
+	Recovery storage exceeds its document limit.	Magazyn odzyskiwania przekracza limit dokumentów.
+	The recovery draft exceeds its size limit.	Kopia odzyskiwania przekracza limit rozmiaru.
+	Recovery storage is full.	Magazyn odzyskiwania jest pełny.
+	Invalid recovery draft header.	Nieprawidłowy nagłówek kopii odzyskiwania.
+	The recovery draft has no name.	Kopia odzyskiwania nie ma nazwy.
+	The recovery draft has no format.	Kopia odzyskiwania nie ma formatu.
+	Invalid recovery draft content.	Nieprawidłowa zawartość kopii odzyskiwania.
+	Recovery storage exceeds its size limit.	Magazyn odzyskiwania przekracza limit rozmiaru.
+	Invalid recovery draft metadata.	Nieprawidłowe metadane kopii odzyskiwania.
+	Settings directory is unavailable.	Katalog ustawień jest niedostępny.

@@ -2515,3 +2515,30 @@ preview	Title	Tiêu đề
 	Next Document	Tài liệu tiếp theo
 	Previous Document	Tài liệu trước
 	Context Menu	Menu ngữ cảnh
+
+# Desktop recovery and native services
+	Recovered — {name}	Đã khôi phục — {name}
+	Recovered {n} unsaved documents	Đã khôi phục {n} tài liệu chưa lưu
+	Could not recover {name}: {error}	Không thể khôi phục {name}: {error}
+	Some recovery drafts could not be read: {error}	Không đọc được một số bản nháp khôi phục: {error}
+	Recovery storage is unavailable: {error}	Không thể dùng kho khôi phục: {error}
+	The system clipboard could not be opened: {error}	Không mở được bảng tạm hệ thống: {error}
+	The clipboard picture format could not be decoded.	Không giải mã được định dạng ảnh trong bảng tạm.
+	Could not open Settings: {error}	Không mở được Cài đặt: {error}
+	The Flatpak sandbox cannot change default apps. Choose this app under Open With in your file manager or system settings.	Môi trường Flatpak không thể đổi ứng dụng mặc định. Chọn ứng dụng này trong Mở bằng ở trình quản lý tệp hoặc cài đặt hệ thống.
+	Desktop integration is not installed. Install it before changing default apps.	Chưa cài tích hợp máy tính. Cài tích hợp trước khi đổi ứng dụng mặc định.
+	xdg-mime is not installed (it comes with xdg-utils)	Chưa cài xdg-mime (có trong xdg-utils)
+	Could not run xdg-mime: {error}	Không chạy được xdg-mime: {error}
+	xdg-mime failed: {error}	xdg-mime không thành công: {error}
+	No system file picker is available. Install a file chooser portal or zenity.	Không có hộp chọn tệp hệ thống. Cài cổng chọn tệp hoặc zenity.
+	Invalid recovery draft key.	Khóa bản nháp khôi phục không hợp lệ.
+	Recovery storage exceeds its document limit.	Kho khôi phục vượt giới hạn số tài liệu.
+	The recovery draft exceeds its size limit.	Bản nháp khôi phục vượt giới hạn dung lượng.
+	Recovery storage is full.	Kho khôi phục đã đầy.
+	Invalid recovery draft header.	Phần đầu bản nháp khôi phục không hợp lệ.
+	The recovery draft has no name.	Bản nháp khôi phục không có tên.
+	The recovery draft has no format.	Bản nháp khôi phục không có định dạng.
+	Invalid recovery draft content.	Nội dung bản nháp khôi phục không hợp lệ.
+	Recovery storage exceeds its size limit.	Kho khôi phục vượt giới hạn dung lượng.
+	Invalid recovery draft metadata.	Thông tin bản nháp khôi phục không hợp lệ.
+	Settings directory is unavailable.	Không thể dùng thư mục cài đặt.
