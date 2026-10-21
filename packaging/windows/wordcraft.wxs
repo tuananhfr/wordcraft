@@ -25,7 +25,7 @@
       Compressed="yes"
       Language="1033"
       Codepage="65001">
-    <SummaryInformation Description="Văn bản – ERPCons" Manufacturer="ERPCons" />
+    <SummaryInformation Codepage="1252" Description="ERPCons VanBan word processor" Manufacturer="ERPCons" />
     <!-- Same-version upgrades let successive pre-releases of one X.Y.Z replace each other
          (MSI versions are numeric, so 1.2.3-rc.1 and 1.2.3-rc.2 are both 1.2.3). -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
