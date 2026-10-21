@@ -312,7 +312,7 @@ pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context) {
         .open(&mut open)
         .show(ctx, |ui| {
             ui.set_width(620.0);
-            done = body(ui, &mut b, &t);
+            done = body(app, ui, &mut b, &t);
         });
     if !open {
         done = Some(None);
@@ -324,12 +324,10 @@ pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context) {
 }
 
 /// The browser's contents; `Some` once it closes (`Some(None)`: cancelled).
-fn body(ui: &mut Ui, b: &mut FileBrowser, t: &Tokens) -> Option<Option<PathBuf>> {
+fn body(app: &WordApp, ui: &mut Ui, b: &mut FileBrowser, t: &Tokens) -> Option<Option<PathBuf>> {
     if b.unavailable {
         ui.label(
-            egui::RichText::new(tl!(
-                "The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity."
-            ))
+            egui::RichText::new(app.product_text("The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity."))
             .color(t.text_dim),
         );
         ui.add_space(6.0);

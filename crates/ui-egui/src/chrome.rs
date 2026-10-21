@@ -317,7 +317,7 @@ fn search_box(app: &mut WordApp, ui: &mut Ui, t: &Tokens, width: f32, control_h:
 fn title(app: &WordApp, ui: &Ui, full: Rect, qat_end: f32, right_start: f32, narrow: bool, t: &Tokens) {
     let title = if !app.has_document() {
         // No document open (#1129): the app's name alone.
-        "WordCraft".to_string()
+        app.product_name().to_string()
     } else {
         format!(
             "{} — {}",

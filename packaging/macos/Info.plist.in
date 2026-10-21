@@ -7,13 +7,13 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>WordCraft</string>
+  <string>Văn bản – ERPCons</string>
   <key>CFBundleName</key>
-  <string>WordCraft</string>
+  <string>Văn bản – ERPCons</string>
   <key>CFBundleExecutable</key>
-  <string>WordCraft</string>
+  <string>wordcraft</string>
   <key>CFBundleIdentifier</key>
-  <string>ai.storyteller.wordcraft</string>
+  <string>vn.erpcons.vanban</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -29,7 +29,7 @@
   <key>WordCraftBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>WordCraft</string>
+  <string>wordcraft</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on

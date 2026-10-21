@@ -28,7 +28,7 @@ pub fn finish_pending_jobs() {
 pub fn submit() -> Submit {
     Box::new(|bytes, settings: Settings, collate| {
         let (sender, receiver) = std::sync::mpsc::channel();
-        let title = format!("WordCraft — {}", wordcraft_ui_egui::i18n::t("Document"));
+        let title = format!("Văn bản – ERPCons — {}", wordcraft_ui_egui::i18n::t("Document"));
         let worker = std::thread::Builder::new().name("print-submit".into()).spawn(move || {
             let job = craft_print::Job {
                 printer: Some(settings.printer),

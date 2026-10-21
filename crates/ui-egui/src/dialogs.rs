@@ -1405,12 +1405,15 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Layout(d) => d.title(),
     };
     let id = egui::Id::new(("dialog", title));
-    let shown = place_dialog(ctx, id, egui::Window::new(tl!(title)).id(id).collapsible(false).resizable(false)).open(&mut open).show(ctx, |ui| {
-        if !matches!(d, Dialog::LossWarning(_) | Dialog::LegacyDoc { .. }) {
-            ui.set_min_width(340.0);
-        }
-        close = body(app, ui, &mut d);
-    });
+    let shown = place_dialog(ctx, id, egui::Window::new(app.product_text(title)).id(id).collapsible(false).resizable(false)).open(&mut open).show(
+        ctx,
+        |ui| {
+            if !matches!(d, Dialog::LossWarning(_) | Dialog::LegacyDoc { .. }) {
+                ui.set_min_width(340.0);
+            }
+            close = body(app, ui, &mut d);
+        },
+    );
     if shown.is_some() {
         count_dialog_frame(ctx, id);
     }
@@ -2364,7 +2367,11 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 1 => crate::credits::contributors_ui(ui),
                 2 => crate::credits::models_ui(ui),
                 _ => {
-                    ui.label(egui::RichText::new(tl!("WordCraft")).font(semibold(22.0)));
+                    ui.label(egui::RichText::new(app.product_text("WordCraft")).font(semibold(22.0)));
+                    if app.services.product_name.is_some() {
+                        ui.label("ERPCons");
+                        ui.hyperlink_to("https://office.erpcons.vn", "https://office.erpcons.vn");
+                    }
                     let build = option_env!("WORDCRAFT_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or(tl!("development build"));
                     ui.label(crate::i18n::fmt(tl!("Version {version} ({build})"), &[("version", env!("CARGO_PKG_VERSION")), ("build", build)]));
                     ui.label("ERPCons Văn phòng — dựa trên WordCraft của nhóm ArtCraft. MIT OR Apache-2.0.");
@@ -2492,9 +2499,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 ui.end_row();
             });
             ui.label(
-                egui::RichText::new(tl!(
-                    "Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password."
-                ))
+                egui::RichText::new(app.product_text("Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password."))
                 .small()
                 .weak(),
             );

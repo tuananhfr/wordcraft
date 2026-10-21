@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 publish = false
 default-run = "wordcraft"
-description = "WordCraft desktop app"
+description = "Văn bản – ERPCons desktop app"
 
 [lints]
 workspace = true

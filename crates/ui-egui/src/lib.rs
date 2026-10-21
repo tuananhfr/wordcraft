@@ -109,6 +109,8 @@ pub use file_dialogs::{Download, FileDialogAnswer, FileDialogRequest, PickerAnsw
 /// Platform services injected by the host (file dialogs, file I/O).
 #[derive(Default)]
 pub struct Services {
+    /// Product name supplied by the native host; browsers retain the upstream default.
+    pub product_name: Option<&'static str>,
     /// Desktop: discover configured printers on a worker.
     pub printers: Option<printing::Discover>,
     /// Desktop: submit the PDF with the chosen settings on a worker.
@@ -776,7 +778,10 @@ impl WordApp {
         let ctx = self.ctx.clone();
         if let Some(r) = zotero::command(self, id, &params, ctx.as_ref()) {
             if let Err(e) = &r {
-                self.status(e.clone());
+                self.status(match self.services.product_name {
+                    Some(name) => e.replace("WordCraft", name),
+                    None => e.clone(),
+                });
             }
             return r;
         }
@@ -822,6 +827,13 @@ impl WordApp {
         if id == "file.open" && r.is_ok() && self.session.document_id() != document {
             font_notice::opened(self);
         }
+        if id == "file.new"
+            && r.is_ok()
+            && params.get("template").and_then(Value::as_str) == Some("sample")
+            && let Some(name) = self.services.product_name
+        {
+            self.session.doc.core.creator = name.into();
+        }
         self.after_command(id);
         if let Err(e) = &r {
             if wordcraft_engine::io::legacy::refused(e) {
@@ -831,7 +843,10 @@ impl WordApp {
                 self.ui.backstage = false;
                 self.status(tl!("The file is too large or abnormally compressed, so it can't be opened."));
             } else {
-                self.status(e.clone());
+                self.status(match self.services.product_name {
+                    Some(name) => e.replace("WordCraft", name),
+                    None => e.clone(),
+                });
             }
         }
         r
@@ -1022,7 +1037,7 @@ impl WordApp {
         if !self.session.status.is_empty() {
             // Engine messages are English; the catalog translates the ones it knows.
             let s = std::mem::take(&mut self.session.status);
-            let s = tl!(&s).to_string();
+            let s = self.product_text(&s);
             self.status(s);
         }
     }
@@ -1269,10 +1284,10 @@ impl WordApp {
             // button does it ([`WordApp::make_default_app`]); scripts, the control channel and
             // MCP get an error.
             "ui.makeDefaultApp" => {
-                return Some(Err(
-                    "making WordCraft the default app needs a click in File › Options › General; scripts and agents can't change system defaults"
-                        .into(),
-                ));
+                return Some(Err(format!(
+                    "making {} the default app needs a click in File › Options › General; scripts and agents can't change system defaults",
+                    self.product_name()
+                )));
             }
             "ui.caretAnimation" => {
                 // File › Options › Advanced › Animation: `value` true or false turns the caret's
@@ -1353,20 +1368,20 @@ impl WordApp {
     /// command, so nothing programmatic (control channel, MCP, macros) can change system defaults.
     pub(crate) fn make_default_app(&mut self) -> Result<Value, String> {
         let Some(hook) = self.services.make_default_app.as_ref() else {
-            return Err("WordCraft can't change the default apps here; use your system's settings".into());
+            return Err(format!("{} can't change the default apps here; use your system's settings", self.product_name()));
         };
         match hook() {
             Ok(DefaultApp::SettingsOpened) => {
-                self.status(tl!("In Default apps, choose WordCraft for the document types you want it to open."));
+                self.status(self.product_text("In Default apps, choose WordCraft for the document types you want it to open."));
                 Ok(json!({"settingsOpened": true}))
             }
             Ok(DefaultApp::MadeDefault) => {
-                self.status(tl!("WordCraft is now the default app for Word documents."));
+                self.status(self.product_text("WordCraft is now the default app for Word documents."));
                 Ok(json!({"default": true}))
             }
             Err(e) => {
                 log::warn!("make default app: {e}");
-                let msg = i18n::fmt(tl!("Couldn't make WordCraft the default: {error}"), &[("error", &e)]);
+                let msg = i18n::fmt(&self.product_text("Couldn't make WordCraft the default: {error}"), &[("error", &e)]);
                 self.status(msg.clone());
                 Err(msg)
             }
@@ -1462,8 +1477,20 @@ impl WordApp {
         }
     }
 
-    /// Document title for the title bar (and the suggested file name). An untitled document is
-    /// named in the interface language, as `Document1` is in English.
+    /// The host's product name, independent of interface language.
+    pub fn product_name(&self) -> &'static str {
+        self.services.product_name.unwrap_or("WordCraft")
+    }
+
+    pub(crate) fn product_text(&self, key: &str) -> String {
+        let text = i18n::t(key);
+        match self.services.product_name {
+            Some(name) => text.replace(i18n::t("WordCraft"), name).replace("WordCraft", name),
+            None => text.to_string(),
+        }
+    }
+
+    /// Document title for the title bar and suggested file name, in the interface language.
     pub fn title_stem(&self) -> String {
         open_documents::title_of(&self.session, self.untitled)
     }
@@ -1764,9 +1791,9 @@ impl WordApp {
             ctx.open_url(egui::OpenUrl::new_tab(url));
         }
         let title = if self.has_document() {
-            format!("{}{} - WordCraft", self.title_stem(), if self.session.dirty { " •" } else { "" })
+            format!("{}{} - {}", self.title_stem(), if self.session.dirty { " •" } else { "" }, self.product_name())
         } else {
-            "WordCraft".to_string()
+            self.product_name().to_string()
         };
         if title != self.sent_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -3471,6 +3498,33 @@ mod tests {
                 assert_eq!(calls.get(), 1, "the button ran the hook");
             }
         }
+    }
+
+    #[test]
+    fn desktop_product_name_titles_and_about_preserve_shared_default() {
+        use egui_kittest::kittest::Queryable;
+        let mut shared = app();
+        shared.execute("file.new", json!({"template": "sample"})).unwrap();
+        assert_eq!(shared.session.doc.core.creator, "WordCraft");
+        assert_eq!(shared.product_name(), "WordCraft");
+        assert_eq!(shared.product_text("About WordCraft"), i18n::t("About WordCraft"));
+        shared.services.product_name = Some("Văn bản – ERPCons");
+        shared.execute("file.new", json!({"template": "sample"})).unwrap();
+        assert_eq!(shared.session.doc.core.creator, "Văn bản – ERPCons");
+        shared.run("ui.dialog", json!({"name": "about"})).unwrap();
+        let mut h = harness(shared);
+        h.run_steps(4);
+        assert!(h.state().sent_title.ends_with("Văn bản – ERPCons"));
+        assert!(h.query_by_label("Văn bản – ERPCons").is_some());
+        assert!(h.query_by_label("ERPCons").is_some());
+        assert!(h.query_by_label("https://office.erpcons.vn").is_some());
+        for info in &i18n::LANGUAGES {
+            let lang = i18n::Lang::from_pref(info.code);
+            i18n::set_current(lang);
+            assert_eq!(h.state().product_text("WordCraft"), "Văn bản – ERPCons");
+            assert!(h.state().product_text("About WordCraft").contains("Văn bản – ERPCons"));
+        }
+        i18n::set_current(i18n::Lang::from_pref("en"));
     }
 
     /// The ERPCons fork credits WordCraft's authors in words and links its own source (ArtCraft

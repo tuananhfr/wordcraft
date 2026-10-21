@@ -55,7 +55,7 @@ if (-not $haveCert -and -not $haveAzure) {
 }
 
 $script:SignTool = Find-SignTool
-$common = @('sign', '/v', '/fd', 'SHA256', '/td', 'SHA256', '/d', 'WordCraft', '/du', 'https://github.com/storytold/wordcraft')
+$common = @('sign', '/v', '/fd', 'SHA256', '/td', 'SHA256', '/d', 'Văn bản – ERPCons', '/du', 'https://office.erpcons.vn')
 $tmp = Join-Path ([IO.Path]::GetTempPath()) "wordcraft-sign-$PID"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 

@@ -24,6 +24,8 @@ mod preferences;
 mod print;
 mod region;
 
+const PRODUCT_NAME: &str = "Văn bản – ERPCons";
+
 use wordcraft_engine::Session;
 use wordcraft_ui_egui::{
     Services, UiState, WordApp,
@@ -208,6 +210,7 @@ fn save_prefs(app: &WordApp) {
 /// (`animations`), and making WordCraft the default app for Word documents (`default_apps`, #295).
 fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
     Services {
+        product_name: Some(PRODUCT_NAME),
         file_dialog: Some(file_dialog),
         printers: Some(print::discover()),
         print_native: Some(print::submit()),
@@ -226,9 +229,9 @@ fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
 /// Window, Dock and taskbar icon.
 fn app_icon() -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/wordcraft-macos-512.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/vn.erpcons.vanban.png");
     #[cfg(not(target_os = "macos"))]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/ai.storyteller.wordcraft.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/vn.erpcons.vanban.png");
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
 }
 
@@ -263,7 +266,7 @@ fn main() -> eframe::Result {
     if let Some(logger) = logger {
         match log_dir().filter(|_| prefs_enabled()) {
             Some(dir) => match logger.attach_dir(&dir) {
-                Ok(path) => log::info!("WordCraft {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), path.display()),
+                Ok(path) => log::info!("{PRODUCT_NAME} {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), path.display()),
                 // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
                 Err(e) => log::warn!("no log file: {e}"),
             },
@@ -272,8 +275,8 @@ fn main() -> eframe::Result {
     }
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("WordCraft")
-            .with_app_id("ai.storyteller.wordcraft")
+            .with_title(PRODUCT_NAME)
+            .with_app_id("vn.erpcons.vanban")
             .with_inner_size([1440.0, 920.0])
             .with_min_inner_size([760.0, 480.0])
             .with_drag_and_drop(true)
@@ -312,16 +315,20 @@ fn main() -> eframe::Result {
     #[cfg(target_os = "macos")]
     let apple_events = &apple_events;
     eframe::run_native(
-        "WordCraft",
+        PRODUCT_NAME,
         options,
         Box::new(move |cc| {
             // The system region picks the new document's paper, the units and the decimal
             // separator (#838).
             let region = region::system();
-            let doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_engine::blank_document(&region) };
+            let mut doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_engine::blank_document(&region) };
+            if sample {
+                doc.core.creator = PRODUCT_NAME.into();
+            }
             let (file_dialog, dialogs) = file_dialogs::hook(&cc.egui_ctx);
             let mut session = Session::new(doc);
             session.system_region = region;
+            session.author = PRODUCT_NAME.into();
             let mut app = WordApp::new(session, services(file_dialog, &cc.egui_ctx));
             load_prefs(&mut app);
             wordcraft_ui_egui::i18n::set_current(wordcraft_ui_egui::i18n::Lang::from_pref(&app.ui.language));
@@ -380,4 +387,26 @@ fn main() -> eframe::Result {
             )))
         }),
     )
+}
+
+#[cfg(test)]
+mod branding_tests {
+    use super::*;
+
+    #[test]
+    fn desktop_host_sets_product_name() {
+        let ctx = egui::Context::default();
+        let hook: file_dialogs::Hook = Box::new(|_| std::sync::mpsc::channel().1);
+        let app = WordApp::new(Session::new(wordcraft_doc::Document::new()), services(hook, &ctx));
+        assert_eq!(PRODUCT_NAME, "Văn bản – ERPCons");
+        assert_eq!(app.product_name(), PRODUCT_NAME);
+        assert_eq!(WordApp::new(Session::new(wordcraft_doc::Document::new()), Services::default()).product_name(), "WordCraft");
+    }
+
+    #[test]
+    fn desktop_settings_use_erpcons_vanban() {
+        if let Some(dir) = wordcraft_control_key::settings_dir() {
+            assert!(dir.ends_with(std::path::Path::new("ERPCons").join("VanBan")), "{}", dir.display());
+        }
+    }
 }
