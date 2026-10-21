@@ -91,6 +91,8 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "WORDCRAFT_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Check file associations and document icons
+        run: python3 packaging/test_file_associations.py -v
       - name: Check out craft-fonts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

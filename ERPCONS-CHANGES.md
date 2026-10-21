@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- File associations (desktop): Show the ERPCons app icon on documents macOS opens with Văn bản – ERPCons.
+
 - Installers (desktop): Build unsigned Windows, Linux and ad-hoc signed universal macOS installers in GitHub Actions; publish tagged ERPCons releases with fixed download names and SHA-256 checksums.
 - Branding (desktop): Use Văn bản – ERPCons, isolated ERPCons/VanBan settings, ERPCons icons and product identifiers across native installers; keep web branding unchanged.
 
