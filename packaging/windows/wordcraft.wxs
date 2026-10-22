@@ -34,7 +34,7 @@
 
     <Icon Id="WordcraftIcon.ico" SourceFile="$(var.IconPath)" />
     <Property Id="ARPPRODUCTICON" Value="WordcraftIcon.ico" />
-    <Property Id="ARPURLINFOABOUT" Value="https://office.erpcons.vn" />
+    <Property Id="ARPURLINFOABOUT" Value="https://office.erpcons.ai" />
     <Property Id="ARPURLUPDATEINFO" Value="https://github.com/tuananhfr/wordcraft/releases" />
     <Property Id="ARPHELPLINK" Value="https://github.com/tuananhfr/wordcraft/issues" />
 

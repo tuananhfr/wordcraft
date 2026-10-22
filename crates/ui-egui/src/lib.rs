@@ -3543,7 +3543,7 @@ mod tests {
         assert!(h.state().sent_title.ends_with("Văn bản – ERPCons"));
         assert!(h.query_by_label("Văn bản – ERPCons").is_some());
         assert!(h.query_by_label("ERPCons").is_some());
-        assert!(h.query_by_label("https://office.erpcons.vn").is_some());
+        assert!(h.query_by_label("https://office.erpcons.ai").is_some());
         for info in &i18n::LANGUAGES {
             let lang = i18n::Lang::from_pref(info.code);
             i18n::set_current(lang);

@@ -14,7 +14,7 @@ section: graphics
 priority: optional
 maintainer: ${WORDCRAFT_MAINTAINER}
 vendor: ERPCons
-homepage: https://office.erpcons.vn
+homepage: https://office.erpcons.ai
 license: MIT OR Apache-2.0
 description: |-
   Open-source, native word processor that works the way Word users expect.

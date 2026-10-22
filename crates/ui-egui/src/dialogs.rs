@@ -2370,7 +2370,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                     ui.label(egui::RichText::new(app.product_text("WordCraft")).font(semibold(22.0)));
                     if app.services.product_name.is_some() {
                         ui.label("ERPCons");
-                        ui.hyperlink_to("https://office.erpcons.vn", "https://office.erpcons.vn");
+                        ui.hyperlink_to("https://office.erpcons.ai", "https://office.erpcons.ai");
                     }
                     let build = option_env!("WORDCRAFT_BUILD_SHA").map(|s| s.get(..8).unwrap_or(s)).unwrap_or(tl!("development build"));
                     ui.label(crate::i18n::fmt(tl!("Version {version} ({build})"), &[("version", env!("CARGO_PKG_VERSION")), ("build", build)]));

@@ -247,6 +247,6 @@ jobs:
           xattr -dr com.apple.quarantine "/Applications/Văn bản – ERPCons.app"
           ```
 
-          Dùng phiên bản web tại https://office.erpcons.vn.
+          Dùng phiên bản web tại https://office.erpcons.ai.
           NOTES
           gh release create "$TAG" --verify-tag --latest --title "Văn bản – ERPCons $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" ./*

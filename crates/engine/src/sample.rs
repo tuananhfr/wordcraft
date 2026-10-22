@@ -112,7 +112,7 @@ pub fn sample_document() -> Document {
     add(
         &mut h,
         "Visit the community board",
-        CharProps { style: Some("Hyperlink".into()), link: Some("https://office.erpcons.vn/".into()), ..Default::default() },
+        CharProps { style: Some("Hyperlink".into()), link: Some("https://office.erpcons.ai/".into()), ..Default::default() },
     );
     add(&mut h, " for events.", CharProps::default());
     b.push(Block::Para(h));

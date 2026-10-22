@@ -1,6 +1,6 @@
 <h1 align="center">WordCraft</h1>
 
-> **ERPCons fork.** This is the ERPCons Văn phòng fork of WordCraft, based on WordCraft by the ArtCraft team (MIT OR Apache-2.0). It runs at https://office.erpcons.vn/van-ban/. ArtCraft names and logos are removed as their brand terms require; see [ERPCONS-CHANGES.md](ERPCONS-CHANGES.md).
+> **ERPCons fork.** This is the ERPCons Văn phòng fork of WordCraft, based on WordCraft by the ArtCraft team (MIT OR Apache-2.0). It runs at https://office.erpcons.ai/van-ban/. ArtCraft names and logos are removed as their brand terms require; see [ERPCONS-CHANGES.md](ERPCONS-CHANGES.md).
 
 <p align="center">
   <b>Writing and document design; an open-source, clean-room reimplementation of Microsoft Word, rebuilt in pure Rust.</b>
