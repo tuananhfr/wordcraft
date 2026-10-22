@@ -139,6 +139,8 @@ jobs:
           retention-days: 14
 
   macos:
+    # Repository variable ERPCONS_SKIP_MACOS=true releases Windows and Linux alone while hosted Mac runners are congested.
+    if: vars.ERPCONS_SKIP_MACOS != 'true'
     runs-on: macos-14
     timeout-minutes: 120
     steps:
@@ -183,7 +185,10 @@ jobs:
           retention-days: 14
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/erpcons-v')
+    if: >-
+      ${{ !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/erpcons-v')
+      && needs.windows.result == 'success' && needs.linux.result == 'success'
+      && (needs.macos.result == 'success' || (needs.macos.result == 'skipped' && vars.ERPCONS_SKIP_MACOS == 'true')) }}
     needs: [windows, linux, macos]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -206,8 +211,18 @@ jobs:
         env:
           VERSION: ${{ needs.windows.outputs.version }}
         run: |
-          python3 erpcons-update/tools/make_manifest.py --app vanban --repo wordcraft --version "$VERSION" \
-            --dir artifacts --out artifacts/update.json
+          # Without a macOS build the manifest omits the Mac asset: installed Windows and Linux apps still update.
+          python3 - "$VERSION" <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "erpcons-update/tools")
+          import make_manifest as tool
+          names = tool.asset_names
+          tool.asset_names = lambda app: {
+              kind: name for kind, name in names(app).items() if kind != "macos-universal-dmg" or Path("artifacts", name).exists()
+          }
+          tool.make_manifest("vanban", "wordcraft", sys.argv[1], "artifacts", "artifacts/update.json")
+          PY
           rm -rf erpcons-update
       # Only openssl runs while the key exists; the manifest generator above never sees the secret.
       - name: Sign the update manifest
@@ -249,4 +264,8 @@ jobs:
 
           Dùng phiên bản web tại https://office.erpcons.ai.
           NOTES
+          if [ ! -e ERPCons-VanBan-macos-universal.dmg ]; then
+            sed -i '/^- macOS/d' "$RUNNER_TEMP/release-notes.md"
+            printf '\nBản macOS chưa có trong lần phát hành này.\n' >> "$RUNNER_TEMP/release-notes.md"
+          fi
           gh release create "$TAG" --verify-tag --latest --title "Văn bản – ERPCons $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" ./*

@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- (desktop) Repository variable `ERPCONS_SKIP_MACOS=true` releases Windows and Linux installers without waiting for a macOS runner; update.json then lists no Mac asset.
+
 - Preserve DOCX altChunk parts in paragraph order, retain them across paragraph merges, and warn on open and before exports that discard embedded content (both).
 
 - Point the website links (About, installers, release notes) to https://office.erpcons.ai; app ids keep the `vn.erpcons.*` form.
