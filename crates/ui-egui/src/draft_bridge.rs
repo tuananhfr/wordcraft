@@ -411,6 +411,36 @@ mod tests {
     }
 
     #[test]
+    fn undo_wave_draft_and_explicit_save_preserve_history() {
+        for browser in [false, true] {
+            let ctx = egui::Context::default();
+            let (mut app, page) = app_with_page();
+            let dir = std::env::temp_dir().join(format!("wordcraft-undo-save-{}-{}", std::process::id(), app.session.document_id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            if browser {
+                app.services.download = Some(Box::new(|_, bytes| {
+                    assert!(bytes.starts_with(b"PK"));
+                    Ok(crate::Download::Done)
+                }));
+            }
+            app.drafts_tick(&ctx, 0.0);
+            type_text(&mut app, "Before save");
+            let history = app.session.history_entries(false);
+            app.drafts_tick(&ctx, 1_000.0);
+            app.drafts_tick(&ctx, 3_600.0);
+            assert_eq!(page.puts.borrow().len(), 1);
+            assert_eq!(app.session.history_entries(false), history);
+            app.execute("file.save", json!({"path": dir.join("saved.docx").to_string_lossy()})).unwrap();
+            assert!(!app.session.dirty);
+            assert_eq!(app.session.history_entries(false), history);
+            app.execute("edit.undo", json!({})).unwrap();
+            assert!(app.session.doc.plain_text(wordcraft_doc::StoryRef::Body).trim().is_empty());
+            assert!(app.session.dirty, "undo after saving needs another save");
+            std::fs::remove_dir_all(dir).unwrap();
+        }
+    }
+
+    #[test]
     fn a_protected_document_is_drafted_encrypted() {
         let ctx = egui::Context::default();
         let (mut app, page) = app_with_page();

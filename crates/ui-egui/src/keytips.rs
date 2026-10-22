@@ -593,7 +593,7 @@ pub(crate) fn qat_label(index: usize, count: usize) -> String {
 
 fn qat_key(app: &mut WordApp, name: &str) {
     app.ui.keytip_prefix.push_str(name);
-    let ids = app.session.ribbon.qat();
+    let ids = crate::chrome::qat_commands(app);
     let mut hit = None;
     let mut pending = false;
     for (index, id) in ids.iter().enumerate() {
@@ -996,6 +996,19 @@ mod tests {
         activate(&mut a);
         assert!(handle_key(&mut a, egui::Key::R));
         assert_eq!(a.ui.tab, "Review");
+    }
+
+    #[test]
+    fn undo_wave_narrow_keytips_follow_visible_history_controls() {
+        let mut a = app();
+        a.narrow.update(320.0);
+        a.run("text.insert", serde_json::json!({"text": "History"})).unwrap();
+        activate(&mut a);
+        handle_key(&mut a, egui::Key::Num1);
+        assert!(a.session.doc.plain_text(wordcraft_doc::StoryRef::Body).is_empty());
+        activate(&mut a);
+        handle_key(&mut a, egui::Key::Num2);
+        assert_eq!(a.session.doc.plain_text(wordcraft_doc::StoryRef::Body), "History");
     }
 
     #[test]

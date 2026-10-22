@@ -9,14 +9,30 @@ use crate::{WordApp, icons};
 
 fn qat_button(ui: &mut Ui, app: &mut WordApp, icon: &str, tip: &str, id: &str, enabled: bool) -> egui::Response {
     let t = Tokens::get(ui.ctx());
-    let (r, resp) = ui.allocate_exact_size(vec2(26.0, 24.0), Sense::click());
+    let size = if app.narrow.is_narrow() && matches!(id, "edit.undo" | "edit.redo") { vec2(44.0, 44.0) } else { vec2(26.0, 24.0) };
+    let (r, resp) = ui
+        .add_enabled_ui(enabled, |ui| {
+            let (_, r) = ui.allocate_space(size);
+            (r, ui.interact(r, egui::Id::new(("qat_command", id)), Sense::click()))
+        })
+        .inner;
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, tip));
     if resp.hovered() && enabled {
         ui.painter().rect_filled(r, 4.0, t.hover);
     }
     let c = if enabled { t.icon } else { t.text_disabled };
     icons::paint(ui.painter(), Rect::from_center_size(r.center(), vec2(16.0, 16.0)), icon, c, if enabled { t.accent } else { c });
     let sc = crate::widgets::shortcut_text(app, id);
-    let resp = resp.on_hover_text(if sc.is_empty() { tip.to_string() } else { format!("{tip} ({sc})") });
+    let tip = if matches!(id, "edit.undo" | "edit.redo")
+        && app.session.history_block_reason(id == "edit.redo") == Some("Use Stop Protection to enable Undo or Redo.")
+    {
+        tl!("Use Stop Protection to enable Undo or Redo.").to_string()
+    } else if sc.is_empty() {
+        tip.to_string()
+    } else {
+        format!("{tip} ({sc})")
+    };
+    let resp = resp.on_hover_text(&tip).on_disabled_hover_text(&tip);
     if resp.clicked() && enabled {
         let _ = app.run(id, json!({}));
     }
@@ -37,10 +53,14 @@ pub(crate) fn qat_enabled(app: &WordApp, id: &str) -> bool {
     }
 }
 
+pub(crate) fn qat_commands(app: &WordApp) -> Vec<&str> {
+    if app.narrow.is_narrow() { vec!["edit.undo", "edit.redo"] } else { app.session.ribbon.qat() }
+}
+
 /// The Quick Access Toolbar (#379): the user's commands (Save, Undo, Redo until customized), each
 /// with a right-click menu, then the menu button that customizes it (#376).
 fn quick_access(ui: &mut Ui, app: &mut WordApp) {
-    let ids: Vec<String> = app.session.ribbon.qat().into_iter().map(str::to_string).collect();
+    let ids: Vec<String> = qat_commands(app).into_iter().map(str::to_string).collect();
     for (index, id) in ids.iter().enumerate() {
         let id = id.as_str();
         let tip = match id {
@@ -58,7 +78,7 @@ fn quick_access(ui: &mut Ui, app: &mut WordApp) {
             }
         }
         crate::widgets::command_menu(&resp, app, id);
-        if id == "edit.undo" {
+        if id == "edit.undo" && !app.narrow.is_narrow() {
             undo_list_button(ui, app, enabled);
         }
     }
@@ -104,7 +124,7 @@ pub(crate) fn undo_list_footer(n: usize) -> String {
 fn undo_list_button(ui: &mut Ui, app: &mut WordApp, enabled: bool) {
     let t = Tokens::get(ui.ctx());
     let (r, _) = ui.allocate_exact_size(vec2(12.0, 24.0), Sense::hover());
-    let resp = ui.interact(r, undo_list_button_id(), if enabled { Sense::click() } else { Sense::hover() });
+    let resp = ui.add_enabled_ui(enabled, |ui| ui.interact(r, undo_list_button_id(), Sense::click())).inner;
     if resp.hovered() && enabled {
         ui.painter().rect_filled(r, 4.0, t.hover);
     }
@@ -205,7 +225,13 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
     let left = if mac { MAC_CONTENT_LEFT as i8 } else { 8 };
     let control_h = if mac { 22.0 } else { 26.0 };
     egui::Panel::top("title_bar")
-        .exact_size(if mac { MAC_TITLE_BAR } else { 38.0 })
+        .exact_size(if app.narrow.is_narrow() {
+            52.0
+        } else if mac {
+            MAC_TITLE_BAR
+        } else {
+            38.0
+        })
         .frame(egui::Frame::NONE.fill(t.title_bar).inner_margin(egui::Margin { left, right: 10, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             let full = ui.max_rect();
@@ -586,6 +612,70 @@ impl WordApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn undo_wave_targets_are_large_reachable_and_really_disabled() {
+        for width in [320.0, 375.0, 390.0] {
+            let ctx = ctx();
+            let mut a = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), crate::Services::default());
+            a.narrow.update(width);
+            a.run("text.insert", json!({"text": "edit"})).unwrap();
+            a.run("edit.undo", json!({})).unwrap();
+            for _ in 0..2 {
+                ctx.run_ui(
+                    egui::RawInput { screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(width, 844.0))), ..Default::default() },
+                    |ui| title_bar(&mut a, ui),
+                )
+                .drop_without_applying_deltas();
+            }
+            let undo = ctx.read_response(egui::Id::new(("qat_command", "edit.undo"))).unwrap();
+            let redo = ctx.read_response(egui::Id::new(("qat_command", "edit.redo"))).unwrap();
+            assert!(!undo.enabled());
+            assert!(redo.enabled());
+            assert!(!undo.hovered() && !undo.is_pointer_button_down_on());
+            let menu = ctx.read_response(qat_menu_button_id()).unwrap();
+            let rects = [undo.rect, redo.rect, menu.rect];
+            for r in &rects[..2] {
+                assert!(r.width() >= 44.0 && r.height() >= 44.0, "{width}: {r:?}");
+                assert!(r.min.x >= 0.0 && r.max.x <= width);
+            }
+            for (i, r) in rects.iter().enumerate() {
+                for other in &rects[i + 1..] {
+                    assert!(!r.intersects(*other));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn undo_wave_toolbar_matches_protection_and_empty_stacks() {
+        let ctx = ctx();
+        let mut a = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), crate::Services::default());
+        let mut n = 0;
+        // read_response also uses the previous interaction pass.
+        frame(&ctx, &mut n, vec![], &mut a);
+        frame(&ctx, &mut n, vec![], &mut a);
+        for id in ["edit.undo", "edit.redo"] {
+            assert!(!qat_enabled(&a, id));
+            assert!(!crate::widgets::enabled(&a, id));
+            let response = ctx.read_response(egui::Id::new(("qat_command", id))).unwrap();
+            assert!(!response.enabled());
+            assert!(!response.hovered() && !response.is_pointer_button_down_on());
+        }
+        a.run("review.restrict", json!({"mode": "readOnly"})).unwrap();
+        frame(&ctx, &mut n, vec![], &mut a);
+        frame(&ctx, &mut n, vec![], &mut a);
+        assert!(!qat_enabled(&a, "edit.undo"));
+        assert!(!crate::widgets::enabled(&a, "edit.undo"));
+        assert_eq!(a.session.history_block_reason(false), Some("Use Stop Protection to enable Undo or Redo."));
+        assert!(!ctx.read_response(egui::Id::new(("qat_command", "edit.undo"))).unwrap().enabled());
+        a.run("review.restrict", json!({"stop": true})).unwrap();
+        frame(&ctx, &mut n, vec![], &mut a);
+        frame(&ctx, &mut n, vec![], &mut a);
+        assert!(qat_enabled(&a, "edit.undo"));
+        assert!(crate::widgets::enabled(&a, "edit.undo"));
+        assert!(ctx.read_response(egui::Id::new(("qat_command", "edit.undo"))).unwrap().enabled());
+    }
 
     fn ctx() -> egui::Context {
         let ctx = egui::Context::default();

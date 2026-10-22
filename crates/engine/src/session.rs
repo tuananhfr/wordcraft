@@ -280,6 +280,8 @@ pub struct FindState {
 #[derive(Clone)]
 struct Undo {
     label: String,
+    transaction_id: u64,
+    timestamp: u64,
     doc: Document,
     sel: Selection,
     /// Formatting waiting at the caret (Bold with nothing selected), so Undo takes it back too.
@@ -305,6 +307,7 @@ pub struct EditSnapshot {
     redo: Vec<Arc<Undo>>,
     typing_open: bool,
     join_next: bool,
+    transaction_checkpoint: bool,
     dirty: bool,
 }
 
@@ -369,6 +372,10 @@ pub struct Session {
     /// Undo and redo steps. Shared so `run` can snapshot both stacks cheaply (a pointer per
     /// step) and put them back exactly when a command fails.
     history: Vec<Arc<Undo>>,
+    next_transaction_id: u64,
+    history_clock: fn() -> u64,
+    transaction_depth: usize,
+    transaction_checkpoint: bool,
     /// Undo steps dropped so far because of the undo limit.
     undo_evicted: u64,
     redo: Vec<Arc<Undo>>,
@@ -598,6 +605,10 @@ impl Session {
             painter: None,
             status: String::new(),
             history: Vec::new(),
+            next_transaction_id: 1,
+            history_clock: history_timestamp,
+            transaction_depth: 0,
+            transaction_checkpoint: false,
             undo_evicted: 0,
             redo: Vec::new(),
             typing_open: false,
@@ -818,11 +829,20 @@ impl Session {
 
     /// Snapshot for undo before a change.
     pub fn checkpoint(&mut self, label: &str) {
+        if self.transaction_depth > 1 && self.transaction_checkpoint {
+            return;
+        }
+        if self.transaction_depth > 0 {
+            self.transaction_checkpoint = true;
+        }
         if label == "Typing" && self.typing_open {
             return;
         }
         self.typing_open = label == "Typing";
+        let (transaction_id, timestamp) = self.history_metadata();
         self.history.push(Arc::new(Undo {
+            transaction_id,
+            timestamp,
             label: label.to_string(),
             doc: self.doc.clone(),
             sel: self.sel.clone(),
@@ -838,7 +858,20 @@ impl Session {
     /// Record `doc`/`sel` as their own undo step after the fact and close the typing group, so
     /// Undo right after an automatic change (AutoFormat, AutoCorrect) reverts only that change.
     pub fn push_undo(&mut self, label: &str, doc: Document, sel: Selection) {
-        self.history.push(Arc::new(Undo { label: label.to_string(), doc, sel, pending: self.pending.clone(), column: None }));
+        if self.transaction_depth > 1 {
+            return;
+        }
+        let (transaction_id, timestamp) = self.history_metadata();
+        self.history.push(Arc::new(Undo {
+            label: label.to_string(),
+            transaction_id,
+            timestamp,
+            doc,
+            sel,
+            pending: self.pending.clone(),
+            column: None,
+        }));
+        self.redo.clear();
         if self.history.len() > MAX_UNDO {
             self.history.remove(0);
             self.undo_evicted += 1;
@@ -868,11 +901,47 @@ impl Session {
         self.typing_open = false;
     }
     pub fn can_undo(&self) -> bool {
-        !self.history.is_empty()
+        self.history_block_reason(false).is_none()
     }
     pub fn can_redo(&self) -> bool {
-        !self.redo.is_empty()
+        self.history_block_reason(true).is_none()
     }
+    /// The shared execution guard for history controls and commands.
+    pub fn history_block_reason(&self, redo: bool) -> Option<&'static str> {
+        if self.step_lifts_protection(redo) {
+            Some("Use Stop Protection to enable Undo or Redo.")
+        } else if if redo { self.redo.is_empty() } else { self.history.is_empty() } {
+            Some(if redo { "there is nothing to redo" } else { "there is nothing to undo" })
+        } else {
+            None
+        }
+    }
+
+    /// Supply a Unix-millisecond clock, including a deterministic clock for tests.
+    pub fn set_history_clock(&mut self, clock: fn() -> u64) {
+        self.history_clock = clock;
+    }
+
+    fn history_metadata(&mut self) -> (u64, u64) {
+        let id = self.next_transaction_id;
+        self.next_transaction_id = id.saturating_add(1);
+        (id, (self.history_clock)())
+    }
+
+    /// Snapshot metadata, newest first, preserving identity through Undo and Redo.
+    pub fn history_entries(&self, redo: bool) -> Vec<Value> {
+        let stack = if redo { &self.redo } else { &self.history };
+        stack
+            .iter()
+            .rev()
+            .map(|u| {
+                serde_json::json!({
+                    "label": u.label, "transaction_id": u.transaction_id, "timestamp": u.timestamp
+                })
+            })
+            .collect()
+    }
+
     pub fn undo_label(&self) -> Option<&str> {
         self.history.last().map(|u| u.label.as_str())
     }
@@ -896,16 +965,21 @@ impl Session {
     /// protection away stops it (only Stop Protection lifts it). Returns the steps undone.
     pub fn undo_steps(&mut self, count: usize) -> usize {
         let mut done = 0;
-        while done < count && !self.step_lifts_protection(false) && self.undo() {
+        while done < count && self.undo() {
             done += 1;
         }
         done
     }
     pub fn undo(&mut self) -> bool {
+        if !self.can_undo() {
+            return false;
+        }
         self.typing_open = false;
         let Some(u) = self.history.pop().map(Arc::unwrap_or_clone) else { return false };
         let cur = Undo {
             label: u.label.clone(),
+            transaction_id: u.transaction_id,
+            timestamp: u.timestamp,
             doc: std::mem::replace(&mut self.doc, u.doc),
             sel: std::mem::replace(&mut self.sel, u.sel),
             pending: std::mem::replace(&mut self.pending, u.pending),
@@ -921,10 +995,15 @@ impl Session {
         next.is_some_and(|u| crate::cmd::protect::protection_lifted(&self.doc, &u.doc))
     }
     pub fn redo(&mut self) -> bool {
+        if !self.can_redo() {
+            return false;
+        }
         self.typing_open = false;
         let Some(u) = self.redo.pop().map(Arc::unwrap_or_clone) else { return false };
         let cur = Undo {
             label: u.label.clone(),
+            transaction_id: u.transaction_id,
+            timestamp: u.timestamp,
             doc: std::mem::replace(&mut self.doc, u.doc),
             sel: std::mem::replace(&mut self.sel, u.sel),
             pending: std::mem::replace(&mut self.pending, u.pending),
@@ -1045,6 +1124,10 @@ impl Session {
             painter,
             status,
             history: _,
+            next_transaction_id: _,
+            history_clock: _,
+            transaction_depth: _,
+            transaction_checkpoint: _,
             undo_evicted: _,
             redo: _,
             typing_open: _,
@@ -1154,6 +1237,10 @@ impl Session {
             painter: _,
             status: _,
             history,
+            next_transaction_id: _,
+            history_clock: _,
+            transaction_depth: _,
+            transaction_checkpoint,
             undo_evicted,
             redo,
             typing_open,
@@ -1205,6 +1292,7 @@ impl Session {
             redo: redo.clone(),
             typing_open: *typing_open,
             join_next: *join_next,
+            transaction_checkpoint: *transaction_checkpoint,
             dirty: *dirty,
         }
     }
@@ -1213,7 +1301,7 @@ impl Session {
     /// selection or undo/redo (undo steps the limit pushed out meanwhile come back). The layout
     /// is recomputed.
     pub fn restore(&mut self, snap: EditSnapshot) {
-        let EditSnapshot { doc, sel, history_len, evicted, head, redo, typing_open, join_next, dirty } = snap;
+        let EditSnapshot { doc, sel, history_len, evicted, head, redo, typing_open, join_next, transaction_checkpoint, dirty } = snap;
         let gone = usize::try_from(self.undo_evicted.saturating_sub(evicted)).unwrap_or(usize::MAX);
         if gone > 0 {
             let back = gone.min(head.len());
@@ -1227,6 +1315,7 @@ impl Session {
         self.redo = redo;
         self.typing_open = typing_open;
         self.join_next = join_next;
+        self.transaction_checkpoint = transaction_checkpoint;
         self.touch();
         self.dirty = dirty;
     }
@@ -1256,6 +1345,20 @@ impl Session {
     /// control channel). Mutating commands are undoable; a failed command leaves the document as
     /// it was; a panic inside a command becomes an error.
     pub fn run(&mut self, id: &str, params: &Value) -> Result<Value, CmdError> {
+        if self.transaction_depth == 0 {
+            self.transaction_checkpoint = false;
+        }
+        let checkpoint = self.transaction_checkpoint;
+        self.transaction_depth = self.transaction_depth.saturating_add(1);
+        let result = self.run_inner(id, params);
+        self.transaction_depth = self.transaction_depth.saturating_sub(1);
+        if result.is_err() {
+            self.transaction_checkpoint = checkpoint;
+        }
+        result
+    }
+
+    fn run_inner(&mut self, id: &str, params: &Value) -> Result<Value, CmdError> {
         let join = std::mem::take(&mut self.join_next);
         let reg = self.registry.clone();
         let Some(spec) = reg.get(id) else { return Err(CmdError::Unknown(id.to_string())) };
@@ -1312,10 +1415,14 @@ impl Session {
             self.typing_open = false;
         }
         if spec.mutates {
+            if self.transaction_depth > 1 && !self.transaction_checkpoint {
+                self.typing_open = false;
+            }
             let label = if typing { "Typing" } else { spec.label };
-            if !join || self.history.is_empty() {
+            if !self.transaction_checkpoint && (!join || self.history.is_empty()) {
                 self.checkpoint(label);
             }
+            self.transaction_checkpoint = true;
         } else if !spec.id.starts_with("caret.") && !spec.id.starts_with("view.") {
             // Non-mutating commands other than caret movement keep the typing group.
         } else if spec.id.starts_with("caret.") {
@@ -1348,6 +1455,7 @@ impl Session {
         match &result {
             Ok(_) => {
                 if spec.mutates {
+                    self.redo.clear();
                     // Formatting changed while tracking becomes a formatting revision.
                     if let Some((before, ..)) = &before_doc {
                         crate::cmd::fmt_revisions::record(self, id, before);
@@ -1439,4 +1547,16 @@ pub fn blank_document(region: &wordcraft_geom::Region) -> Document {
     d.last_section.page_w = w;
     d.last_section.page_h = h;
     d
+}
+
+fn history_timestamp() -> u64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX)).unwrap_or(0)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let ms = js_sys::Date::now();
+        if ms.is_finite() && ms > 0.0 { ms as u64 } else { 0 }
+    }
 }

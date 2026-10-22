@@ -2384,11 +2384,11 @@ fn mailings_results_are_new_untitled_documents() {
 
         // Undo doesn't bring the old document back under the new one's identity; Redo can't
         // put the result back under a file saved in between.
-        run(&mut s, "edit.undo", json!({}));
+        assert!(s.run("edit.undo", &json!({})).is_err(), "{id}: history starts afresh, like New");
         assert_eq!(text(&s), result, "{id}: history starts afresh, like New");
         run(&mut s, "file.saveAs", json!({"path": saved_as.to_string_lossy()}));
         let written = on_file(&saved_as);
-        run(&mut s, "edit.redo", json!({}));
+        assert!(s.run("edit.redo", &json!({})).is_err(), "{id}: nothing to redo");
         assert_eq!(text(&s), result, "{id}: nothing to redo");
         run(&mut s, "file.save", json!({}));
         assert_eq!(on_file(&saved_as), written, "{id}: the saved file still holds what was saved");
@@ -5297,4 +5297,100 @@ fn swapping_documents_moves_the_document_and_keeps_the_users_settings() {
     run(&mut a, "edit.undo", json!({}));
     assert!(!text(&a).contains("Alpha"), "undo takes back this document's own typing");
     assert!(text(&b).contains("Alpha"), "the other one keeps its paste");
+}
+
+#[test]
+fn undo_wave_protection_uses_executable_state() {
+    let mut s = s();
+    run(&mut s, "review.restrict", json!({"mode": "readOnly"}));
+    assert!(!s.can_undo(), "protection must disable Undo, even with history");
+    assert_eq!(s.history_block_reason(false), Some("Use Stop Protection to enable Undo or Redo."));
+    assert!(!s.undo(), "the direct engine guard also refuses the protected step");
+    assert!((s.registry.get("edit.undo").unwrap().enabled)(&s).is_some());
+    run(&mut s, "review.restrict", json!({"stop": true}));
+    assert!(s.can_undo());
+    assert!(s.undo());
+    assert!(!s.can_redo(), "Redo must not lift restored protection");
+    assert_eq!(s.history_block_reason(true), Some("Use Stop Protection to enable Undo or Redo."));
+    assert!(!s.redo());
+    assert!((s.registry.get("edit.redo").unwrap().enabled)(&s).is_some());
+    run(&mut s, "review.restrict", json!({"stop": true}));
+    assert!(s.can_undo());
+    assert_eq!(s.can_redo(), !s.history_entries(true).is_empty());
+}
+
+#[test]
+fn undo_wave_nested_macro_is_one_transaction() {
+    let mut s = s();
+    run(
+        &mut s,
+        "tools.macros",
+        json!({"define": {"name": "gesture", "steps": [
+            {"command": "text.insert", "params": {"text": "Hello"}},
+            {"command": "format.bold", "params": {}}
+        ]}}),
+    );
+    s.reset_history();
+    run(&mut s, "tools.macros", json!({"run": "gesture"}));
+    assert_eq!(s.undo_depth(), 1, "one outer command owns nested edits");
+    let entry = s.history_entries(false);
+    assert!(s.undo());
+    assert!(text(&s).is_empty());
+    assert!(s.redo());
+    assert_eq!(text(&s), "Hello");
+    assert_eq!(s.history_entries(false), entry);
+    let mut prior = Session::new(wordcraft_doc::Document::new());
+    prior.macros = s.macros.clone();
+    run(&mut prior, "text.insert", json!({"text": "Before"}));
+    run(&mut prior, "tools.macros", json!({"run": "gesture"}));
+    assert_eq!(prior.undo_depth(), 2, "a macro starts its own gesture after typing");
+    assert!(prior.undo());
+    assert_eq!(text(&prior), "Before");
+}
+
+#[test]
+fn undo_wave_metadata_survives_redo_and_branches() {
+    for _ in 0..2 {
+        let mut s = s();
+        s.set_history_clock(|| 1_700_000_000_123);
+        run(&mut s, "text.insert", json!({"text": "A"}));
+        run(&mut s, "text.insert", json!({"text": "B"}));
+        let entry = s.history_entries(false);
+        assert_eq!(entry.len(), 1, "typing is one gesture");
+        assert_eq!(entry[0]["timestamp"], 1_700_000_000_123u64);
+        assert_eq!(entry[0]["transaction_id"], 1);
+        assert!(s.undo());
+        assert_eq!(s.history_entries(true), entry);
+        assert!(s.redo());
+        assert_eq!(s.history_entries(false), entry);
+        assert!(s.undo());
+        run(&mut s, "text.insert", json!({"text": "branch"}));
+        assert!(!s.can_redo());
+        let report = run(&mut s, "edit.undoHistory", json!({}));
+        assert_eq!(report["undoEntries"][0]["transaction_id"], 2);
+        assert_eq!(report["undoEntries"][0]["timestamp"], 1_700_000_000_123u64);
+        assert_eq!(report["redoEntries"], json!([]));
+    }
+}
+
+#[test]
+fn undo_wave_preview_restore_keeps_the_outer_transaction() {
+    let mut s = s();
+    let mut specs = s.registry.all().to_vec();
+    specs.push(
+        crate::CommandSpec::new("test.preview", "Preview", "", |s, _| {
+            let before = s.edit_snapshot();
+            s.run("text.insert", &json!({"text": "discarded"}))?;
+            s.restore(before);
+            s.run("text.insert", &json!({"text": "kept"}))
+        })
+        .pure(),
+    );
+    s.registry = std::sync::Arc::new(crate::Registry::new(specs));
+    run(&mut s, "test.preview", json!({}));
+    assert_eq!(text(&s), "kept");
+    assert_eq!(s.undo_depth(), 1, "restoring a preview must allow the real edit's checkpoint");
+    assert_eq!(s.history_entries(false)[0]["transaction_id"], 2, "discarded IDs are not reused");
+    assert!(s.undo());
+    assert!(text(&s).is_empty());
 }

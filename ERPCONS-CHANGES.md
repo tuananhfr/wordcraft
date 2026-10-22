@@ -55,3 +55,5 @@ This branch (`erpcons`) is the ERPCons Văn phòng fork of [WordCraft](https://g
 
 - Desktop recovery keeps bounded, atomically replaced DOCX drafts for unsaved work in per-instance directories with Windows-safe sibling lock files, recovers only exited instances, restores them as clearly marked unsaved documents on startup, and removes them after save, discard or approved shutdown (desktop).
 - Native file filters, clipboard errors, default-app messages and print queue document labels use the interface catalog, with Vietnamese translations (desktop).
+
+- Undo/Redo now share protection-aware availability, expose transaction IDs and timestamps, keep nested commands in one transaction, and provide accessible disabled controls with 44-point narrow-layout targets; save and draft history is regression-tested.

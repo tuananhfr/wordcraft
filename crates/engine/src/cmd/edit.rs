@@ -15,9 +15,6 @@ fn undo_to(s: &mut Session, v: &Value) -> CmdResult {
         return Err(CmdError::Params("`count` must be 1 or more".into()));
     }
     let n = usize::try_from(n).unwrap_or(usize::MAX).min(s.undo_depth());
-    if s.step_lifts_protection(false) {
-        return Err(CmdError::Disabled("edit.undoTo: use Stop Protection to lift the document's protection".into()));
-    }
     let undone = s.undo_steps(n);
     let mut r = sel_result(s)?;
     if let Some(m) = r.as_object_mut() {
@@ -34,30 +31,26 @@ fn has_sel(s: &Session) -> Option<&'static str> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("edit.undo", "Undo", "Quick Access Toolbar", |s, _| {
-            if s.step_lifts_protection(false) {
-                return Err(CmdError::Disabled("edit.undo: use Stop Protection to lift the document's protection".into()));
-            }
             s.undo();
             sel_result(s)
         })
         .key("Mod+Z")
+        .when(|s| s.history_block_reason(false))
         .pure(),
         CommandSpec::new("edit.undoTo", "Undo Actions", "Quick Access Toolbar", undo_to)
             .params(r#"{"count": n (1 = the newest step, like edit.undo; n undoes the newest n steps at once; at most the undo depth)}"#)
-            .when(|s| if s.can_undo() { None } else { Some("there is nothing to undo") })
+            .when(|s| s.history_block_reason(false))
             .pure(),
         CommandSpec::new("edit.undoHistory", "Undo History", "Quick Access Toolbar", |s, _| {
-            Ok(json!({"undo": s.undo_history(), "depth": s.undo_depth(), "redo": s.redo_label()}))
+            Ok(json!({"undo": s.undo_history(), "depth": s.undo_depth(), "redo": s.redo_label(), "undoEntries": s.history_entries(false), "redoEntries": s.history_entries(true)}))
         })
         .pure(),
         CommandSpec::new("edit.redo", "Redo", "Quick Access Toolbar", |s, _| {
-            if s.step_lifts_protection(true) {
-                return Err(CmdError::Disabled("edit.redo: use Stop Protection to lift the document's protection".into()));
-            }
             s.redo();
             sel_result(s)
         })
         .key("Mod+Y / Mod+Shift+Z")
+        .when(|s| s.history_block_reason(true))
         .pure(),
         CommandSpec::new("edit.cut", "Cut", "Home › Clipboard", cut).key("Mod+X").when(has_sel),
         CommandSpec::new("edit.copy", "Copy", "Home › Clipboard", copy).key("Mod+C").pure(),

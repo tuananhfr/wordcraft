@@ -2125,3 +2125,5 @@
 	Install now	今すぐインストール
 	Embedded content (altChunk)	埋め込みコンテンツ (altChunk)
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	このファイルには表示や編集ができない埋め込みコンテンツが含まれています。DOCX 形式で保存すると保持されます。
+
+	Use Stop Protection to enable Undo or Redo.	元に戻す、またはやり直しを有効にするには、保護を停止してください。

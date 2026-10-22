@@ -2523,3 +2523,5 @@ preview	Title	Örnek
 	Install now	Şimdi yükle
 	Embedded content (altChunk)	Gömülü içerik (altChunk)
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Bu dosya görüntülenemeyen veya düzenlenemeyen gömülü içerik içeriyor. DOCX olarak kaydedildiğinde korunur.
+
+	Use Stop Protection to enable Undo or Redo.	Geri Al veya Yinele işlemini etkinleştirmek için korumayı durdurun.

@@ -4191,7 +4191,7 @@ mod tests {
             a.autosave_tick(now_ms() + 10_000.0);
             a.run("file.save", json!({})).unwrap();
             a.run("edit.undo", json!({})).unwrap();
-            a.run("edit.undo", json!({})).unwrap();
+            assert!(a.run("edit.undo", json!({})).unwrap_err().contains("there is nothing to undo"));
             a.run("file.save", json!({})).unwrap();
             a.autosave_tick(now_ms() + 20_000.0);
             assert_eq!(std::fs::read(&path).unwrap(), saved, "{id}: the original file is never overwritten");
@@ -4230,7 +4230,7 @@ mod tests {
             a.run("file.close", json!({})).unwrap();
             assert_eq!(prompt(&a), Some("saveChanges"), "{id}");
 
-            a.execute("edit.undo", json!({})).unwrap();
+            assert!(a.execute("edit.undo", json!({})).unwrap_err().contains("there is nothing to undo"));
             assert_eq!(a.session.document_id(), b, "{id}");
             assert_eq!(body_text(&a), result, "{id}: nothing from before the mailing comes back");
             a.run("ui.saveChanges", json!({"answer": "dontSave"})).unwrap();
@@ -4255,11 +4255,11 @@ mod tests {
             assert_eq!(prompt(&a), None, "{id}: the document was saved");
             let result = body_text(&a);
 
-            a.run("edit.undo", json!({})).unwrap();
+            assert!(a.run("edit.undo", json!({})).unwrap_err().contains("there is nothing to undo"));
             assert_eq!(body_text(&a), result, "{id}: history starts afresh, like New");
             a.run("file.saveAs", json!({"path": copy.to_string_lossy()})).unwrap();
             let written = on_file(&copy);
-            a.run("edit.redo", json!({})).unwrap();
+            assert!(a.run("edit.redo", json!({})).unwrap_err().contains("there is nothing to redo"));
             assert_eq!(body_text(&a), result, "{id}: nothing to redo");
             a.run("file.save", json!({})).unwrap();
             a.autosave_tick(now_ms() + 10_000.0);
