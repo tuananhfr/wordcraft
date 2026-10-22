@@ -2094,3 +2094,31 @@
 	Next Document	次の文書
 	Previous Document	前の文書
 	Context Menu	コンテキストメニュー
+	Automatically check for updates	更新を自動的に確認する
+	Check for updates	アップデートを確認
+	Checking for a newer version…	新しいバージョンを確認中…
+	Could not start updater: {reason}	更新プログラムを起動できませんでした: {reason}
+	Could not write the update: {detail}	更新を書き込めませんでした: {detail}
+	Download new version	新しいバージョンをダウンロード
+	Permission denied while updating; check folder permissions	更新中にアクセスが拒否されました。フォルダーのアクセス権を確認してください
+	Remind me later	後で通知
+	Retry	再試行
+	Skip this version	このバージョンをスキップ
+	The app will close and reopen after updating	更新後にアプリを閉じて再起動します
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	アプリが終了し、Windows がインストールの許可を求めます — Yes を選択してください — その後アプリが自動的に再起動します
+	The downloaded update failed verification	ダウンロードした更新の検証に失敗しました
+	The update check stopped unexpectedly	更新の確認が予期せず停止しました
+	The update manifest is invalid: {detail}	更新マニフェストが無効です: {detail}
+	The update signature is invalid	更新の署名が無効です
+	The updater failed; restart the app and try again	更新プログラムでエラーが発生しました。アプリを再起動して再試行してください
+	The updater is busy; try again shortly	更新プログラムは使用中です。しばらくしてから再試行してください
+	This installation cannot update automatically	このインストールでは自動更新できません
+	Update cancelled	更新をキャンセルしました
+	Update network unavailable: {detail}	更新用ネットワークを利用できません: {detail}
+	Update now	今すぐ更新
+	Update server returned HTTP {detail}	更新サーバーが HTTP {detail} を返しました
+	Update to {version} failed: {reason}	{version} への更新に失敗しました: {reason}
+	Updated to version {version}	バージョン {version} に更新しました
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons は最新です。
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} が利用可能です
+	What's new	新機能

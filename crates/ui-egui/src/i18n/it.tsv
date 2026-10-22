@@ -2505,3 +2505,31 @@ preview	Title	Esempio
 	Recovery storage exceeds its size limit.	L’archivio di recupero supera il limite di dimensione.
 	Invalid recovery draft metadata.	Metadati della bozza di recupero non validi.
 	Settings directory is unavailable.	La cartella delle impostazioni non è disponibile.
+	Automatically check for updates	Verifica automaticamente gli aggiornamenti
+	Check for updates	Verifica aggiornamenti
+	Checking for a newer version…	Ricerca di una versione più recente…
+	Could not start updater: {reason}	Impossibile avviare il programma di aggiornamento: {reason}
+	Could not write the update: {detail}	Impossibile scrivere l’aggiornamento: {detail}
+	Download new version	Scarica la nuova versione
+	Permission denied while updating; check folder permissions	Autorizzazione negata durante l’aggiornamento; controlla i permessi della cartella
+	Remind me later	Ricordamelo più tardi
+	Retry	Riprova
+	Skip this version	Salta questa versione
+	The app will close and reopen after updating	L’applicazione verrà chiusa e riaperta dopo l’aggiornamento
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	L’app si chiuderà, Windows chiederà il permesso di installazione — scegli Yes — poi l’app si riaprirà automaticamente
+	The downloaded update failed verification	L’aggiornamento scaricato non ha superato la verifica
+	The update check stopped unexpectedly	La ricerca di aggiornamenti si è interrotta in modo imprevisto
+	The update manifest is invalid: {detail}	Il manifesto dell’aggiornamento non è valido: {detail}
+	The update signature is invalid	La firma dell’aggiornamento non è valida
+	The updater failed; restart the app and try again	Il programma di aggiornamento non è riuscito; riavvia l’applicazione e riprova
+	The updater is busy; try again shortly	Il programma di aggiornamento è occupato; riprova tra poco
+	This installation cannot update automatically	Questa installazione non può aggiornarsi automaticamente
+	Update cancelled	Aggiornamento annullato
+	Update network unavailable: {detail}	Rete di aggiornamento non disponibile: {detail}
+	Update now	Aggiorna ora
+	Update server returned HTTP {detail}	Il server di aggiornamento ha restituito HTTP {detail}
+	Update to {version} failed: {reason}	Aggiornamento a {version} non riuscito: {reason}
+	Updated to version {version}	Aggiornato alla versione {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons è aggiornato.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} è disponibile
+	What's new	Novità

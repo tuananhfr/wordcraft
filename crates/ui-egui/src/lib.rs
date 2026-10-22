@@ -93,6 +93,8 @@ pub mod table_resize;
 pub mod table_ruler;
 pub mod theme;
 pub mod touch;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod updates;
 mod vn_legacy;
 pub mod widgets;
 pub mod window_geometry;
@@ -109,6 +111,8 @@ pub use file_dialogs::{Download, FileDialogAnswer, FileDialogRequest, PickerAnsw
 /// Platform services injected by the host (file dialogs, file I/O).
 #[derive(Default)]
 pub struct Services {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub updates: Option<std::sync::Arc<dyn updates::UpdateHook>>,
     /// Product name supplied by the native host; browsers retain the upstream default.
     pub product_name: Option<&'static str>,
     /// Desktop: discover configured printers on a worker.
@@ -505,6 +509,8 @@ pub struct WordApp {
     pub(crate) save_failures: save_status::SaveFailures,
     focus: focus::State,
     font_notice: font_notice::State,
+    #[cfg(not(target_arch = "wasm32"))]
+    updates: updates::Updates,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -602,6 +608,8 @@ impl WordApp {
             save_failures: Default::default(),
             focus: Default::default(),
             font_notice: Default::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            updates: Default::default(),
         }
     }
 
@@ -1276,6 +1284,16 @@ impl WordApp {
                 self.pick_recipient_list();
                 json!({"pending": self.recipient_list_pending})
             }
+            #[cfg(not(target_arch = "wasm32"))]
+            "ui.checkUpdates" => {
+                self.check_for_updates();
+                return Some(Ok(json!({})));
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            "ui.continueUpdate" => {
+                let ctx = self.ctx.clone().unwrap_or_default();
+                return Some(self.guard_update(p.clone(), &ctx));
+            }
             // Native printing submits the selected queue on a worker; the browser owns its dialog.
             "ui.printSettings" => return Some(printing::settings(&mut self.printing, p, self.services.printers.as_ref())),
             "ui.print" | "ui.printSubmit" => return Some(self.print_to_system(p)),
@@ -1574,6 +1592,8 @@ impl WordApp {
         if self.ctx.is_none() {
             self.ctx = Some(ctx.clone());
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        self.poll_updates();
         self.poll_printing(ctx);
         self.drain_control(ctx);
         zotero::poll(self, ctx);
@@ -1779,6 +1799,8 @@ impl WordApp {
         focus::hint(self, &ctx);
         content_controls::popup(self, &ctx);
         dialogs::show(self, &ctx);
+        #[cfg(not(target_arch = "wasm32"))]
+        updates::dialog(self, &ctx);
         #[cfg(not(target_arch = "wasm32"))]
         file_browser::show(self, &ctx);
         colors::show(self, &ctx);
@@ -2056,6 +2078,10 @@ fn input_dialog(id: &str, params: &Value) -> Option<&'static str> {
 /// Everything else needs a document, `ui.*` included: only the interface commands listed here
 /// (tabs, Backstage, dialogs, appearance, opening files) work without one.
 pub(crate) fn works_without_document(id: &str) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    if matches!(id, "ui.checkUpdates" | "ui.continueUpdate") {
+        return true;
+    }
     matches!(
         id,
         "file.new"

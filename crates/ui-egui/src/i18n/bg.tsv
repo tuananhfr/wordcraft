@@ -2483,3 +2483,31 @@
 	Next Document	Следващ документ
 	Previous Document	Предишен документ
 	Context Menu	Контекстно меню
+	Automatically check for updates	Автоматична проверка за актуализации
+	Check for updates	Провери за актуализации
+	Checking for a newer version…	Проверка за по-нова версия…
+	Could not start updater: {reason}	Неуспешно стартиране на програмата за актуализиране: {reason}
+	Could not write the update: {detail}	Неуспешно записване на актуализацията: {detail}
+	Download new version	Изтегли новата версия
+	Permission denied while updating; check folder permissions	Отказан достъп при актуализиране; проверете правата за папката
+	Remind me later	Напомни ми по-късно
+	Retry	Опитай отново
+	Skip this version	Пропусни тази версия
+	The app will close and reopen after updating	Приложението ще се затвори и отвори отново след актуализирането
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Приложението ще се затвори, Windows ще поиска разрешение за инсталиране — изберете Yes — след което приложението ще се отвори автоматично
+	The downloaded update failed verification	Изтеглената актуализация не премина проверката
+	The update check stopped unexpectedly	Проверката за актуализации спря неочаквано
+	The update manifest is invalid: {detail}	Манифестът на актуализацията е невалиден: {detail}
+	The update signature is invalid	Подписът на актуализацията е невалиден
+	The updater failed; restart the app and try again	Програмата за актуализиране се провали; рестартирайте приложението и опитайте отново
+	The updater is busy; try again shortly	Програмата за актуализиране е заета; опитайте отново след малко
+	This installation cannot update automatically	Тази инсталация не може да се актуализира автоматично
+	Update cancelled	Актуализацията е отменена
+	Update network unavailable: {detail}	Мрежата за актуализации е недостъпна: {detail}
+	Update now	Актуализирай сега
+	Update server returned HTTP {detail}	Сървърът за актуализации върна HTTP {detail}
+	Update to {version} failed: {reason}	Актуализирането до {version} е неуспешно: {reason}
+	Updated to version {version}	Актуализирано до версия {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons е актуален.
+	Văn bản – ERPCons {version} is available	Наличен е Văn bản – ERPCons {version}
+	What's new	Какво е новото

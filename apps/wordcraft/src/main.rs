@@ -23,6 +23,7 @@ mod logging;
 mod preferences;
 mod print;
 mod region;
+mod updates;
 
 const PRODUCT_NAME: &str = "Văn bản – ERPCons";
 
@@ -211,6 +212,10 @@ fn save_prefs(app: &WordApp) {
 fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
     Services {
         product_name: Some(PRODUCT_NAME),
+        updates: wordcraft_control_key::settings_dir().map(|dir| {
+            std::sync::Arc::new(updates::DesktopUpdates::new(dir.join("update-state.json")))
+                as std::sync::Arc<dyn wordcraft_ui_egui::updates::UpdateHook>
+        }),
         file_dialog: Some(file_dialog),
         printers: Some(print::discover()),
         print_native: Some(print::submit()),
@@ -241,6 +246,9 @@ fn build_sha() -> &'static str {
 }
 
 fn main() -> eframe::Result {
+    if let Some(code) = erpcons_update::run_helper_from_args() {
+        std::process::exit(code);
+    }
     // First, so the panic hook and every start-up warning are recorded (`logging`).
     let logger = logging::install();
     logging::install_panic_hook();

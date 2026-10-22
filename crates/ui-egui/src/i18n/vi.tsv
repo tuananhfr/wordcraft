@@ -2542,3 +2542,31 @@ preview	Title	Tiêu đề
 	Recovery storage exceeds its size limit.	Kho khôi phục vượt giới hạn dung lượng.
 	Invalid recovery draft metadata.	Thông tin bản nháp khôi phục không hợp lệ.
 	Settings directory is unavailable.	Không thể dùng thư mục cài đặt.
+	Automatically check for updates	Tự động kiểm tra cập nhật
+	Check for updates	Kiểm tra cập nhật
+	Checking for a newer version…	Đang kiểm tra phiên bản mới hơn…
+	Could not start updater: {reason}	Không khởi chạy được trình cập nhật: {reason}
+	Could not write the update: {detail}	Không ghi được bản cập nhật: {detail}
+	Download new version	Tải bản mới
+	Permission denied while updating; check folder permissions	Không có quyền cập nhật; hãy kiểm tra quyền truy cập thư mục
+	Remind me later	Nhắc sau
+	Retry	Thử lại
+	Skip this version	Bỏ qua phiên bản này
+	The app will close and reopen after updating	Ứng dụng sẽ đóng và mở lại sau khi cập nhật
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Ứng dụng sẽ đóng, Windows sẽ hỏi quyền cài đặt — hãy chọn Yes — rồi ứng dụng tự mở lại
+	The downloaded update failed verification	Bản cập nhật đã tải không vượt qua xác minh
+	The update check stopped unexpectedly	Quá trình kiểm tra cập nhật đã dừng đột ngột
+	The update manifest is invalid: {detail}	Thông tin bản cập nhật không hợp lệ: {detail}
+	The update signature is invalid	Chữ ký bản cập nhật không hợp lệ
+	The updater failed; restart the app and try again	Trình cập nhật gặp lỗi; hãy khởi động lại ứng dụng và thử lại
+	The updater is busy; try again shortly	Trình cập nhật đang bận; hãy thử lại sau ít phút
+	This installation cannot update automatically	Bản cài đặt này không hỗ trợ cập nhật tự động
+	Update cancelled	Đã huỷ cập nhật
+	Update network unavailable: {detail}	Không có kết nối cập nhật: {detail}
+	Update now	Cập nhật ngay
+	Update server returned HTTP {detail}	Máy chủ cập nhật trả về HTTP {detail}
+	Update to {version} failed: {reason}	Cập nhật lên {version} không thành công: {reason}
+	Updated to version {version}	Đã cập nhật lên phiên bản {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons đang ở phiên bản mới nhất.
+	Văn bản – ERPCons {version} is available	Đã có Văn bản – ERPCons {version}
+	What's new	Xem có gì mới

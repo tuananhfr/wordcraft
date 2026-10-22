@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Updates (desktop): Check signed ERPCons releases automatically or from Help, save unsaved documents before downloading and installing, and explain Windows installer permission prompts.
+
 - File associations (desktop): Show the ERPCons app icon on documents macOS opens with Văn bản – ERPCons.
 
 - Installers (desktop): Build unsigned Windows, Linux and ad-hoc signed universal macOS installers in GitHub Actions; publish tagged ERPCons releases with fixed download names and SHA-256 checksums.

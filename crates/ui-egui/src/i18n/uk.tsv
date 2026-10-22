@@ -2106,3 +2106,31 @@
 	Next Document	Наступний документ
 	Previous Document	Попередній документ
 	Context Menu	Контекстне меню
+	Automatically check for updates	Автоматично перевіряти оновлення
+	Check for updates	Перевірити оновлення
+	Checking for a newer version…	Перевірка наявності новішої версії…
+	Could not start updater: {reason}	Не вдалося запустити програму оновлення: {reason}
+	Could not write the update: {detail}	Не вдалося записати оновлення: {detail}
+	Download new version	Завантажити нову версію
+	Permission denied while updating; check folder permissions	Доступ під час оновлення заборонено; перевірте дозволи папки
+	Remind me later	Нагадати пізніше
+	Retry	Спробувати знову
+	Skip this version	Пропустити цю версію
+	The app will close and reopen after updating	Після оновлення застосунок закриється й відкриється знову
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Програма закриється, Windows запитає дозвіл на встановлення — виберіть Yes — потім програма відкриється автоматично
+	The downloaded update failed verification	Завантажене оновлення не пройшло перевірку
+	The update check stopped unexpectedly	Перевірка оновлень несподівано перервалася
+	The update manifest is invalid: {detail}	Маніфест оновлення недійсний: {detail}
+	The update signature is invalid	Підпис оновлення недійсний
+	The updater failed; restart the app and try again	Програма оновлення завершилася з помилкою; перезапустіть застосунок і спробуйте знову
+	The updater is busy; try again shortly	Програма оновлення зайнята; спробуйте знову трохи пізніше
+	This installation cannot update automatically	Цю інсталяцію неможливо оновити автоматично
+	Update cancelled	Оновлення скасовано
+	Update network unavailable: {detail}	Мережа оновлень недоступна: {detail}
+	Update now	Оновити зараз
+	Update server returned HTTP {detail}	Сервер оновлень повернув HTTP {detail}
+	Update to {version} failed: {reason}	Не вдалося оновити до {version}: {reason}
+	Updated to version {version}	Оновлено до версії {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons має найновішу версію.
+	Văn bản – ERPCons {version} is available	Доступна версія Văn bản – ERPCons {version}
+	What's new	Що нового

@@ -2093,3 +2093,31 @@
 	Next Document	Nächstes Dokument
 	Previous Document	Vorheriges Dokument
 	Context Menu	Kontextmenü
+	Automatically check for updates	Automatisch nach Updates suchen
+	Check for updates	Nach Updates suchen
+	Checking for a newer version…	Suche nach einer neueren Version…
+	Could not start updater: {reason}	Das Aktualisierungsprogramm konnte nicht gestartet werden: {reason}
+	Could not write the update: {detail}	Das Update konnte nicht geschrieben werden: {detail}
+	Download new version	Neue Version herunterladen
+	Permission denied while updating; check folder permissions	Zugriff beim Aktualisieren verweigert; prüfen Sie die Ordnerberechtigungen
+	Remind me later	Später erinnern
+	Retry	Erneut versuchen
+	Skip this version	Diese Version überspringen
+	The app will close and reopen after updating	Die App wird nach dem Update geschlossen und erneut geöffnet
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Die App wird geschlossen, Windows fragt nach der Installationsberechtigung — wählen Sie Yes — danach öffnet sich die App automatisch
+	The downloaded update failed verification	Das heruntergeladene Update hat die Überprüfung nicht bestanden
+	The update check stopped unexpectedly	Die Suche nach Updates wurde unerwartet beendet
+	The update manifest is invalid: {detail}	Das Update-Manifest ist ungültig: {detail}
+	The update signature is invalid	Die Signatur des Updates ist ungültig
+	The updater failed; restart the app and try again	Das Aktualisierungsprogramm ist fehlgeschlagen; starten Sie die App neu und versuchen Sie es erneut
+	The updater is busy; try again shortly	Das Aktualisierungsprogramm ist beschäftigt; versuchen Sie es gleich erneut
+	This installation cannot update automatically	Diese Installation kann nicht automatisch aktualisiert werden
+	Update cancelled	Update abgebrochen
+	Update network unavailable: {detail}	Netzwerk für Updates nicht verfügbar: {detail}
+	Update now	Jetzt aktualisieren
+	Update server returned HTTP {detail}	Der Update-Server hat HTTP {detail} zurückgegeben
+	Update to {version} failed: {reason}	Update auf {version} fehlgeschlagen: {reason}
+	Updated to version {version}	Auf Version {version} aktualisiert
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons ist auf dem neuesten Stand.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} ist verfügbar
+	What's new	Neuigkeiten

@@ -2551,3 +2551,31 @@ preview	Title	Tytuł
 	Recovery storage exceeds its size limit.	Magazyn odzyskiwania przekracza limit rozmiaru.
 	Invalid recovery draft metadata.	Nieprawidłowe metadane kopii odzyskiwania.
 	Settings directory is unavailable.	Katalog ustawień jest niedostępny.
+	Automatically check for updates	Automatycznie sprawdzaj aktualizacje
+	Check for updates	Sprawdź aktualizacje
+	Checking for a newer version…	Sprawdzanie dostępności nowszej wersji…
+	Could not start updater: {reason}	Nie można uruchomić aktualizatora: {reason}
+	Could not write the update: {detail}	Nie można zapisać aktualizacji: {detail}
+	Download new version	Pobierz nową wersję
+	Permission denied while updating; check folder permissions	Brak uprawnień do aktualizacji; sprawdź uprawnienia folderu
+	Remind me later	Przypomnij później
+	Retry	Ponów próbę
+	Skip this version	Pomiń tę wersję
+	The app will close and reopen after updating	Aplikacja zamknie się i otworzy ponownie po aktualizacji
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Aplikacja zostanie zamknięta, Windows poprosi o zgodę na instalację — wybierz Yes — a aplikacja otworzy się ponownie automatycznie
+	The downloaded update failed verification	Pobrana aktualizacja nie przeszła weryfikacji
+	The update check stopped unexpectedly	Sprawdzanie aktualizacji nieoczekiwanie się zatrzymało
+	The update manifest is invalid: {detail}	Manifest aktualizacji jest nieprawidłowy: {detail}
+	The update signature is invalid	Podpis aktualizacji jest nieprawidłowy
+	The updater failed; restart the app and try again	Aktualizator zawiódł; uruchom aplikację ponownie i spróbuj jeszcze raz
+	The updater is busy; try again shortly	Aktualizator jest zajęty; spróbuj ponownie za chwilę
+	This installation cannot update automatically	Ta instalacja nie obsługuje automatycznych aktualizacji
+	Update cancelled	Aktualizacja anulowana
+	Update network unavailable: {detail}	Sieć aktualizacji jest niedostępna: {detail}
+	Update now	Aktualizuj teraz
+	Update server returned HTTP {detail}	Serwer aktualizacji zwrócił HTTP {detail}
+	Update to {version} failed: {reason}	Aktualizacja do {version} nie powiodła się: {reason}
+	Updated to version {version}	Zaktualizowano do wersji {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons jest aktualny.
+	Văn bản – ERPCons {version} is available	Dostępna jest wersja Văn bản – ERPCons {version}
+	What's new	Co nowego

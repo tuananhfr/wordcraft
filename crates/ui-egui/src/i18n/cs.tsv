@@ -2099,3 +2099,31 @@
 	Next Document	Další dokument
 	Previous Document	Předchozí dokument
 	Context Menu	Kontextová nabídka
+	Automatically check for updates	Automaticky kontrolovat aktualizace
+	Check for updates	Zkontrolovat aktualizace
+	Checking for a newer version…	Hledání novější verze…
+	Could not start updater: {reason}	Aktualizační program nelze spustit: {reason}
+	Could not write the update: {detail}	Aktualizaci nelze zapsat: {detail}
+	Download new version	Stáhnout novou verzi
+	Permission denied while updating; check folder permissions	Přístup při aktualizaci odepřen; zkontrolujte oprávnění složky
+	Remind me later	Připomenout později
+	Retry	Zkusit znovu
+	Skip this version	Přeskočit tuto verzi
+	The app will close and reopen after updating	Aplikace se po aktualizaci zavře a znovu otevře
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Aplikace se zavře, Windows požádá o oprávnění k instalaci — zvolte Yes — a aplikace se automaticky znovu otevře
+	The downloaded update failed verification	Stažená aktualizace neprošla ověřením
+	The update check stopped unexpectedly	Kontrola aktualizací se neočekávaně zastavila
+	The update manifest is invalid: {detail}	Manifest aktualizace je neplatný: {detail}
+	The update signature is invalid	Podpis aktualizace je neplatný
+	The updater failed; restart the app and try again	Aktualizační program selhal; restartujte aplikaci a zkuste to znovu
+	The updater is busy; try again shortly	Aktualizační program je zaneprázdněn; zkuste to za chvíli znovu
+	This installation cannot update automatically	Tuto instalaci nelze aktualizovat automaticky
+	Update cancelled	Aktualizace zrušena
+	Update network unavailable: {detail}	Síť pro aktualizace není dostupná: {detail}
+	Update now	Aktualizovat nyní
+	Update server returned HTTP {detail}	Aktualizační server vrátil HTTP {detail}
+	Update to {version} failed: {reason}	Aktualizace na {version} selhala: {reason}
+	Updated to version {version}	Aktualizováno na verzi {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons je aktuální.
+	Văn bản – ERPCons {version} is available	Je k dispozici Văn bản – ERPCons {version}
+	What's new	Co je nového

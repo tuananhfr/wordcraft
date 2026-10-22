@@ -2493,3 +2493,31 @@ preview	Title	Пример
 	Next Document	Следующий документ
 	Previous Document	Предыдущий документ
 	Context Menu	Контекстное меню
+	Automatically check for updates	Автоматически проверять обновления
+	Check for updates	Проверить обновления
+	Checking for a newer version…	Проверка новой версии…
+	Could not start updater: {reason}	Не удалось запустить программу обновления: {reason}
+	Could not write the update: {detail}	Не удалось записать обновление: {detail}
+	Download new version	Скачать новую версию
+	Permission denied while updating; check folder permissions	Доступ при обновлении запрещён; проверьте права на папку
+	Remind me later	Напомнить позже
+	Retry	Повторить
+	Skip this version	Пропустить эту версию
+	The app will close and reopen after updating	После обновления приложение закроется и откроется снова
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Приложение закроется, Windows запросит разрешение на установку — выберите Yes — затем приложение откроется автоматически
+	The downloaded update failed verification	Загруженное обновление не прошло проверку
+	The update check stopped unexpectedly	Проверка обновлений неожиданно прервалась
+	The update manifest is invalid: {detail}	Манифест обновления недействителен: {detail}
+	The update signature is invalid	Подпись обновления недействительна
+	The updater failed; restart the app and try again	Программа обновления завершилась с ошибкой; перезапустите приложение и повторите попытку
+	The updater is busy; try again shortly	Программа обновления занята; повторите попытку чуть позже
+	This installation cannot update automatically	Эту установку нельзя обновить автоматически
+	Update cancelled	Обновление отменено
+	Update network unavailable: {detail}	Сеть обновлений недоступна: {detail}
+	Update now	Обновить сейчас
+	Update server returned HTTP {detail}	Сервер обновлений вернул HTTP {detail}
+	Update to {version} failed: {reason}	Не удалось обновить до {version}: {reason}
+	Updated to version {version}	Обновлено до версии {version}
+	Văn bản – ERPCons is up to date.	Установлена последняя версия Văn bản – ERPCons.
+	Văn bản – ERPCons {version} is available	Доступна версия Văn bản – ERPCons {version}
+	What's new	Что нового

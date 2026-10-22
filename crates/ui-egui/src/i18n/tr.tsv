@@ -2492,3 +2492,31 @@ preview	Title	Örnek
 	Next Document	Sonraki belge
 	Previous Document	Önceki belge
 	Context Menu	Bağlam menüsü
+	Automatically check for updates	Güncellemeleri otomatik olarak denetle
+	Check for updates	Güncellemeleri denetle
+	Checking for a newer version…	Daha yeni bir sürüm denetleniyor…
+	Could not start updater: {reason}	Güncelleyici başlatılamadı: {reason}
+	Could not write the update: {detail}	Güncelleme yazılamadı: {detail}
+	Download new version	Yeni sürümü indir
+	Permission denied while updating; check folder permissions	Güncelleme sırasında izin reddedildi; klasör izinlerini denetleyin
+	Remind me later	Daha sonra hatırlat
+	Retry	Yeniden dene
+	Skip this version	Bu sürümü atla
+	The app will close and reopen after updating	Uygulama güncellemeden sonra kapanıp yeniden açılacak
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Uygulama kapanacak, Windows kurulum izni isteyecek — Yes seçin — ardından uygulama otomatik olarak yeniden açılacak
+	The downloaded update failed verification	İndirilen güncelleme doğrulamadan geçemedi
+	The update check stopped unexpectedly	Güncelleme denetimi beklenmedik biçimde durdu
+	The update manifest is invalid: {detail}	Güncelleme bildirimi geçersiz: {detail}
+	The update signature is invalid	Güncelleme imzası geçersiz
+	The updater failed; restart the app and try again	Güncelleyici başarısız oldu; uygulamayı yeniden başlatıp tekrar deneyin
+	The updater is busy; try again shortly	Güncelleyici meşgul; kısa süre sonra yeniden deneyin
+	This installation cannot update automatically	Bu kurulum otomatik olarak güncellenemez
+	Update cancelled	Güncelleme iptal edildi
+	Update network unavailable: {detail}	Güncelleme ağı kullanılamıyor: {detail}
+	Update now	Şimdi güncelle
+	Update server returned HTTP {detail}	Güncelleme sunucusu HTTP {detail} döndürdü
+	Update to {version} failed: {reason}	{version} sürümüne güncelleme başarısız oldu: {reason}
+	Updated to version {version}	{version} sürümüne güncellendi
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons güncel.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} kullanıma sunuldu
+	What's new	Yenilikler

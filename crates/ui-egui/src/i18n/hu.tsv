@@ -2492,3 +2492,31 @@
 	Next Document	Következő dokumentum
 	Previous Document	Előző dokumentum
 	Context Menu	Helyi menü
+	Automatically check for updates	Frissítések automatikus keresése
+	Check for updates	Frissítések keresése
+	Checking for a newer version…	Újabb verzió keresése…
+	Could not start updater: {reason}	Nem sikerült elindítani a frissítőt: {reason}
+	Could not write the update: {detail}	Nem sikerült kiírni a frissítést: {detail}
+	Download new version	Új verzió letöltése
+	Permission denied while updating; check folder permissions	Hozzáférés megtagadva a frissítés során; ellenőrizze a mappa jogosultságait
+	Remind me later	Emlékeztessen később
+	Retry	Újrapróbálkozás
+	Skip this version	Verzió kihagyása
+	The app will close and reopen after updating	Az alkalmazás a frissítés után bezárul és újra megnyílik
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Az alkalmazás bezárul, a Windows telepítési engedélyt kér — válassza a Yes lehetőséget — majd az alkalmazás automatikusan újra megnyílik
+	The downloaded update failed verification	A letöltött frissítés ellenőrzése sikertelen
+	The update check stopped unexpectedly	A frissítések keresése váratlanul leállt
+	The update manifest is invalid: {detail}	A frissítési jegyzék érvénytelen: {detail}
+	The update signature is invalid	A frissítés aláírása érvénytelen
+	The updater failed; restart the app and try again	A frissítő hibát jelzett; indítsa újra az alkalmazást, és próbálja újra
+	The updater is busy; try again shortly	A frissítő foglalt; próbálja újra hamarosan
+	This installation cannot update automatically	Ez a telepítés nem frissíthető automatikusan
+	Update cancelled	Frissítés megszakítva
+	Update network unavailable: {detail}	A frissítési hálózat nem érhető el: {detail}
+	Update now	Frissítés most
+	Update server returned HTTP {detail}	A frissítési kiszolgáló HTTP {detail} választ adott
+	Update to {version} failed: {reason}	A(z) {version} verzióra frissítés sikertelen: {reason}
+	Updated to version {version}	Frissítve a(z) {version} verzióra
+	Văn bản – ERPCons is up to date.	A Văn bản – ERPCons naprakész.
+	Văn bản – ERPCons {version} is available	Elérhető a Văn bản – ERPCons {version}
+	What's new	Újdonságok

@@ -183,6 +183,8 @@ fn general(app: &mut WordApp, ui: &mut Ui) {
     default_app_button(app, ui);
     ui.add_space(8.0);
     section(ui, "Start-up");
+    #[cfg(not(target_arch = "wasm32"))]
+    crate::updates::preferences(ui, app);
     let mut start = app.ui.start_screen;
     if ui
         .checkbox(&mut start, app.product_text("Show the Start screen when WordCraft starts"))

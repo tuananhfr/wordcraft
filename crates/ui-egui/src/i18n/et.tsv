@@ -2128,3 +2128,31 @@
 	Next Document	Järgmine dokument
 	Previous Document	Eelmine dokument
 	Context Menu	Kontekstimenüü
+	Automatically check for updates	Kontrolli uuendusi automaatselt
+	Check for updates	Kontrolli uuendusi
+	Checking for a newer version…	Uuema versiooni kontrollimine…
+	Could not start updater: {reason}	Uuendajat ei saanud käivitada: {reason}
+	Could not write the update: {detail}	Uuendust ei saanud kirjutada: {detail}
+	Download new version	Laadi alla uus versioon
+	Permission denied while updating; check folder permissions	Uuendamiseks pole luba; kontrollige kausta õigusi
+	Remind me later	Tuleta hiljem meelde
+	Retry	Proovi uuesti
+	Skip this version	Jäta see versioon vahele
+	The app will close and reopen after updating	Rakendus sulgub ja avaneb pärast uuendamist uuesti
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Rakendus sulgub, Windows küsib installimiseks luba — valige Yes — seejärel avaneb rakendus automaatselt uuesti
+	The downloaded update failed verification	Allalaaditud uuendus ei läbinud kontrolli
+	The update check stopped unexpectedly	Uuenduste kontroll peatus ootamatult
+	The update manifest is invalid: {detail}	Uuenduse manifest on vigane: {detail}
+	The update signature is invalid	Uuenduse allkiri on vigane
+	The updater failed; restart the app and try again	Uuendaja ebaõnnestus; taaskäivitage rakendus ja proovige uuesti
+	The updater is busy; try again shortly	Uuendaja on hõivatud; proovige varsti uuesti
+	This installation cannot update automatically	Seda paigaldust ei saa automaatselt uuendada
+	Update cancelled	Uuendamine tühistatud
+	Update network unavailable: {detail}	Uuenduste võrk pole saadaval: {detail}
+	Update now	Uuenda kohe
+	Update server returned HTTP {detail}	Uuendusserver tagastas HTTP {detail}
+	Update to {version} failed: {reason}	Versioonile {version} uuendamine ebaõnnestus: {reason}
+	Updated to version {version}	Uuendatud versioonile {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons on ajakohane.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} on saadaval
+	What's new	Mis on uut

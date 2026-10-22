@@ -2106,3 +2106,31 @@
 	Next Document	Próximo documento
 	Previous Document	Documento anterior
 	Context Menu	Menu de contexto
+	Automatically check for updates	Verificar atualizações automaticamente
+	Check for updates	Verificar atualizações
+	Checking for a newer version…	Verificando se há uma versão mais recente…
+	Could not start updater: {reason}	Não foi possível iniciar o atualizador: {reason}
+	Could not write the update: {detail}	Não foi possível gravar a atualização: {detail}
+	Download new version	Baixar nova versão
+	Permission denied while updating; check folder permissions	Permissão negada durante a atualização; verifique as permissões da pasta
+	Remind me later	Lembrar mais tarde
+	Retry	Tentar novamente
+	Skip this version	Ignorar esta versão
+	The app will close and reopen after updating	O aplicativo será fechado e reaberto após a atualização
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	O aplicativo será fechado, o Windows pedirá permissão para instalar — escolha Yes — e o aplicativo reabrirá automaticamente
+	The downloaded update failed verification	A atualização baixada não passou na verificação
+	The update check stopped unexpectedly	A verificação de atualizações foi interrompida inesperadamente
+	The update manifest is invalid: {detail}	O manifesto da atualização é inválido: {detail}
+	The update signature is invalid	A assinatura da atualização é inválida
+	The updater failed; restart the app and try again	O atualizador falhou; reinicie o aplicativo e tente novamente
+	The updater is busy; try again shortly	O atualizador está ocupado; tente novamente em instantes
+	This installation cannot update automatically	Esta instalação não pode ser atualizada automaticamente
+	Update cancelled	Atualização cancelada
+	Update network unavailable: {detail}	Rede de atualização indisponível: {detail}
+	Update now	Atualizar agora
+	Update server returned HTTP {detail}	O servidor de atualização retornou HTTP {detail}
+	Update to {version} failed: {reason}	Falha ao atualizar para {version}: {reason}
+	Updated to version {version}	Atualizado para a versão {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons está atualizado.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} está disponível
+	What's new	Novidades

@@ -195,6 +195,33 @@ jobs:
           pattern: erpcons-desktop-*
           merge-multiple: true
           path: artifacts
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tuananhfr/erpcons-update
+          # v0.1.0, pinned by commit like Cargo.lock: a moved tag must not change what runs next to the signing key.
+          ref: 16d74709d1c964382d052ec568e7c7cd756b39fc
+          path: erpcons-update
+          persist-credentials: false
+      - name: Write the update manifest
+        env:
+          VERSION: ${{ needs.windows.outputs.version }}
+        run: |
+          python3 erpcons-update/tools/make_manifest.py --app vanban --repo wordcraft --version "$VERSION" \
+            --dir artifacts --out artifacts/update.json
+          rm -rf erpcons-update
+      # Only openssl runs while the key exists; the manifest generator above never sees the secret.
+      - name: Sign the update manifest
+        env:
+          UPDATE_KEY: ${{ secrets.ERPCONS_UPDATE_KEY }}
+        run: |
+          test -n "$UPDATE_KEY" || { echo "::error::ERPCONS_UPDATE_KEY is not set"; exit 1; }
+          key="$RUNNER_TEMP/update-key.pem"
+          trap 'rm -f "$key"' EXIT
+          (umask 077 && printf '%s\n' "$UPDATE_KEY" > "$key")
+          # Installed apps only trust this public key; signing with any other key would strand them.
+          test "$(openssl pkey -in "$key" -pubout -outform DER | tail -c 32 | od -An -tx1 | tr -d ' \n')" = \
+            e9a7dd9f1d4550e0dd13986d67893666a3bdb1833ae04e5b93ace45b4f01bda3
+          openssl pkeyutl -sign -rawin -inkey "$key" -in artifacts/update.json -out artifacts/update.json.sig
       - name: Publish installers
         env:
           GH_TOKEN: ${{ github.token }}
@@ -210,7 +237,7 @@ jobs:
           - Windows x64: tải `ERPCons-VanBan-windows-x64.msi` để cài đặt, hoặc `ERPCons-VanBan-windows-x64-portable.zip` để giải nén và chạy.
           - Linux x86_64: tải `ERPCons-VanBan-linux-x86_64.AppImage` (cấp quyền thực thi trước khi chạy), `erpcons-vanban_amd64.deb` cho Debian/Ubuntu, hoặc `erpcons-vanban.x86_64.rpm` cho Fedora/openSUSE.
           - macOS Intel và Apple Silicon: tải `ERPCons-VanBan-macos-universal.dmg`, mở và kéo ứng dụng vào Applications.
-          - `SHA256SUMS.txt` chứa mã SHA-256 để kiểm tra các tệp tải về.
+          - `SHA256SUMS.txt` chứa mã SHA-256 để kiểm tra các tệp tải về. `update.json` và `update.json.sig` dành cho chức năng tự cập nhật của ứng dụng.
 
           Bản dựng chưa có chứng thư ký mã: Windows không được ký; macOS chỉ ký ad-hoc và chưa được Apple notarize.
           Windows SmartScreen: chọn "More info" → "Run anyway".

@@ -1704,6 +1704,8 @@ fn outlining(app: &mut WordApp, ui: &mut Ui) {
 
 fn help(app: &mut WordApp, ui: &mut Ui) {
     group(ui, "Help", None, app, |ui, app| {
+        #[cfg(not(target_arch = "wasm32"))]
+        big(ui, app, "help", "Check for updates", "ui.checkUpdates", json!({}), false);
         big(ui, app, "help", "Help", "ui.dialog", json!({"name": "about"}), false);
     });
     group(ui, "Agents", None, app, |ui, app| {

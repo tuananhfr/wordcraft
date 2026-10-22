@@ -2108,3 +2108,31 @@
 	Next Document	Следећи документ
 	Previous Document	Претходни документ
 	Context Menu	Контекстни мени
+	Automatically check for updates	Аутоматски проверавај ажурирања
+	Check for updates	Провери ажурирања
+	Checking for a newer version…	Провера новије верзије…
+	Could not start updater: {reason}	Није могуће покренути ажурирање: {reason}
+	Could not write the update: {detail}	Није могуће уписати ажурирање: {detail}
+	Download new version	Преузми нову верзију
+	Permission denied while updating; check folder permissions	Приступ је одбијен при ажурирању; проверите дозволе фасцикле
+	Remind me later	Подсети ме касније
+	Retry	Покушај поново
+	Skip this version	Прескочи ову верзију
+	The app will close and reopen after updating	Апликација ће се затворити и поново отворити после ажурирања
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Апликација ће се затворити, Windows ће затражити дозволу за инсталацију — изаберите Yes — затим ће се апликација аутоматски поново отворити
+	The downloaded update failed verification	Преузето ажурирање није прошло проверу
+	The update check stopped unexpectedly	Провера ажурирања је неочекивано заустављена
+	The update manifest is invalid: {detail}	Манифест ажурирања није важећи: {detail}
+	The update signature is invalid	Потпис ажурирања није важећи
+	The updater failed; restart the app and try again	Ажурирање није успело; поново покрените апликацију и покушајте опет
+	The updater is busy; try again shortly	Ажурирање је заузето; покушајте поново ускоро
+	This installation cannot update automatically	Ова инсталација не може аутоматски да се ажурира
+	Update cancelled	Ажурирање је отказано
+	Update network unavailable: {detail}	Мрежа за ажурирање није доступна: {detail}
+	Update now	Ажурирај сада
+	Update server returned HTTP {detail}	Сервер за ажурирање је вратио HTTP {detail}
+	Update to {version} failed: {reason}	Ажурирање на {version} није успело: {reason}
+	Updated to version {version}	Ажурирано на верзију {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons је ажуриран.
+	Văn bản – ERPCons {version} is available	Доступан је Văn bản – ERPCons {version}
+	What's new	Шта је ново

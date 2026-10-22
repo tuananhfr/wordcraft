@@ -2104,3 +2104,31 @@
 	Next Document	Sledeći dokument
 	Previous Document	Prethodni dokument
 	Context Menu	Kontekstni meni
+	Automatically check for updates	Automatski proveravaj ažuriranja
+	Check for updates	Proveri ažuriranja
+	Checking for a newer version…	Provera novije verzije…
+	Could not start updater: {reason}	Nije moguće pokrenuti ažuriranje: {reason}
+	Could not write the update: {detail}	Nije moguće upisati ažuriranje: {detail}
+	Download new version	Preuzmi novu verziju
+	Permission denied while updating; check folder permissions	Pristup je odbijen pri ažuriranju; proverite dozvole fascikle
+	Remind me later	Podseti me kasnije
+	Retry	Pokušaj ponovo
+	Skip this version	Preskoči ovu verziju
+	The app will close and reopen after updating	Aplikacija će se zatvoriti i ponovo otvoriti posle ažuriranja
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	Aplikacija će se zatvoriti, Windows će zatražiti dozvolu za instalaciju — izaberite Yes — zatim će se aplikacija automatski ponovo otvoriti
+	The downloaded update failed verification	Preuzeto ažuriranje nije prošlo proveru
+	The update check stopped unexpectedly	Provera ažuriranja je neočekivano zaustavljena
+	The update manifest is invalid: {detail}	Manifest ažuriranja nije važeći: {detail}
+	The update signature is invalid	Potpis ažuriranja nije važeći
+	The updater failed; restart the app and try again	Ažuriranje nije uspelo; ponovo pokrenite aplikaciju i pokušajte opet
+	The updater is busy; try again shortly	Ažuriranje je zauzeto; pokušajte ponovo uskoro
+	This installation cannot update automatically	Ova instalacija ne može automatski da se ažurira
+	Update cancelled	Ažuriranje je otkazano
+	Update network unavailable: {detail}	Mreža za ažuriranje nije dostupna: {detail}
+	Update now	Ažuriraj sada
+	Update server returned HTTP {detail}	Server za ažuriranje je vratio HTTP {detail}
+	Update to {version} failed: {reason}	Ažuriranje na {version} nije uspelo: {reason}
+	Updated to version {version}	Ažurirano na verziju {version}
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons je ažuriran.
+	Văn bản – ERPCons {version} is available	Dostupan je Văn bản – ERPCons {version}
+	What's new	Šta je novo

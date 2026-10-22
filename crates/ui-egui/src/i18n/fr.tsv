@@ -2102,3 +2102,31 @@
 	Next Document	Document suivant
 	Previous Document	Document précédent
 	Context Menu	Menu contextuel
+	Automatically check for updates	Rechercher automatiquement les mises à jour
+	Check for updates	Rechercher des mises à jour
+	Checking for a newer version…	Recherche d'une version plus récente…
+	Could not start updater: {reason}	Impossible de démarrer le programme de mise à jour : {reason}
+	Could not write the update: {detail}	Impossible d’enregistrer la mise à jour : {detail}
+	Download new version	Télécharger la nouvelle version
+	Permission denied while updating; check folder permissions	Autorisation refusée pendant la mise à jour ; vérifiez les permissions du dossier
+	Remind me later	Me le rappeler plus tard
+	Retry	Réessayer
+	Skip this version	Ignorer cette version
+	The app will close and reopen after updating	L’application se fermera et se rouvrira après la mise à jour
+	The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically	L’application va se fermer, Windows demandera l’autorisation d’installation — choisissez Yes — puis l’application se rouvrira automatiquement
+	The downloaded update failed verification	La mise à jour téléchargée a échoué à la vérification
+	The update check stopped unexpectedly	La recherche de mises à jour s’est arrêtée de manière inattendue
+	The update manifest is invalid: {detail}	Le manifeste de mise à jour est invalide : {detail}
+	The update signature is invalid	La signature de la mise à jour est invalide
+	The updater failed; restart the app and try again	Le programme de mise à jour a échoué ; redémarrez l’application et réessayez
+	The updater is busy; try again shortly	Le programme de mise à jour est occupé ; réessayez dans un instant
+	This installation cannot update automatically	Cette installation ne peut pas être mise à jour automatiquement
+	Update cancelled	Mise à jour annulée
+	Update network unavailable: {detail}	Réseau de mise à jour indisponible : {detail}
+	Update now	Mettre à jour maintenant
+	Update server returned HTTP {detail}	Le serveur de mise à jour a renvoyé HTTP {detail}
+	Update to {version} failed: {reason}	La mise à jour vers {version} a échoué : {reason}
+	Updated to version {version}	Mise à jour vers la version {version} effectuée
+	Văn bản – ERPCons is up to date.	Văn bản – ERPCons est à jour.
+	Văn bản – ERPCons {version} is available	Văn bản – ERPCons {version} est disponible
+	What's new	Nouveautés
