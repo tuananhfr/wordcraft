@@ -84,11 +84,11 @@ impl ClipboardBridge {
                     }
                     count += 1;
                     if count > MAX_IMAGES {
-                        listener_bridge.notice(Notice::TooLarge);
-                        break;
+                        listener_bridge.skipped_images(&mut paste, 1, 0);
+                        continue;
                     }
                     if file.size() > MAX_IMAGE_BYTES as f64 {
-                        listener_bridge.notice(Notice::TooLarge);
+                        listener_bridge.skipped_images(&mut paste, 1, 0);
                         continue;
                     }
                     files.push(file);
@@ -104,7 +104,7 @@ impl ClipboardBridge {
                     for file in files {
                         match bytes(file.as_ref()).await {
                             Ok(bytes) => paste.images.push((file.type_(), bytes)),
-                            Err(_) => bridge.notice(Notice::ReadFailed),
+                            Err(_) => bridge.skipped_images(&mut paste, 0, 1),
                         }
                     }
                     bridge.deliver(paste, formats, None);
@@ -120,7 +120,7 @@ impl ClipboardBridge {
         Ok(bridge)
     }
 
-    pub fn write(&self, html: &str, text: &str) -> bool {
+    pub fn write(&self, html: &str, text: &str, png: Option<&[u8]>) -> bool {
         let Ok(constructor) = property(&js_sys::global(), "ClipboardItem").and_then(|v| v.dyn_into::<Function>()) else {
             return false;
         };
@@ -138,6 +138,18 @@ impl ClipboardBridge {
                 let blob = web_sys::Blob::new_with_str_sequence_and_options(&strings, &options)?;
                 Reflect::set(&parts, &JsValue::from_str(mime), blob.as_ref())?;
             }
+            if let Some(png) = png {
+                let supports = property(constructor.as_ref(), "supports").ok().and_then(|v| v.dyn_into::<Function>().ok());
+                let supported = supports
+                    .is_none_or(|f| f.call1(constructor.as_ref(), &JsValue::from_str("image/png")).ok().and_then(|v| v.as_bool()).unwrap_or(false));
+                if supported {
+                    let options = web_sys::BlobPropertyBag::new();
+                    options.set_type("image/png");
+                    let buffers = Array::of1(&js_sys::Uint8Array::from(png));
+                    let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&buffers, &options)?;
+                    Reflect::set(&parts, &JsValue::from_str("image/png"), blob.as_ref())?;
+                }
+            }
             let args = Array::new();
             args.push(&parts);
             let item = Reflect::construct(&constructor, &args)?;
@@ -150,9 +162,16 @@ impl ClipboardBridge {
         match start() {
             Ok(write) => {
                 let bridge = self.clone();
+                let bitmap = png.is_some();
+                let html = html.to_string();
+                let text = text.to_string();
                 spawn_local(async move {
                     if JsFuture::from(write).await.is_err() {
-                        bridge.notice(Notice::WriteFailed);
+                        if bitmap {
+                            bridge.write(&html, &text, None);
+                        } else {
+                            bridge.notice(Notice::WriteFailed);
+                        }
                     }
                 });
                 true
@@ -211,17 +230,25 @@ async fn read_items(read: Promise, bridge: &ClipboardBridge) -> Result<(PendingP
                 Err(e) => Err(e),
             };
             let Ok(blob) = blob else {
-                bridge.notice(Notice::ReadFailed);
+                if mime.starts_with("image/") {
+                    bridge.skipped_images(&mut paste, 0, 1);
+                } else {
+                    bridge.notice(Notice::ReadFailed);
+                }
                 continue;
             };
             if blob.size() > cap as f64 {
-                bridge.notice(Notice::TooLarge);
+                if mime.starts_with("image/") {
+                    bridge.skipped_images(&mut paste, 1, 0);
+                } else {
+                    bridge.notice(Notice::TooLarge);
+                }
                 continue;
             }
             if mime.starts_with("image/") {
                 match bytes(&blob).await {
                     Ok(bytes) => paste.images.push((mime, bytes)),
-                    Err(_) => bridge.notice(Notice::ReadFailed),
+                    Err(_) => bridge.skipped_images(&mut paste, 0, 1),
                 }
             } else {
                 let Some(text) = JsFuture::from(blob.text()).await.ok().and_then(|v| v.as_string()) else {

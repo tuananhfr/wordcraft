@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Image clipboard (WORD-05): copies carry pictures as `data:` URIs up to 4 MiB each and 16 MiB in total, and a copy of one picture also as a PNG bitmap; pastes never fetch URLs and replace pictures they cannot keep with their alt text or `▧` and a notice counting them by cause (both). Embedded in the ERP page, the web app keeps its own IndexedDB recovery copy of the host document, keyed by the parent's `docId` or file name and off with `drafts: "host"` (WORD-06, contract in `packaging/web/README.md`). Vietnamese PDF export test (T18).
+
 - (desktop) Repository variable `ERPCONS_SKIP_MACOS=true` releases Windows and Linux installers without waiting for a macOS runner; update.json then lists no Mac asset.
 
 - Preserve DOCX altChunk parts in paragraph order, retain them across paragraph merges, and warn on open and before exports that discard embedded content (both).

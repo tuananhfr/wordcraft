@@ -2127,3 +2127,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	このファイルには表示や編集ができない埋め込みコンテンツが含まれています。DOCX 形式で保存すると保持されます。
 
 	Use Stop Protection to enable Undo or Redo.	元に戻す、またはやり直しを有効にするには、保護を停止してください。
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	貼り付けられなかった画像：外部URL {external}、サイズ超過 {large}、未対応または破損 {unsupported}。

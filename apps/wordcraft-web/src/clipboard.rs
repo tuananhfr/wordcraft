@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use wordcraft_ui_egui::{Inbox, Services, paste_picture::ClipboardPicture};
 
-const MAX_TEXT_BYTES: usize = 8 << 20;
+const MAX_TEXT_BYTES: usize = 32 << 20;
 const MAX_IMAGE_BYTES: usize = 20 << 20;
 const MAX_IMAGES: usize = 20;
 const MAX_FORMATS: usize = 64;
@@ -182,6 +182,7 @@ pub enum Notice {
     ReadFailed,
     WriteFailed,
     TooLarge,
+    ImagesSkipped { large: usize, unsupported: usize },
 }
 
 impl Notice {
@@ -191,6 +192,10 @@ impl Notice {
             Self::ReadFailed => tl!("The browser cannot read the clipboard — use Ctrl+V").to_string(),
             Self::WriteFailed => tl!("Could not write to the clipboard").to_string(),
             Self::TooLarge => tl!("Some clipboard content is too large and was skipped").to_string(),
+            Self::ImagesSkipped { large, unsupported } => wordcraft_ui_egui::i18n::fmt(
+                tl!("Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged."),
+                &[("external", "0"), ("large", &large.to_string()), ("unsupported", &unsupported.to_string())],
+            ),
         }
     }
 }
@@ -209,13 +214,49 @@ pub struct ClipboardBridge {
 impl ClipboardBridge {
     fn notice(&self, notice: Notice) {
         let mut notices = self.notices.borrow_mut();
-        if !notices.contains(&notice) {
+        if let Notice::ImagesSkipped { large, unsupported } = notice {
+            if let Some(Notice::ImagesSkipped { large: total_large, unsupported: total_unsupported }) =
+                notices.iter_mut().find(|n| matches!(n, Notice::ImagesSkipped { .. }))
+            {
+                *total_large = total_large.saturating_add(large);
+                *total_unsupported = total_unsupported.saturating_add(unsupported);
+            } else {
+                notices.push(notice);
+            }
+        } else if !notices.contains(&notice) {
             notices.push(notice);
         }
         self.ctx.request_repaint();
     }
 
+    fn skipped_images(&self, paste: &mut PendingPaste, large: usize, unsupported: usize) {
+        self.notice(Notice::ImagesSkipped { large, unsupported });
+        if paste.html.is_none() {
+            paste.text.push_str(&"▧".repeat(large.saturating_add(unsupported).min(MAX_FORMATS)));
+        }
+    }
+
     fn deliver(&self, mut paste: PendingPaste, formats: Vec<String>, command: Option<String>) {
+        use wordcraft_ui_egui::paste_picture::{ClipboardImageError, check_encoded};
+        let mut images = Vec::new();
+        let (mut large, mut unsupported) = (0usize, 0usize);
+        for (mime, bytes) in std::mem::take(&mut paste.images) {
+            if bytes.len() > MAX_IMAGE_BYTES || images.len() >= MAX_IMAGES {
+                large += 1;
+            } else if !mime.starts_with("image/") {
+                unsupported += 1;
+            } else {
+                match check_encoded(&bytes) {
+                    Ok(()) => images.push((mime, bytes)),
+                    Err(ClipboardImageError::TooLarge) => large += 1,
+                    Err(ClipboardImageError::Unsupported) => unsupported += 1,
+                }
+            }
+        }
+        paste.images = images;
+        if large + unsupported > 0 {
+            self.skipped_images(&mut paste, large, unsupported);
+        }
         if paste.enforce_caps() {
             self.notice(Notice::TooLarge);
         }
@@ -245,11 +286,12 @@ impl ClipboardBridge {
         let command = self.command.borrow_mut().take();
         let empty = paste.text.is_empty();
         let has_pictures = !paste.images.is_empty();
+        let image_only = empty && has_pictures && paste.html.is_none() && paste.rtf.is_none();
         if command.is_none() {
             raw.events.extend(paste_events(&paste));
         }
         // Image-only browser pastes retain the existing multi-picture inbox path.
-        if empty && has_pictures && command.as_deref().is_none_or(|id| id == "edit.paste") {
+        if image_only && command.as_deref().is_none_or(|id| id == "edit.paste") {
             let mut inbox = pictures.lock().unwrap_or_else(|e| e.into_inner());
             for (mime, bytes) in &paste.images {
                 let ext = match mime.as_str() {
@@ -263,7 +305,7 @@ impl ClipboardBridge {
             }
         }
         *self.current.borrow_mut() = Some(paste);
-        if empty && has_pictures && command.as_deref().is_none_or(|id| id == "edit.paste") {
+        if image_only && command.as_deref().is_none_or(|id| id == "edit.paste") {
             None
         } else {
             command.or_else(|| empty.then(|| "edit.paste".into()))
@@ -286,7 +328,9 @@ impl ClipboardBridge {
         #[cfg(target_arch = "wasm32")]
         {
             let bridge = self.clone();
-            services.set_clipboard_html = Some(Box::new(move |html, text| bridge.write(html, text)));
+            services.set_clipboard_html = Some(Box::new(move |html, text| bridge.write(html, text, None)));
+            let bridge = self.clone();
+            services.set_clipboard_image = Some(Box::new(move |png, html, text| bridge.write(html, text, Some(png))));
             let bridge = self.clone();
             services.request_clipboard = Some(Box::new(move |command| {
                 if bridge.current.borrow().is_some() {

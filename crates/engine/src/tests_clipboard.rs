@@ -259,7 +259,7 @@ fn cut_exports_html_and_marker_including_small_images() {
 }
 
 #[test]
-fn large_images_are_only_in_marker_and_unreferenced_media_is_excluded() {
+fn images_past_256_kib_are_inlined_and_unreferenced_media_is_excluded() {
     let mut s = source();
     let key = s.doc.media.keys().next().unwrap().clone();
     s.doc.media.insert(key, Arc::new(vec![1; 300 << 10]));
@@ -267,7 +267,9 @@ fn large_images_are_only_in_marker_and_unreferenced_media_is_excluded() {
     let clip = copy(&mut s);
     let html = clip["html"].as_str().unwrap();
     assert!(html.contains("erpcons-clip"));
-    assert!(!html.contains("data:image"));
+    // WORD-05: other programs get the picture too, up to the published per-image limit.
+    assert!(html.contains("data:image"));
+    assert!(html.len() < 4 << 20, "the unreferenced picture is left out");
     let mut dst = Session::new(Document::new());
     run(&mut dst, "edit.paste", clip);
     assert_eq!(dst.doc.media.len(), 1);

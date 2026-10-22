@@ -2526,3 +2526,5 @@ preview	Title	Пример
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Этот файл содержит встроенное содержимое, которое нельзя отобразить или изменить. Оно сохраняется при сохранении в формате DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Отключите защиту, чтобы включить отмену или повтор.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Не вставлены изображения: {external} внешних URL, {large} превышают размер, {unsupported} не поддерживаются или повреждены.

@@ -86,3 +86,44 @@ WordCraft renders with wgpu. It uses **WebGPU** when the browser has it and fall
 For example: `<iframe src="https://example.com/wordcraft/?webgl" ...>`.
 
 A browser with neither WebGPU nor WebGL2 gets a message in place of the app.
+
+## Embedded document recovery (WORD-06)
+
+Embedded in the ERP page (`?embed=erpcons&parent=…`, the shell's `window.erpEmbed` bridge) or with
+`?host=parent`, the editor keeps its own recovery copy of the host's document in IndexedDB database
+`erpcons-embed-drafts`, store `documents` (one record per document: `{key, name, format, bytes}`),
+apart from the shell's standalone drafts. Contract with the parent (protocol v1 messages,
+`{ns: "erp-office", v: 1, type, …}`, checked for the parent's origin and window):
+
+- Once it listens, the editor posts `{type: "drafts-ready"}` to the parent's origin.
+- The parent answers (and after every iframe reload) with
+  `{"ns":"erp-office","v":1,"type":"init","docId":"drive-item-stable-id","name":"Document.docx","drafts":"local"}`.
+  All fields but `type` are optional; they may also ride on the usual `open` message. An `open`
+  without `docId`/`drafts` right after `init` keeps the identity `init` set.
+- `docId` identifies the document: keep it stable across reloads and renames, different for
+  another document. Without it the key is the file name. Either is hashed with the parent origin
+  (SHA-256), so other parents never see the record.
+- `drafts: "host"` means the host keeps the drafts: nothing is stored or restored locally. Any
+  other value, or none, keeps local recovery on.
+- A shell that sends no `init` gets recovery keyed by the file name it delivered
+  (`erpEmbed.originalName()`). Send `init` before the user can edit: a document changed before
+  its identity is known is first stored at its next edit.
+
+Only the host's document is stored: the first unsaved document named like it (case and
+extension aside), or the restored copy. On reload the stored copy opens as an unsaved document
+under its own name next to the one the parent sent; saving under that name saves to the ERP as
+usual, and saving or closing it deletes the record. The shell's `erpDrafts.put/remove` stub keeps
+receiving the calls that drive the `dirty` message. IndexedDB availability and quota stay with the
+browser; a failed write is logged and retried at the next draft.
+
+## Image clipboard limits (WORD-05)
+
+Clipboard HTML carries pictures as `data:` URIs up to **4 MiB decoded each** and **16 MiB decoded
+in total**, in at most 32 MiB of HTML (including Văn bản's private marker); pictures over a limit
+are written as an `<img>` without a source, marked `data-erpcons-image="too-large"`. Pasting never
+fetches http(s) or file URLs. A picture that cannot be kept (URL only, over a limit, more than
+16 384 pixels a side, or not PNG/JPEG/GIF/WebP/BMP) becomes its alt text or a visible `▧`, and a
+notice counts the pictures not pasted and why. Copying exactly one picture also offers it as a
+PNG bitmap: the desktop app puts the bitmap on the system clipboard and keeps the full copy in
+process (pasting back into Văn bản keeps size, wrapping and alt text); the browser writes HTML,
+text and PNG in one `ClipboardItem` where it supports `image/png`, else HTML and text.

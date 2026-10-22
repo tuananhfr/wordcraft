@@ -2126,3 +2126,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Diese Datei enthält eingebetteten Inhalt, der nicht angezeigt oder bearbeitet werden kann. Er bleibt beim Speichern als DOCX erhalten.
 
 	Use Stop Protection to enable Undo or Redo.	Beenden Sie den Schutz, um Rückgängig oder Wiederholen zu aktivieren.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Nicht eingefügte Bilder: {external} externe URLs, {large} zu groß, {unsupported} nicht unterstützt oder beschädigt.

@@ -1,6 +1,7 @@
 //! The ERPCons office shell's draft storage, `window.erpDrafts` (`put`, `remove`, `ready`): the
 //! shell keeps the drafts and shows all recovery UI; this only passes bytes both ways. Absent
-//! (WordCraft opened on its own) or embedded with `?host=parent`, drafting is off.
+//! (WordCraft opened on its own), drafting is off. Embedded in the ERP page (`embed=erpcons`) or
+//! with `?host=parent`, the app keeps its own recovery copy instead ([`embedded`]).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -9,16 +10,22 @@ use wasm_bindgen::JsCast as _;
 use wasm_bindgen::JsValue;
 use wordcraft_ui_egui::draft_bridge::{DraftBridge, HiddenFlush, RestoredDraft, flush_hidden};
 
+mod embedded;
+
 /// Announces the app to the shell once it can open documents.
 pub(super) struct Drafts {
+    embedded: Option<embedded::Embedded>,
     restores: Rc<RefCell<Vec<RestoredDraft>>>,
     ready_sent: bool,
 }
 
-/// The bridge for the app's [`wordcraft_ui_egui::Services`], or `None` when embedded.
+/// The bridge for the app's [`wordcraft_ui_egui::Services`].
 pub(super) fn connect() -> Option<(DraftBridge, Drafts)> {
-    if super::query().trim_start_matches('?').split('&').any(|p| p == "host=parent") {
-        return None;
+    if embedded::active() {
+        return embedded::connect().map(|(bridge, embedded)| {
+            let restores = bridge.restores.clone();
+            (bridge, Drafts { restores, ready_sent: false, embedded: Some(embedded) })
+        });
     }
     let hidden = Rc::new(RefCell::new(HiddenFlush::default()));
     let restores = Rc::new(RefCell::new(Vec::new()));
@@ -27,13 +34,17 @@ pub(super) fn connect() -> Option<(DraftBridge, Drafts)> {
     }
     let bridge =
         DraftBridge { available: Box::new(|| shell().is_some()), put: Box::new(put), remove: Box::new(remove), hidden, restores: restores.clone() };
-    Some((bridge, Drafts { restores, ready_sent: false }))
+    Some((bridge, Drafts { restores, ready_sent: false, embedded: None }))
 }
 
 impl Drafts {
     /// `erpDrafts.ready(restore)`, once. `restore` only queues the draft: opening it inside the
     /// shell's callback would run the app outside a frame.
     pub(super) fn announce_ready(&mut self, ctx: &egui::Context) {
+        if let Some(embedded) = &mut self.embedded {
+            embedded.tick(ctx);
+            return;
+        }
         if self.ready_sent {
             return;
         }

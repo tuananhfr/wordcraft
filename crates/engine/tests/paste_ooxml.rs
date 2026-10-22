@@ -402,3 +402,62 @@ fn cross_document_copy_paste_save_resolves_styles_numbering_and_picture_relation
     assert_ne!(targets[0], targets[1], "source and destination pictures stay distinct");
     assert_eq!(document.matches("r:embed=\"").count(), 2, "every picture reference is checked");
 }
+
+#[test]
+fn image_clipboard_limits_markers_and_html_fallback_never_lose_images_silently() {
+    const LIMIT: usize = wordcraft_formats::html::MAX_INLINE_IMAGE_BYTES;
+    assert_eq!(LIMIT, 4 << 20);
+    assert_eq!(wordcraft_formats::html::MAX_INLINE_TOTAL_BYTES, 16 << 20);
+    for size in [1024, (256 << 10) + 1, LIMIT + 1] {
+        let mut png = solid_png([32, 96, 160, 255]);
+        png.resize(size, 0);
+        let mut doc = Document::new();
+        add_picture(&mut doc, &Pos::body(0, 0), &png);
+        let mut source = Session::new(doc);
+        run(&mut source, "select.all", json!({}));
+        let copied = run(&mut source, "edit.copy", json!({}));
+        let html = copied["html"].as_str().unwrap();
+        for html in [html.to_string(), html.split("<meta name=\"erpcons-clip\"").next().unwrap().to_string()] {
+            let mut dest = Session::new(Document::new());
+            run(&mut dest, "edit.paste", json!({"html": html}));
+            if size <= LIMIT {
+                assert!(dest.doc.media.values().any(|data| data.as_slice() == png));
+                assert!(!dest.ui_requests.iter().any(|r| r.get("imagePaste").is_some()));
+            } else {
+                assert!(dest.doc.media.is_empty());
+                assert!(!dest.doc.body_fragment().plain_text().trim().is_empty(), "visible placeholder");
+                assert!(dest.ui_requests.iter().any(|r| r["imagePaste"]["tooLarge"] == 1));
+            }
+        }
+    }
+}
+
+#[test]
+fn html_url_and_unsupported_images_keep_alt_or_placeholder_and_emit_counts() {
+    for (html, expected) in [
+        ("<p><img src=\"https://example.invalid/never-fetch.png\" alt=\"Ảnh\"></p>", "Ảnh"),
+        ("<p><img src=\"https://example.invalid/never-fetch.png\"></p>", "▧"),
+        ("<p><img src=\"data:image/unknown;base64,eA==\"></p>", "▧"),
+    ] {
+        let mut session = Session::new(Document::new());
+        run(&mut session, "edit.paste", json!({"html": html}));
+        assert!(session.doc.body_fragment().plain_text().contains(expected));
+        assert!(session.doc.media.is_empty());
+        assert!(session.ui_requests.iter().any(|r| r.get("imagePaste").is_some()));
+    }
+    // A browser's Copy Image: the bitmap beside it is pasted instead of the placeholder.
+    use wordcraft_engine::cmd::paste::single_lost_image;
+    assert!(single_lost_image("<p><IMG src=\"https://example.invalid/a.png\"></p>"));
+    assert!(!single_lost_image("<p>caption <img src=\"https://example.invalid/a.png\"></p>"));
+    assert!(!single_lost_image("<img src=\"https://example.invalid/a.png\"><img src=\"https://example.invalid/b.png\">"));
+    let kept = format!("<img src=\"data:image/png;base64,{}\">", wordcraft_engine::cmd::insert::base64_encode(&solid_png([1, 2, 3, 255])));
+    assert!(!single_lost_image(&kept));
+}
+
+#[test]
+fn bitmap_only_paste_keeps_png() {
+    let png = solid_png([20, 60, 120, 255]);
+    let mut session = Session::new(Document::new());
+    run(&mut session, "edit.paste", json!({"picture": wordcraft_engine::cmd::insert::base64_encode(&png)}));
+    assert!(session.doc.media.values().any(|data| data.as_slice() == png));
+}

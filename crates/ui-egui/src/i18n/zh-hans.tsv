@@ -2139,3 +2139,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	此文件包含无法显示或编辑的嵌入内容。保存为 DOCX 时会保留这些内容。
 
 	Use Stop Protection to enable Undo or Redo.	停止保护以启用撤消或重做。
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	未粘贴的图片：{external} 个外部 URL，{large} 个超过大小限制，{unsupported} 个不受支持或已损坏。

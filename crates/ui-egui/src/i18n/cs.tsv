@@ -2132,3 +2132,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Tento soubor obsahuje vložený obsah, který nelze zobrazit ani upravit. Při uložení jako DOCX bude zachován.
 
 	Use Stop Protection to enable Undo or Redo.	Zastavte ochranu, chcete-li povolit Zpět nebo Znovu.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Nevložené obrázky: {external} externích URL, {large} příliš velkých, {unsupported} nepodporovaných nebo poškozených.

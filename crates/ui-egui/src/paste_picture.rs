@@ -74,6 +74,57 @@ pub fn names_picture_files(text: &str) -> bool {
         })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ClipboardImageError {
+    TooLarge,
+    Unsupported,
+}
+
+/// Whether encoded picture bytes are a raster format within the pasted-picture size limits; only
+/// the header is read.
+pub fn check_encoded(bytes: &[u8]) -> Result<(), ClipboardImageError> {
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return Err(ClipboardImageError::TooLarge);
+    }
+    let reader = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|_| ClipboardImageError::Unsupported)?;
+    let (w, h) = reader.into_dimensions().map_err(|_| ClipboardImageError::Unsupported)?;
+    let (w, h) = (w as usize, h as usize);
+    if w > MAX_SIDE || h > MAX_SIDE || w.saturating_mul(h) > MAX_PIXELS {
+        return Err(ClipboardImageError::TooLarge);
+    }
+    Ok(())
+}
+
+/// PNG of encoded picture bytes (what a copy offers other programs as a bitmap), decoded within
+/// the pasted-picture limits.
+pub fn png_from_encoded(bytes: &[u8]) -> Result<Vec<u8>, ClipboardImageError> {
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|_| ClipboardImageError::Unsupported)?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_SIDE as u32);
+    limits.max_image_height = Some(MAX_SIDE as u32);
+    limits.max_alloc = Some(MAX_PIXELS as u64 * 4);
+    reader.limits(limits);
+    let image = reader
+        .decode()
+        .map_err(|error| match error {
+            image::ImageError::Limits(_) => ClipboardImageError::TooLarge,
+            _ => ClipboardImageError::Unsupported,
+        })?
+        .to_rgba8();
+    let mut png = Vec::new();
+    image.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).map_err(|_| ClipboardImageError::Unsupported)?;
+    Ok(png)
+}
+
+fn missing_bitmap(app: &mut WordApp, large: bool) -> Result<Value, String> {
+    let result = app.execute("text.insert", json!({"text": "▧"}))?;
+    app.status(crate::i18n::fmt(
+        tl!("Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged."),
+        &[("external", "0"), ("large", if large { "1" } else { "0" }), ("unsupported", if large { "0" } else { "1" })],
+    ));
+    Ok(result)
+}
+
 /// Paste the picture on the system clipboard. `None` when there is none (or no clipboard
 /// service): the caller pastes as usual.
 pub(crate) fn paste(app: &mut WordApp) -> Option<Result<Value, String>> {
@@ -83,21 +134,19 @@ pub(crate) fn paste(app: &mut WordApp) -> Option<Result<Value, String>> {
             Ok(png) => app.execute("insert.picture", json!({"data": wordcraft_engine::cmd::insert::base64_encode(&png)})),
             Err(e) => {
                 log::warn!("clipboard picture: {e}");
-                app.status(e.clone());
-                Err(e)
+                let large = width > MAX_SIDE || height > MAX_SIDE || width.saturating_mul(height) > MAX_PIXELS;
+                missing_bitmap(app, large)
             }
         },
-        ClipboardPicture::Encoded(bytes) if bytes.len() as u64 > MAX_FILE_BYTES => {
-            let e = "the clipboard picture is larger than 200 MB".to_string();
-            app.status(e.clone());
-            Err(e)
-        }
-        ClipboardPicture::Encoded(bytes) => app.execute("insert.picture", json!({"data": wordcraft_engine::cmd::insert::base64_encode(&bytes)})),
+        ClipboardPicture::Encoded(bytes) if bytes.len() as u64 > MAX_FILE_BYTES => missing_bitmap(app, true),
+        ClipboardPicture::Encoded(bytes) => match check_encoded(&bytes) {
+            Ok(()) => app.execute("insert.picture", json!({"data": wordcraft_engine::cmd::insert::base64_encode(&bytes)})),
+            Err(error) => missing_bitmap(app, error == ClipboardImageError::TooLarge),
+        },
         ClipboardPicture::Unreadable(why) => {
             let e = format!("the picture on the clipboard couldn't be read: {why}");
             log::warn!("clipboard picture: {e}");
-            app.status(e.clone());
-            Err(e)
+            missing_bitmap(app, false)
         }
         ClipboardPicture::Files(files) => {
             let files: Vec<PathBuf> = files.into_iter().filter(|p| is_picture_file(p)).take(MAX_FILES).collect();
@@ -182,7 +231,7 @@ mod tests {
         assert!(!names_picture_files("see /tmp/b.png") && !names_picture_files("notes.txt") && !names_picture_files(""));
     }
 
-    /// Hostile clipboard sizes are refused without inserting anything (or allocating for them).
+    /// Hostile sizes leave a placeholder without allocating their requested pixels.
     #[test]
     fn hostile_clipboard_pictures_are_refused() {
         assert!(png_from_rgba(100_000, 1, vec![0; 400_000]).is_err());
@@ -191,8 +240,10 @@ mod tests {
         assert!(png_from_rgba(4, 4, vec![0; 63]).is_err());
         assert!(png_from_rgba(0, 4, Vec::new()).is_err());
         let mut a = app_with(|| Some(ClipboardPicture::Pixels { width: 1 << 40, height: 1 << 40, rgba: Vec::new() }));
-        assert!(a.run("edit.paste", json!({})).is_err());
+        a.run("edit.paste", json!({})).unwrap();
         assert_eq!(pictures(&mut a), 0);
+        assert!(a.session.doc.body_fragment().plain_text().contains('▧'));
+        assert!(a.status_msg.as_ref().unwrap().0.contains("1 over the size limit"));
         // Copied files that aren't pictures leave Paste to the usual clipboard.
         let mut a = app_with(|| Some(ClipboardPicture::Files(vec![PathBuf::from("/tmp/notes.txt")])));
         assert_eq!(a.run("edit.paste", json!({})).unwrap_err(), "the clipboard is empty");

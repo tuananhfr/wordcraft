@@ -15,7 +15,7 @@ fn js(e: JsValue) -> String {
 }
 
 /// Wait for an IndexedDB request; its result.
-async fn done(req: &IdbRequest) -> Result<JsValue, String> {
+pub(super) async fn done(req: &IdbRequest) -> Result<JsValue, String> {
     let promise = js_sys::Promise::new(&mut |resolve: js_sys::Function, reject: js_sys::Function| {
         let ok_req = req.clone();
         let ok = Closure::once_into_js(move || {

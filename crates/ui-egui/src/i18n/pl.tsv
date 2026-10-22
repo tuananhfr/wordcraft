@@ -2584,3 +2584,5 @@ preview	Title	Tytuł
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Ten plik zawiera osadzoną zawartość, której nie można wyświetlić ani edytować. Zostanie zachowana podczas zapisywania jako DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Zatrzymaj ochronę, aby włączyć Cofnij lub Ponów.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Niewklejone obrazy: {external} zewnętrznych adresów URL, {large} za dużych, {unsupported} nieobsługiwanych lub uszkodzonych.

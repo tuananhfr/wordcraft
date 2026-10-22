@@ -2128,3 +2128,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	此檔案包含無法顯示或編輯的嵌入內容。儲存為 DOCX 時會保留這些內容。
 
 	Use Stop Protection to enable Undo or Redo.	停止保護以啟用復原或重做。
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	未貼上的圖片：{external} 個外部 URL，{large} 個超過大小限制，{unsupported} 個不支援或已損壞。

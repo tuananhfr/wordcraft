@@ -399,6 +399,8 @@ struct Builder<'r> {
     sheet: css::Sheet,
     cell_count: usize,
     failed: bool,
+    image_report: ImageReport,
+    image_bytes: usize,
 }
 
 fn is_void(n: &str) -> bool {
@@ -500,6 +502,8 @@ impl<'r> Builder<'r> {
             sheet,
             cell_count: 0,
             failed: false,
+            image_report: ImageReport { only_images: true, ..Default::default() },
+            image_bytes: 0,
         }
     }
 
@@ -638,6 +642,9 @@ impl<'r> Builder<'r> {
         }
         if t.is_empty() {
             return;
+        }
+        if !t.trim().is_empty() {
+            self.image_report.only_images = false;
         }
         let inside_table_only = matches!(
             self.stack.iter().rev().find(|e| matches!(e.kind, ElKind::Table | ElKind::Tr | ElKind::Cell)).map(|e| e.kind),
@@ -887,6 +894,7 @@ impl<'r> Builder<'r> {
                 return;
             }
             "img" => {
+                self.image_report.count += 1;
                 let alt = attr(attrs, "alt").unwrap_or("").to_string();
                 let dim = |k: &str| attr(attrs, k).and_then(|v| v.trim().trim_end_matches("px").trim().parse::<f32>().ok()).map(|p| p * 0.75);
                 let mut w = dim("width");
@@ -902,14 +910,52 @@ impl<'r> Builder<'r> {
                         }
                     }
                 }
+                let src = attr(attrs, "src").unwrap_or("");
+                let mut too_large = attr(attrs, "data-erpcons-image") == Some("too-large");
                 let img = attr(attrs, "src")
-                    .and_then(|src| if src.trim_start().starts_with("data:") { data_uri(src).map(Arc::new) } else if safety::local_image(src) { (self.images)(src.trim()) } else { None })
-                    .and_then(|d| make_img(d, w, h, &alt));
+                    .and_then(|src| {
+                        if src.trim_start().starts_with("data:") {
+                            if src.len() > MAX_INLINE_IMAGE_BYTES.saturating_mul(3).saturating_add(1024) {
+                                too_large = true;
+                                return None;
+                            }
+                            data_uri(src).map(Arc::new)
+                        } else if safety::local_image(src) {
+                            (self.images)(src.trim())
+                        } else {
+                            None
+                        }
+                    })
+                    .filter(|d| {
+                        if d.len() > MAX_INLINE_IMAGE_BYTES || d.len() > MAX_INLINE_TOTAL_BYTES.saturating_sub(self.image_bytes) {
+                            too_large = true;
+                            false
+                        } else {
+                            self.image_bytes += d.len();
+                            true
+                        }
+                    })
+                    .and_then(|d| match model::image_px(&d) {
+                        // A small file may still claim huge pixel dimensions (a decompression bomb).
+                        Some((pw, ph)) if pw > MAX_INLINE_IMAGE_SIDE || ph > MAX_INLINE_IMAGE_SIDE => {
+                            too_large = true;
+                            None
+                        }
+                        _ => make_img(d, w, h, &alt),
+                    });
                 let f = self.fmt();
                 match img {
                     Some(im) => self.start_para().inlines.push(Inline::Image(im)),
-                    None if !alt.is_empty() => self.start_para().push_text(&alt, &f),
-                    None => {}
+                    None => {
+                        if too_large {
+                            self.image_report.too_large += 1;
+                        } else if !src.trim_start().starts_with("data:") {
+                            self.image_report.external += 1;
+                        } else {
+                            self.image_report.unsupported += 1;
+                        }
+                        self.start_para().push_text(if alt.is_empty() { "▧" } else { &alt }, &f);
+                    }
                 }
                 return;
             }
@@ -1085,6 +1131,10 @@ pub fn parse_with(s: &str, images: ImageLoader) -> Flow {
 }
 
 fn parse_bounded(s: &str, images: ImageLoader) -> Result<Flow, ()> {
+    parse_report(s, images).map(|(flow, _)| flow)
+}
+
+fn parse_report(s: &str, images: ImageLoader) -> Result<(Flow, ImageReport), ()> {
     if s.len() > safety::MAX_INPUT { return Err(()); }
     let sheet = safety::sheet(s)?;
     let mut lx = Lexer { s, pos: 0 };
@@ -1128,7 +1178,8 @@ fn parse_bounded(s: &str, images: ImageLoader) -> Result<Flow, ()> {
     }
     b.pop_to(0);
     if b.failed { return Err(()); }
-    Ok(b.finish())
+    let report = b.image_report;
+    Ok((b.finish(), report))
 }
 
 /// A `<math>` element (#816): its tokens up to the matching end tag, as a tree. Nesting and size
@@ -1210,6 +1261,59 @@ fn skip_math(lx: &mut Lexer, first: Tok) {
         }
         t = lx.next();
     }
+}
+
+/// Largest decoded image carried as a `data:` URI in clipboard HTML, each.
+pub const MAX_INLINE_IMAGE_BYTES: usize = 4 << 20;
+/// Largest decoded total of the `data:` URI images in one clipboard HTML.
+pub const MAX_INLINE_TOTAL_BYTES: usize = 16 << 20;
+/// Longest side, in pixels, of an image pasted from HTML.
+pub const MAX_INLINE_IMAGE_SIDE: u32 = 16_384;
+/// Marks an image left out of a copy for its size, so the paste can say so.
+const TOO_LARGE_MARK: char = '\u{E000}';
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ImageReport {
+    pub count: usize,
+    pub only_images: bool,
+    pub external: usize,
+    pub too_large: usize,
+    pub unsupported: usize,
+}
+
+/// Import without network access and report pictures replaced by alt text or a visible symbol.
+pub fn import_report(s: &str) -> (Document, ImageReport) {
+    let (flow, report) = parse_report(s, &|_| None).unwrap_or_else(|()| clipboard_fallback(s));
+    (model::to_doc(&flow), report)
+}
+
+fn clipboard_fallback(s: &str) -> (Flow, ImageReport) {
+    let mut flow = safety::plain(s);
+    let mut end = s.len().min(safety::MAX_INPUT);
+    while !s.is_char_boundary(end) {
+        end = end.saturating_sub(1);
+    }
+    let mut lexer = Lexer { s: s.get(..end).unwrap_or(""), pos: 0 };
+    let mut report = ImageReport::default();
+    let mut placeholders = Para::default();
+    while let Some(token) = lexer.next() {
+        if let Tok::Start { name, attrs, .. } = token
+            && name == "img"
+        {
+            report.count += 1;
+            if attr(&attrs, "src").is_some_and(|src| src.trim_start().starts_with("data:")) {
+                report.unsupported += 1;
+            } else {
+                report.external += 1;
+            }
+            let alt = attr(&attrs, "alt").filter(|s| !s.is_empty()).unwrap_or("▧");
+            placeholders.push_text(alt, &Fmt::default());
+        }
+    }
+    if report.count > 0 {
+        flow.blocks.push(FBlock::Para(placeholders));
+    }
+    (flow, report)
 }
 
 /// Parse HTML into a document.
@@ -1525,10 +1629,38 @@ pub fn export(doc: &Document) -> String {
 /// `doc`'s content as an HTML fragment (no head or style sheet): what a copy puts on the system
 /// clipboard beside its text, equations as MathML (#816).
 pub fn export_fragment(doc: &Document) -> String {
-    let flow = model::from_doc(doc);
+    let mut flow = model::from_doc(doc);
+    let mut total = 0usize;
+    bound_clipboard_images(&mut flow.blocks, &mut total, 0);
     let mut out = String::from("<meta charset=\"utf-8\">");
     blocks_html(&flow.blocks, &mut out, 0);
-    out
+    out.replace(&format!("<img alt=\"{TOO_LARGE_MARK}"), "<img data-erpcons-image=\"too-large\" alt=\"")
+}
+
+fn bound_clipboard_images(blocks: &mut [FBlock], total: &mut usize, depth: usize) {
+    if depth > 64 {
+        return;
+    }
+    for block in blocks {
+        match block {
+            FBlock::Para(p) => {
+                for inline in &mut p.inlines {
+                    if let Inline::Image(image) = inline {
+                        if image.data.len() > MAX_INLINE_IMAGE_BYTES || image.data.len() > MAX_INLINE_TOTAL_BYTES.saturating_sub(*total) {
+                            *inline = Inline::Figure(format!("{TOO_LARGE_MARK}{}", image.alt));
+                        } else {
+                            *total += image.data.len();
+                        }
+                    }
+                }
+            }
+            FBlock::Table(table) => {
+                for cell in table.rows.iter_mut().flatten() {
+                    bound_clipboard_images(&mut cell.blocks, total, depth + 1);
+                }
+            }
+        }
+    }
 }
 
 pub fn export_flow(flow: &Flow, lang: &str) -> String {
@@ -1675,5 +1807,64 @@ mod tests {
     #[test]
     fn entities() {
         assert_eq!(unescape("a &lt;b&gt; &#65;&#x42; &bogus; &"), "a <b> AB &bogus; &");
+    }
+}
+
+#[cfg(test)]
+mod clipboard_image_tests {
+    use super::*;
+
+    fn png(size: usize) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        image::RgbaImage::from_pixel(1, 1, image::Rgba([20, 60, 120, 255]))
+            .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+            .unwrap();
+        bytes.resize(size, 0);
+        bytes
+    }
+
+    #[test]
+    fn clipboard_data_uri_per_image_limit_and_failure_counts() {
+        for size in [1024, (256 << 10) + 1, MAX_INLINE_IMAGE_BYTES, MAX_INLINE_IMAGE_BYTES + 1] {
+            let source = format!("<p><img src=\"data:image/png;base64,{}\"></p>", base64_encode(&png(size)));
+            let (doc, report) = import_report(&source);
+            assert_eq!(report.count, 1);
+            assert!(report.only_images);
+            if size <= MAX_INLINE_IMAGE_BYTES {
+                assert_eq!(doc.media.len(), 1);
+                assert_eq!(report.too_large, 0);
+            } else {
+                assert!(doc.media.is_empty());
+                assert_eq!(report.too_large, 1);
+                assert!(doc.body_fragment().plain_text().contains('▧'));
+            }
+        }
+        let (_, report) = import_report("<img src='data:bad;base64,eA=='><img src='https://example.invalid/x'>");
+        assert_eq!((report.unsupported, report.external), (1, 1));
+        let mut wide = Vec::new();
+        image::GrayImage::new(MAX_INLINE_IMAGE_SIDE + 1, 1).write_to(&mut std::io::Cursor::new(&mut wide), image::ImageFormat::Png).unwrap();
+        let (doc, report) = import_report(&format!("<img src=\"data:image/png;base64,{}\">", base64_encode(&wide)));
+        assert!(doc.media.is_empty());
+        assert_eq!(report.too_large, 1);
+    }
+
+    #[test]
+    fn clipboard_total_limit_counts_repeated_images_on_copy_and_paste() {
+        let bytes = Arc::new(png(MAX_INLINE_IMAGE_BYTES));
+        let image = model::Img { data: bytes, ext: "png".into(), w: 24.0, h: 24.0, alt: String::new() };
+        let mut blocks = vec![FBlock::Para(Para { inlines: vec![Inline::Image(image.clone()); 5], ..Default::default() })];
+        let mut total = 0;
+        bound_clipboard_images(&mut blocks, &mut total, 0);
+        assert_eq!(total, MAX_INLINE_TOTAL_BYTES);
+        let FBlock::Para(p) = blocks.first().unwrap() else { panic!() };
+        assert_eq!(p.inlines.iter().filter(|i| matches!(i, Inline::Image(_))).count(), 4);
+        assert!(matches!(p.inlines.last(), Some(Inline::Figure(alt)) if alt.starts_with(TOO_LARGE_MARK)));
+        let mut out = String::new();
+        blocks_html(&blocks, &mut out, 0);
+        assert_eq!(out.matches(&format!("<img alt=\"{TOO_LARGE_MARK}")).count(), 1);
+        let tag = format!("<img src=\"data:image/png;base64,{}\">", base64_encode(&image.data));
+        let (doc, report) = import_report(&tag.repeat(5));
+        assert_eq!(report.too_large, 1);
+        assert!(doc.body_fragment().plain_text().contains('▧'));
     }
 }

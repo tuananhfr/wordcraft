@@ -2575,3 +2575,5 @@ preview	Title	Tiêu đề
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Tệp này có nội dung nhúng không thể hiển thị hoặc chỉnh sửa. Nội dung đó được giữ nguyên khi lưu dưới dạng DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Dừng bảo vệ để bật Hoàn tác hoặc Làm lại.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Không dán được ảnh: {external} ảnh chỉ có URL bên ngoài, {large} ảnh vượt giới hạn dung lượng, {unsupported} ảnh có định dạng không hỗ trợ hoặc bị hỏng.

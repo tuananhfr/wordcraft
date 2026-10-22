@@ -2141,3 +2141,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Ова датотека садржи уграђени садржај који се не може приказати или уређивати. Чува се при чувању у формату DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Зауставите заштиту да омогућите опозивање или понављање.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Неналепљене слике: {external} спољних URL адреса, {large} превеликих, {unsupported} неподржаних или оштећених.

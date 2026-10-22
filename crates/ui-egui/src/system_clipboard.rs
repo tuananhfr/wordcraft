@@ -57,6 +57,12 @@ pub(crate) fn fill(app: &mut WordApp, id: &str, params: &mut Value) -> Option<Re
     }
     let fits = |t: &String| !t.trim().is_empty() && t.len() <= MAX_PASTE_BYTES;
     if let Some(html) = app.services.clipboard_html.as_ref().and_then(|f| f()).filter(fits) {
+        if id == "edit.paste"
+            && wordcraft_engine::cmd::paste::single_lost_image(&html)
+            && let Some(png) = paste_picture::clipboard_png(app)
+        {
+            return Some(app.execute("insert.picture", serde_json::json!({"data": wordcraft_engine::cmd::insert::base64_encode(&png)})));
+        }
         o.insert("html".into(), Value::String(html));
     }
     if let Some(rtf) = app.services.clipboard_rtf.as_ref().and_then(|f| f()).filter(fits) {
@@ -77,6 +83,13 @@ pub(crate) fn fill(app: &mut WordApp, id: &str, params: &mut Value) -> Option<Re
 /// equation as MathML, #816) and the host can set it, else the text through egui. egui sets its
 /// text at the end of the frame, which would replace the HTML, so only one of them runs.
 pub(crate) fn put(app: &WordApp, ctx: &egui::Context, text: &str, html: &str) {
+    // A lone picture has no text but is copied (as a bitmap); an empty copy has no HTML.
+    if !html.is_empty()
+        && let Some(png) = copied_image(app)
+        && app.services.set_clipboard_image.as_ref().is_some_and(|f| f(&png, html, text))
+    {
+        return;
+    }
     if text.is_empty() {
         return;
     }
@@ -84,6 +97,23 @@ pub(crate) fn put(app: &WordApp, ctx: &egui::Context, text: &str, html: &str) {
         return;
     }
     ctx.copy_text(text.to_string());
+}
+
+/// Whether the system clipboard still holds the bitmap of Văn bản's own single-picture copy, so
+/// Paste uses the copied fragment (with its size, wrapping and alt text) instead of the bitmap.
+pub(crate) fn cached_picture(app: &WordApp) -> bool {
+    copied_image(app).is_some_and(|copied| paste_picture::clipboard_png(app).is_some_and(|system| system == copied))
+}
+
+fn copied_image(app: &WordApp) -> Option<Vec<u8>> {
+    let fragment = app.session.clipboard.as_ref()?;
+    let [wordcraft_doc::Block::Para(p)] = fragment.blocks.as_slice() else { return None };
+    if p.text != wordcraft_doc::para::OBJ.to_string() {
+        return None;
+    }
+    let [wordcraft_doc::InlineObject::Image { media, .. }] = p.objects.as_slice() else { return None };
+    let bytes = app.session.doc.media.get(media)?;
+    paste_picture::png_from_encoded(bytes).ok()
 }
 
 /// Put what Copy or Cut returned on the system clipboard (see [`put`]).
@@ -300,8 +330,10 @@ mod tests {
             clipboard_picture: Some(Box::new(|| Some(ClipboardPicture::Unreadable("its format isn't supported".into())))),
             ..Default::default()
         };
-        let e = app(unreadable).run("edit.paste", json!({})).unwrap_err();
-        assert!(e.contains("couldn't be read") && e.contains("isn't supported"), "{e}");
+        let mut unreadable = app(unreadable);
+        unreadable.run("edit.paste", json!({})).unwrap();
+        assert!(unreadable.session.doc.body_fragment().plain_text().contains('▧'));
+        assert!(unreadable.status_msg.as_ref().unwrap().0.contains("1 unsupported or damaged"));
     }
 
     #[test]
@@ -323,6 +355,52 @@ mod tests {
             "Không thể dán nội dung bảng tạm vào đây (bảng tạm chứa f0, f1, f2, f3, f4, f5 và 14 định dạng khác)."
         );
         crate::i18n::set_current(previous);
+    }
+
+    #[test]
+    fn html_image_loss_is_visible_and_explained_in_vietnamese() {
+        let previous = crate::i18n::current();
+        crate::i18n::set_current(crate::i18n::Lang::from_code("vi").unwrap());
+        let mut a = app(Services::default());
+        a.run("edit.paste", json!({"html": "<p><img src='https://example.invalid/image.png'></p>"})).unwrap();
+        assert!(a.session.doc.body_fragment().plain_text().contains('▧'));
+        let message = &a.status_msg.as_ref().unwrap().0;
+        assert!(message.contains("1 ảnh chỉ có URL bên ngoài"), "{message}");
+        crate::i18n::set_current(previous);
+    }
+
+    #[test]
+    fn single_image_copy_offers_png_and_retains_cached_rich_fragment() {
+        let system = std::rc::Rc::new(std::cell::RefCell::new(None::<Vec<u8>>));
+        let writer = system.clone();
+        let reader = system.clone();
+        let mut a = app(Services {
+            set_clipboard_image: Some(Box::new(move |png, html, _| {
+                assert!(html.contains("data:image/png;base64,"));
+                *writer.borrow_mut() = Some(png.to_vec());
+                true
+            })),
+            clipboard_picture: Some(Box::new(move || reader.borrow().clone().map(ClipboardPicture::Encoded))),
+            ..Default::default()
+        });
+        let png = paste_picture::png_from_rgba(4, 4, vec![200; 64]).unwrap();
+        a.run("insert.picture", json!({"data": wordcraft_engine::cmd::insert::base64_encode(&png)})).unwrap();
+        a.run("select.all", json!({})).unwrap();
+        let r = a.run("edit.copy", json!({})).unwrap();
+        put_result(&a, &egui::Context::default(), &r);
+        assert!(system.borrow().is_some());
+        assert!(cached_picture(&a));
+        a.run("edit.paste", json!({})).unwrap();
+        let fragment = a.session.doc.body_fragment();
+        let objects: usize = fragment
+            .blocks
+            .iter()
+            .filter_map(|b| match b {
+                wordcraft_doc::Block::Para(p) => Some(p.objects.len()),
+                _ => None,
+            })
+            .sum();
+        assert_eq!(objects, 1);
     }
 
     #[test]

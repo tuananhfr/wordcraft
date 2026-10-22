@@ -55,19 +55,22 @@ fn html_only_paste_produces_exactly_one_event_and_preserves_the_html() {
 #[test]
 fn image_only_paste_uses_the_picture_inbox_without_a_text_event() {
     let bridge = ClipboardBridge::default();
-    let images = vec![("image/jpeg".into(), vec![1, 2]), ("image/png".into(), vec![3])];
+    let first = wordcraft_ui_egui::paste_picture::png_from_rgba(4, 4, vec![120; 64]).unwrap();
+    let second = wordcraft_ui_egui::paste_picture::png_from_rgba(4, 4, vec![200; 64]).unwrap();
+    let images = vec![("image/png".into(), first.clone()), ("image/png".into(), second.clone())];
     bridge.deliver(PendingPaste { images, ..Default::default() }, vec!["image/jpeg".into()], None);
     let pictures = Inbox::default();
     let mut raw = egui::RawInput::default();
     assert!(bridge.begin_frame(&mut raw, &pictures).is_none());
     assert!(raw.events.is_empty());
-    assert_eq!(*pictures.lock().unwrap(), vec![("pasted.jpg".into(), vec![1, 2]), ("pasted.png".into(), vec![3])]);
+    assert_eq!(*pictures.lock().unwrap(), vec![("pasted.png".into(), first), ("pasted.png".into(), second)]);
 }
 
 #[test]
 fn rich_text_with_an_image_does_not_also_insert_a_picture() {
     let bridge = ClipboardBridge::default();
-    bridge.deliver(PendingPaste { text: "caption".into(), images: vec![("image/png".into(), vec![3])], ..Default::default() }, vec![], None);
+    let png = wordcraft_ui_egui::paste_picture::png_from_rgba(4, 4, vec![200; 64]).unwrap();
+    bridge.deliver(PendingPaste { text: "caption".into(), images: vec![("image/png".into(), png.clone())], ..Default::default() }, vec![], None);
     let mut services = Services::default();
     bridge.connect(&mut services);
     let pictures = Inbox::default();
@@ -75,7 +78,7 @@ fn rich_text_with_an_image_does_not_also_insert_a_picture() {
     bridge.begin_frame(&mut raw, &pictures);
     assert_eq!(raw.events, vec![egui::Event::Paste("caption".into())]);
     assert!(pictures.lock().unwrap().is_empty());
-    assert!(matches!(services.clipboard_picture.as_ref().unwrap()(), Some(ClipboardPicture::Encoded(bytes)) if bytes == [3]));
+    assert!(matches!(services.clipboard_picture.as_ref().unwrap()(), Some(ClipboardPicture::Encoded(bytes)) if bytes == png));
 }
 
 #[test]
@@ -130,7 +133,7 @@ fn next_frame_clears_all_hooks_and_next_paste_cannot_reuse_rich_data() {
             text: "strong".into(),
             html: Some("<b>strong</b>".into()),
             rtf: Some("{\\rtf1 strong}".into()),
-            images: vec![("image/png".into(), vec![1])],
+            images: vec![("image/png".into(), wordcraft_ui_egui::paste_picture::png_from_rgba(1, 1, vec![0; 4]).unwrap())],
         },
         vec!["text/html".into(), "text/rtf".into(), "image/png".into()],
         None,
@@ -176,4 +179,49 @@ fn notices_are_visible_localized_and_do_not_accumulate_duplicates() {
     bridge.notice(Notice::ReadFailed);
     assert_eq!(bridge.take_notices(), vec![Notice::ReadFailed]);
     assert!(bridge.take_notices().is_empty());
+}
+
+#[test]
+fn browser_bitmap_replaces_a_single_url_image_without_fetching_or_duplicate_paste() {
+    let bridge = ClipboardBridge::default();
+    let mut app = app(&bridge);
+    let png = wordcraft_ui_egui::paste_picture::png_from_rgba(4, 4, vec![200; 64]).unwrap();
+    bridge.deliver(
+        PendingPaste {
+            html: Some("<p><img src='https://example.invalid/never-fetch.png'></p>".into()),
+            images: vec![("image/png".into(), png)],
+            ..Default::default()
+        },
+        vec!["text/html".into(), "image/png".into()],
+        None,
+    );
+    paste_frame(&bridge, &mut app);
+    assert_eq!(app.session.doc.media.len(), 1);
+    let objects: usize = app
+        .session
+        .doc
+        .body
+        .iter()
+        .map(|b| match &**b {
+            wordcraft_doc::Block::Para(p) => p.objects.len(),
+            _ => 0,
+        })
+        .sum();
+    assert_eq!(objects, 1, "one picture, not also the HTML's placeholder");
+    assert!(!app.session.doc.body_fragment().plain_text().contains('▧'));
+}
+
+#[test]
+fn rejected_bitmaps_leave_placeholders_and_counted_notices() {
+    for (bytes, expected) in [
+        (vec![1, 2, 3], Notice::ImagesSkipped { large: 0, unsupported: 1 }),
+        (vec![0; MAX_IMAGE_BYTES + 1], Notice::ImagesSkipped { large: 1, unsupported: 0 }),
+    ] {
+        let bridge = ClipboardBridge::default();
+        bridge.deliver(PendingPaste { images: vec![("image/png".into(), bytes)], ..Default::default() }, vec![], None);
+        let pending = bridge.take().unwrap();
+        assert_eq!(pending.text, "▧");
+        assert!(pending.images.is_empty());
+        assert_eq!(bridge.take_notices(), [expected]);
+    }
 }

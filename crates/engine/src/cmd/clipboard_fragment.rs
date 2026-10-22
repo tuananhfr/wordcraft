@@ -15,7 +15,6 @@ use crate::Session;
 /// The encoded attribute, including base64 expansion, must fit in 4 MiB.
 pub(crate) const MAX_MARKER_BYTES: usize = 4 << 20;
 const MAX_JSON_BYTES: usize = MAX_MARKER_BYTES / 4 * 3;
-const SMALL_IMAGE_BYTES: usize = 256 << 10;
 const MAX_CELLS: usize = 20_000;
 
 #[derive(Serialize, Deserialize)]
@@ -192,9 +191,7 @@ pub(crate) fn export(s: &Session, fragment: &Fragment) -> String {
     let payload = ClipPayload::capture(s, fragment);
     let mut bytes = CappedJson(Vec::new());
     let encoded = serde_json::to_writer(&mut bytes, &payload).ok().map(|()| super::insert::base64_encode(&bytes.0));
-    let mut doc = payload.into_document();
-    // Large pictures remain in the internal marker; HTML stays useful to external programs.
-    doc.media.retain(|_, data| data.len() <= SMALL_IMAGE_BYTES);
+    let doc = payload.into_document();
     let mut html = wordcraft_formats::html::export_fragment(&doc);
     if let Some(encoded) = encoded.filter(|s| s.len() <= MAX_MARKER_BYTES) {
         html.push_str("<meta name=\"erpcons-clip\" content=\"");

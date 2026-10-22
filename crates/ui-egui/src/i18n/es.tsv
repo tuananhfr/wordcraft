@@ -2493,3 +2493,5 @@ preview	Title	Título
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Este archivo contiene contenido incrustado que no se puede mostrar ni editar. Se conserva al guardar como DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Detenga la protección para activar Deshacer o Rehacer.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Imágenes no pegadas: {external} URL externas, {large} demasiado grandes, {unsupported} no compatibles o dañadas.

@@ -163,6 +163,8 @@ pub struct Services {
     /// a copy holding an equation (as MathML, #816). `true` when both are there; otherwise the
     /// copy's text goes through egui as usual.
     pub set_clipboard_html: Option<Box<dyn Fn(&str, &str) -> bool>>,
+    /// Copy one selected image as PNG, plus HTML/text on hosts that can write them together.
+    pub set_clipboard_image: Option<Box<dyn Fn(&[u8], &str, &str) -> bool>>,
     /// Desktop: the RTF on the system clipboard, where the platform offers it (#687).
     pub clipboard_rtf: Option<Box<dyn Fn() -> Option<String>>>,
     /// Desktop: the names of the formats on the system clipboard (MIME types, Windows format
@@ -741,6 +743,7 @@ impl WordApp {
         // here replaces it with text), so it wins (#45).
         if id == "edit.paste"
             && params.get("text").is_none()
+            && !system_clipboard::cached_picture(self)
             && let Some(r) = paste_picture::paste(self)
         {
             return r;
@@ -1056,6 +1059,14 @@ impl WordApp {
 
     /// Requests commands make of the UI (open a dialog…).
     fn handle_request(&mut self, req: &Value) {
+        if let Some(report) = req.get("imagePaste") {
+            let count = |key| report.get(key).and_then(Value::as_u64).unwrap_or(0).to_string();
+            self.status(crate::i18n::fmt(
+                tl!("Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged."),
+                &[("external", &count("external")), ("large", &count("tooLarge")), ("unsupported", &count("unsupported"))],
+            ));
+            return;
+        }
         // Ctrl+F: type straight into the Navigation pane's search box (#712).
         if req.get("focus").and_then(Value::as_str) == Some("navSearch") {
             self.nav_search_focus = true;

@@ -2139,3 +2139,5 @@
 	This file contains embedded content that cannot be displayed or edited. It is kept when saving as DOCX.	Цей файл містить вбудований вміст, який неможливо відобразити або змінити. Він зберігається під час збереження у форматі DOCX.
 
 	Use Stop Protection to enable Undo or Redo.	Вимкніть захист, щоб увімкнути скасування або повторення.
+
+	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Не вставлено зображення: {external} зовнішніх URL, {large} перевищують розмір, {unsupported} не підтримуються або пошкоджені.

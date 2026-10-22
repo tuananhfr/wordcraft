@@ -15,6 +15,9 @@ mod clipboard;
 #[cfg(any(target_arch = "wasm32", test))]
 mod editor_closed;
 
+#[cfg(any(target_arch = "wasm32", test))]
+mod embedded_drafts;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
 

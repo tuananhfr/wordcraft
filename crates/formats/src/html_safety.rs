@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(super) const MAX_INPUT: usize = 8 * 1024 * 1024;
+pub(super) const MAX_INPUT: usize = 32 * 1024 * 1024;
 pub(super) const MAX_CELLS: usize = 20_000;
 
 pub(super) fn local_image(src: &str) -> bool {

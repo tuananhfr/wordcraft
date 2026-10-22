@@ -11,6 +11,7 @@ description = "Văn bản – ERPCons desktop app"
 workspace = true
 
 [dependencies]
+image = { workspace = true }
 wordcraft-doc = { workspace = true }
 wordcraft-engine = { workspace = true }
 wordcraft-proof = { workspace = true }

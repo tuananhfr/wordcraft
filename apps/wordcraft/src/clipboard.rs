@@ -51,6 +51,25 @@ pub fn set_html(html: &str, text: &str) -> bool {
     })
 }
 
+pub fn set_image(png: &[u8], _html: &str, _text: &str) -> bool {
+    let Ok(image) = image::load_from_memory_with_format(png, image::ImageFormat::Png) else { return false };
+    let pixels = image.to_rgba8();
+    WRITER.with(|w| {
+        let Ok(mut slot) = w.try_borrow_mut() else { return false };
+        if slot.is_none() {
+            *slot = open();
+        }
+        slot.as_mut().is_some_and(|c| {
+            c.set_image(arboard::ImageData {
+                width: pixels.width() as usize,
+                height: pixels.height() as usize,
+                bytes: std::borrow::Cow::Borrowed(pixels.as_raw()),
+            })
+            .is_ok()
+        })
+    })
+}
+
 /// The clipboard's text.
 pub fn text() -> Option<String> {
     open()?.get_text().ok()

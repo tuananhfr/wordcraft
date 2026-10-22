@@ -17,7 +17,7 @@ use super::{delete_selection, sel_result};
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 
 /// Largest clipboard payload Paste Special accepts, in bytes.
-pub const MAX_PASTE_BYTES: usize = 16 << 20;
+pub const MAX_PASTE_BYTES: usize = 32 << 20;
 /// Largest clipboard picture Paste Special accepts (base64), in bytes.
 pub const MAX_PICTURE_BYTES: usize = 96 << 20;
 pub const CLIPBOARD_TOO_LARGE: &str = "The clipboard content is too large to paste.";
@@ -187,7 +187,7 @@ pub fn rich_fragment(s: &mut Session, v: &Value) -> Option<Fragment> {
     {
         return from_html(s, html, p::bool(v, "keepSource").unwrap_or(false)).ok();
     }
-    let doc = fits("html").map(|html| wordcraft_formats::html::import(html_fragment(html)));
+    let doc = fits("html").map(|html| import_html(s, html_fragment(html)));
     let doc = match doc.filter(has_content) {
         Some(d) => d,
         None => {
@@ -196,6 +196,25 @@ pub fn rich_fragment(s: &mut Session, v: &Value) -> Option<Fragment> {
         }
     };
     adopt(s, doc).ok()
+}
+
+/// Whether clipboard HTML holds one picture and nothing else, a picture the HTML import cannot
+/// keep (a browser's Copy Image: `<img src=URL>` beside the bitmap, which is then the picture).
+pub fn single_lost_image(html: &str) -> bool {
+    // Most pasted HTML is text: skip the parse unless there is exactly one `<img`.
+    if html.as_bytes().windows(4).filter(|w| w.eq_ignore_ascii_case(b"<img")).take(2).count() != 1 {
+        return false;
+    }
+    let (doc, report) = wordcraft_formats::html::import_report(html);
+    report.count == 1 && report.only_images && doc.media.is_empty() && matches!(doc.body.as_slice(), [block] if matches!(&**block, Block::Para(_)))
+}
+
+fn import_html(s: &mut Session, html: &str) -> Document {
+    let (doc, report) = wordcraft_formats::html::import_report(html);
+    if report.external + report.too_large + report.unsupported > 0 {
+        s.ui_requests.push(json!({"imagePaste": {"external": report.external, "tooLarge": report.too_large, "unsupported": report.unsupported}}));
+    }
+    doc
 }
 
 fn from_html(s: &mut Session, html: &str, keep_source: bool) -> Result<Fragment, CmdError> {
@@ -211,7 +230,8 @@ fn from_html(s: &mut Session, html: &str, keep_source: bool) -> Result<Fragment,
         }
         return super::clipboard_adopt::adopt(s, payload.into_document(), keep_source, false);
     }
-    adopt(s, wordcraft_formats::html::import(html_fragment(html)))
+    let doc = import_html(s, html_fragment(html));
+    adopt(s, doc)
 }
 
 fn foreign_marker(s: &Session, html: &str) -> bool {
@@ -233,6 +253,12 @@ fn foreign_source(s: &Session, v: &Value) -> bool {
 }
 
 pub(crate) fn paste(s: &mut Session, v: &Value, merge: bool) -> Result<(), CmdError> {
+    if let Some(picture) = p::str(v, "picture").filter(|_| p::str(v, "html").is_none() && p::str(v, "rtf").is_none()) {
+        if picture.len() > MAX_PICTURE_BYTES {
+            return Err(CmdError::Failed(CLIPBOARD_TOO_LARGE.into()));
+        }
+        return super::insert::picture(s, &json!({"data": picture})).map(|_| ());
+    }
     let preserve = !merge && foreign_source(s, v);
     let mut frag = paste_fragment(s, v)?;
     if merge {

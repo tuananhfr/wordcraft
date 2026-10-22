@@ -1006,13 +1006,16 @@ fn paste_keeps_source_formatting_from_other_programs() {
     assert!(text(&s).starts_with("bold"), "{}", text(&s));
     assert!(bold_at(&s, 0, 0));
 
-    // HTML with nothing to paste (a web picture by address) or too large: the text is pasted.
+    // A web picture by address is never fetched: a visible placeholder and a notice (WORD-05).
     run(&mut s, "document.setText", json!({"text": ""}));
+    s.ui_requests.clear();
     run(&mut s, "edit.paste", json!({"text": "alt", "html": "<img src='https://example.com/a.png'>"}));
-    assert_eq!(text(&s), "alt");
+    assert_eq!(text(&s), "▧");
+    assert!(s.ui_requests.iter().any(|r| r["imagePaste"]["external"] == 1));
+    // HTML too large: the text is pasted.
     let huge = format!("<b>{}</b>", "a".repeat(crate::cmd::paste::MAX_PASTE_BYTES));
     run(&mut s, "edit.paste", json!({"text": "!", "html": huge}));
-    assert_eq!(text(&s), "alt!");
+    assert_eq!(text(&s), "▧!");
     assert!(s.run("edit.paste", &json!({"html": "<p> </p>"})).is_err(), "nothing to paste is an error");
     assert!(s.run("edit.pasteMerge", &json!({"rtf": "not rtf"})).is_err());
     assert!(s.run("edit.pasteText", &json!({})).is_err());

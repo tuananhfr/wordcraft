@@ -902,3 +902,121 @@ fn internal_links_export_in_linear_time() {
     let ratio = fastest(&big) / fastest(&small).max(1e-9);
     assert!(ratio < 9.0, "4x the paragraphs and links took {ratio:.1}x as long (quadratic would be ~16x)");
 }
+
+fn vietnamese_pdf_glyphs(bytes: &[u8]) -> Vec<Vec<(String, f64, f64)>> {
+    use hayro_interpret::font::Glyph;
+    use hayro_interpret::{
+        BlendMode, ClipPath, Context, Device, GlyphDrawMode, Image, InterpreterCache, InterpreterSettings, Paint, PathDrawMode, SoftMask,
+        interpret_page,
+    };
+    use hayro_syntax::Pdf;
+    struct Ex(Vec<(String, f64, f64)>);
+    impl Device<'_> for Ex {
+        fn set_soft_mask(&mut self, _: Option<SoftMask<'_>>) {}
+        fn set_blend_mode(&mut self, _: BlendMode) {}
+        fn draw_path(&mut self, _: &kurbo::BezPath, _: kurbo::Affine, _: &Paint<'_>, _: &PathDrawMode) {}
+        fn push_clip_path(&mut self, _: &ClipPath) {}
+        fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'_>>, _: BlendMode) {}
+        fn draw_glyph(&mut self, g: &Glyph<'_>, transform: kurbo::Affine, glyph_transform: kurbo::Affine, _: &Paint<'_>, mode: &GlyphDrawMode) {
+            // Synthetic bold fills and then strokes each glyph: one character, two draws.
+            if matches!(mode, GlyphDrawMode::Stroke(_)) {
+                return;
+            }
+            if let Glyph::Outline(outline) = g {
+                assert_ne!(outline.glyph_id().to_u32(), 0, "PDF must not contain .notdef");
+            }
+            let text = match g.as_unicode() {
+                Some(hayro_cmap::BfString::Char(c)) => c.to_string(),
+                Some(hayro_cmap::BfString::String(s)) => s.to_string(),
+                None => panic!("PDF glyph has no Unicode mapping"),
+            };
+            let point = transform * glyph_transform * kurbo::Point::ORIGIN;
+            self.0.push((text, point.x, point.y));
+        }
+        fn draw_image(&mut self, _: Image<'_, '_>, _: kurbo::Affine) {}
+        fn pop_clip_path(&mut self) {}
+        fn pop_transparency_group(&mut self) {}
+    }
+    let pdf = Pdf::new(bytes.to_vec()).expect("parse");
+    let cache = InterpreterCache::new();
+    pdf.pages()
+        .iter()
+        .map(|page| {
+            let mut ctx =
+                Context::new(kurbo::Affine::IDENTITY, kurbo::Rect::new(0.0, 0.0, 1.0, 1.0), &cache, pdf.xref(), InterpreterSettings::default());
+            let mut ex = Ex(Vec::new());
+            interpret_page(page, &mut ctx, &mut ex);
+            ex.0
+        })
+        .collect()
+}
+
+#[test]
+fn vietnamese_pdf_embeds_subsets_and_preserves_layout_and_unicode() {
+    vietnamese_pdf_for_families(&[None, Some("Source Sans 3"), Some("Source Serif 4")]);
+}
+
+#[test]
+fn vietnamese_pdf_with_craft_fonts() {
+    if std::env::var_os("CRAFT_FONTS_DIR").is_none() {
+        return;
+    }
+    assert!(!wordcraft_fonts::CRAFT_FONTS.is_empty(), "build must embed the configured craft-fonts checkout");
+    // No craft-fonts family covers Vietnamese; this checks the embedded fonts do not disturb the default face's Vietnamese output.
+    vietnamese_pdf_for_families(&[None]);
+}
+
+fn vietnamese_pdf_for_families(families: &[Option<&str>]) {
+    use unicode_normalization::UnicodeNormalization as _;
+    use wordcraft_layout::display::{DisplayOptions, Draw, page_display};
+    let source = "Cộng hòa xã hội chủ nghĩa Việt Nam Nguyễn đường Ở ữ";
+    for family in families {
+        for text in [source.to_string(), source.nfd().collect::<String>()] {
+            let mut doc = Document::from_text(&text);
+            if let Some(family) = family {
+                doc.styles.default_chr.font = Some((*family).into());
+            }
+            // A narrow page forces several lines through the same layout used by the screen.
+            doc.last_section.page_w = 260.0;
+            doc.last_section.margin_left = 30.0;
+            doc.last_section.margin_right = 30.0;
+            let lay = layout(&doc, &mut LayoutCache::new(), &LayoutOptions { hide_deleted: true, ..Default::default() });
+            let mut expected = Vec::new();
+            for page in &lay.pages {
+                let mut positions = Vec::new();
+                for item in page_display(&doc, page, &DisplayOptions::default()) {
+                    if let Draw::Glyphs { glyphs, .. } = item {
+                        assert!(glyphs.iter().all(|(id, _, _)| *id != 0), "screen .notdef for {family:?}");
+                        positions.extend(glyphs.into_iter().map(|(_, x, y)| (x as f64, y as f64)));
+                    }
+                }
+                expected.push(positions);
+            }
+            let bytes = export_layout(&doc, &lay, &PdfOptions { compress: false, ..Default::default() }).unwrap();
+            let raw = String::from_utf8_lossy(&bytes);
+            assert!(raw.contains("/FontFile2") || raw.contains("/FontFile3"));
+            assert!(raw.contains("/ToUnicode"));
+            let subset = raw.split("/BaseFont").skip(1).any(|part| {
+                part.trim_start()
+                    .strip_prefix('/')
+                    .and_then(|name| name.split_once('+'))
+                    .is_some_and(|(prefix, _)| prefix.len() == 6 && prefix.chars().all(|c| c.is_ascii_uppercase()))
+            });
+            assert!(subset, "font subset prefix");
+            let actual = vietnamese_pdf_glyphs(&bytes);
+            let extracted: String = actual.iter().flatten().map(|(text, _, _)| text.as_str()).collect();
+            assert_eq!(extracted.nfc().collect::<String>(), source, "{family:?}, {text:?}");
+            assert_eq!(actual.len(), expected.len());
+            for (actual, expected) in actual.iter().zip(&expected) {
+                assert_eq!(actual.len(), expected.len(), "glyph count for {family:?}");
+                assert!(expected.iter().map(|(_, y)| y.to_bits()).collect::<std::collections::BTreeSet<_>>().len() > 1, "must wrap");
+                let (_, ax, ay) = actual.first().unwrap();
+                let (ex, ey) = expected.first().unwrap();
+                for ((_, x, y), (sx, sy)) in actual.iter().zip(expected) {
+                    assert!(((x - ax) - (sx - ex)).abs() < 0.02, "horizontal/mark placement: {family:?}: {x} vs {sx}");
+                    assert!(((y - ay).abs() - (sy - ey).abs()).abs() < 0.02, "baseline/line break: {family:?}: {y} vs {sy}");
+                }
+            }
+        }
+    }
+}
