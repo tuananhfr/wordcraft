@@ -256,6 +256,8 @@ struct Shared {
     generation: u64,
     error: Option<String>,
     /// A worker thread is running (cleared under the lock as it exits).
+    // Only the native worker reads it.
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     running: bool,
 }
 
