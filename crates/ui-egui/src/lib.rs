@@ -22,6 +22,7 @@ macro_rules! tl {
 
 pub mod a11y;
 pub mod a11y_pane;
+mod alt_chunk_notice;
 pub mod autoscroll;
 pub mod backstage;
 mod browser_save;
@@ -508,6 +509,7 @@ pub struct WordApp {
     /// Saves that failed, shown in the status bar until saved or edited ([`save_status`]).
     pub(crate) save_failures: save_status::SaveFailures,
     focus: focus::State,
+    alt_chunk_notices: std::collections::BTreeSet<u64>,
     font_notice: font_notice::State,
     #[cfg(not(target_arch = "wasm32"))]
     updates: updates::Updates,
@@ -607,6 +609,7 @@ impl WordApp {
             closed: Default::default(),
             save_failures: Default::default(),
             focus: Default::default(),
+            alt_chunk_notices: Default::default(),
             font_notice: Default::default(),
             #[cfg(not(target_arch = "wasm32"))]
             updates: Default::default(),
@@ -833,6 +836,7 @@ impl WordApp {
             self.keep_web_font(id, &params, v);
         }
         if id == "file.open" && r.is_ok() && self.session.document_id() != document {
+            alt_chunk_notice::opened(self);
             font_notice::opened(self);
         }
         if id == "file.new"
@@ -1792,6 +1796,7 @@ impl WordApp {
                 panes::show(self, ui);
             }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
+                alt_chunk_notice::show(self, ui);
                 font_notice::show(self, ui);
                 canvas::show(self, ui);
             });

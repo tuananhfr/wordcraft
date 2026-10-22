@@ -51,6 +51,10 @@ impl Writer<'_> {
             }
             match &**b {
                 Block::Para(p) => {
+                    for chunk in &p.preserved_before {
+                        let id = self.embeds.alt_chunk(chunk, rels);
+                        w.empty("w:altChunk", &[("r:id", &id)]);
+                    }
                     self.inline_controls = plan.inline_in(i);
                     self.para(w, p, rels, top, depth);
                 }

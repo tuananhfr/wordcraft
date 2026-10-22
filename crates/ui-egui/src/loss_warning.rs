@@ -13,6 +13,7 @@ mod tests;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum LossItem {
+    EmbeddedContent,
     Comments(usize),
     TrackedChanges(usize),
     Vba,
@@ -24,6 +25,9 @@ pub fn lost_items(facts: DocFacts, target_format: &str) -> Vec<LossItem> {
     let structured = matches!(target.as_str(), "docx" | "docm" | "dotx" | "dotm" | "xml" | "flatopc" | "wordml2003" | "json");
     let macros = matches!(target.as_str(), "docm" | "dotm" | "json");
     let mut items = Vec::new();
+    if facts.alt_chunks > 0 && !matches!(target.as_str(), "docx" | "docm" | "dotx" | "dotm" | "xml" | "flatopc" | "json") {
+        items.push(LossItem::EmbeddedContent);
+    }
     if !structured {
         if facts.comments > 0 {
             items.push(LossItem::Comments(facts.comments));
@@ -231,6 +235,7 @@ pub(crate) fn body(app: &mut WordApp, ui: &mut egui::Ui, pending: &PendingSave) 
         let label = match item {
             LossItem::Comments(count) => crate::i18n::fmt(tl!("Comments ({count})"), &[("count", &count.to_string())]),
             LossItem::TrackedChanges(count) => crate::i18n::fmt(tl!("Tracked changes ({count})"), &[("count", &count.to_string())]),
+            LossItem::EmbeddedContent => tl!("Embedded content (altChunk)").to_string(),
             LossItem::Vba => tl!("VBA macros").to_string(),
             LossItem::Signature => tl!("Digital signature (removed or invalidated)").to_string(),
         };

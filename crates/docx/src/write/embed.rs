@@ -42,6 +42,7 @@ pub(crate) struct EmbedWriter<'d> {
     next: HashMap<String, u32>,
     /// Original part name → name written, for parts written by an object's first copy.
     first: HashMap<String, String>,
+    alt_chunk_parts: HashMap<(usize, String), String>,
     /// Budget left for copies.
     copy_bytes: u64,
     /// Budget left for kept markup.
@@ -87,6 +88,7 @@ impl<'d> EmbedWriter<'d> {
             taken,
             next: HashMap::new(),
             first: HashMap::new(),
+            alt_chunk_parts: HashMap::new(),
             copy_bytes: MAX_COPY_BYTES,
             markup_bytes: MAX_MARKUP_BYTES,
             parts: Vec::new(),
@@ -106,6 +108,20 @@ impl<'d> EmbedWriter<'d> {
         for f in files {
             self.taken.insert(format!("word/media/{f}").to_ascii_lowercase());
         }
+    }
+
+    pub fn alt_chunk(&mut self, chunk: &wordcraft_doc::para::PreservedAltChunk, rels: &mut PartRels) -> String {
+        // Shared references must not multiply a large imported part's allocation.
+        let key = (Arc::as_ptr(&chunk.bytes) as usize, chunk.content_type.clone());
+        let name = if let Some(name) = self.alt_chunk_parts.get(&key) {
+            name.clone()
+        } else {
+            let name = self.alloc(&chunk.target);
+            self.parts.push((name.clone(), chunk.bytes.to_vec(), chunk.content_type.clone(), PartRels::default()));
+            self.alt_chunk_parts.insert(key, name.clone());
+            name
+        };
+        rels.add(&chunk.relationship_type, &relative(STORY_PART, &name), false)
     }
 
     /// Names this writer may give its own parts later (headers, footers, package parts).

@@ -7,6 +7,8 @@ use crate::Session;
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DocFacts {
+    #[serde(default)]
+    pub alt_chunks: usize,
     pub comments: usize,
     pub tracked_changes: usize,
     pub tracked_formatting: usize,
@@ -18,6 +20,7 @@ impl DocFacts {
     pub fn of(s: &Session) -> Self {
         let (tracked_changes, tracked_formatting) = crate::cmd::review::tracked_change_counts(s);
         Self {
+            alt_chunks: s.doc.preserved_alt_chunk_count(),
             comments: s.doc.comments.len(),
             tracked_changes,
             tracked_formatting,

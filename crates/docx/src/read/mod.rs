@@ -89,6 +89,7 @@ pub(crate) struct Reader<'p> {
     main: String,
     /// The package's content types, read when first needed.
     content_types: Option<ContentTypes>,
+    alt_chunk_bytes: HashMap<String, Arc<Vec<u8>>>,
     /// Parts kept for charts, diagrams and OLE objects (see `embed`).
     embedded: EmbeddedManifest,
     /// Linked text boxes as read: (`wps:txbx/@id` or `wps:linkedTxbx/@id`, `seq` (0 for the box
@@ -158,6 +159,7 @@ pub(crate) fn read_opened(pkg: &Package) -> Result<Document, DocxError> {
         shape_ids: false,
         main: main.clone(),
         content_types: None,
+        alt_chunk_bytes: HashMap::new(),
         embedded: EmbeddedManifest::default(),
         txbx_links: Vec::new(),
     };

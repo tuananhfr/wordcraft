@@ -1159,6 +1159,17 @@ impl Document {
         }
     }
 
+    /// Opaque DOCX chunks in all stories, including nested table cells.
+    pub fn preserved_alt_chunk_count(&self) -> usize {
+        let mut count = 0usize;
+        for blocks in std::iter::once(&self.body).chain(self.parts.values().map(|p| &p.blocks)) {
+            for block in blocks {
+                edit::each_para(block, 0, &mut |p| count = count.saturating_add(p.preserved_before.len()));
+            }
+        }
+        count
+    }
+
     /// Number of paragraphs in the body (all depths).
     pub fn paragraph_count(&self) -> usize {
         self.para_paths(StoryRef::Body).len()

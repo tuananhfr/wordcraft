@@ -177,16 +177,41 @@ impl Reader<'_> {
         if depth > crate::xml::MAX_DEPTH {
             return;
         }
+        let mut preserved = Vec::new();
         for e in parent.els() {
+            if !preserved.is_empty()
+                && matches!(e.name.as_str(), "w:tbl" | "w:sdt" | "w:customXml" | "w:smartTag" | "w:ins" | "w:moveTo" | "mc:AlternateContent")
+            {
+                let mut p = Paragraph::new();
+                p.preserved_before = std::mem::take(&mut preserved);
+                out.push(para_block(p));
+            }
             match e.name.as_str() {
+                "w:altChunk" => {
+                    if let Some(rel) = e.attr("r:id").and_then(|id| rels.by_id(id)).filter(|r| !r.external)
+                        && let Some(bytes) = self.pkg.get(&rel.target)
+                        && let Some(content_type) =
+                            self.content_types.get_or_insert_with(|| crate::package::ContentTypes::read(self.pkg)).of(&rel.target)
+                    {
+                        preserved.push(wordcraft_doc::para::PreservedAltChunk {
+                            relationship_id: rel.id.clone(),
+                            relationship_type: rel.kind.clone(),
+                            target: rel.target.clone(),
+                            content_type: content_type.to_string(),
+                            bytes: self.alt_chunk_bytes.entry(rel.target.clone()).or_insert_with(|| Arc::new(bytes.to_vec())).clone(),
+                        });
+                    }
+                }
                 "w:p" => {
-                    let p = self.read_para(sc, e, rels, depth);
+                    let mut p = self.read_para(sc, e, rels, depth);
+                    p.preserved_before = std::mem::take(&mut preserved);
                     // A framed drop-cap paragraph merges into the paragraph it starts.
                     if let Some(Block::Para(prev)) = out.last().map(|b| &**b)
                         && prev.props.drop_cap.is_some()
                         && prev.section.is_none()
                         && prev.text.len() <= 16
                         && p.props.drop_cap.is_none()
+                        && p.preserved_before.is_empty()
                         && let Some(Block::Para(mut first)) = out.pop().map(|b| (*b).clone())
                     {
                         let lines = first.props.drop_cap;
@@ -221,6 +246,11 @@ impl Reader<'_> {
                 "w:moveFromRangeStart" | "w:moveFromRangeEnd" | "w:moveToRangeStart" | "w:moveToRangeEnd" => self.move_range(e),
                 _ => {}
             }
+        }
+        if !preserved.is_empty() {
+            let mut p = Paragraph::new();
+            p.preserved_before = preserved;
+            out.push(para_block(p));
         }
     }
 

@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Preserve DOCX altChunk parts in paragraph order, retain them across paragraph merges, and warn on open and before exports that discard embedded content (both).
+
 - Point the website links (About, installers, release notes) to https://office.erpcons.ai; app ids keep the `vn.erpcons.*` form.
 - Updates (desktop): Check signed ERPCons releases automatically or from Help, save unsaved documents before downloading and installing, and explain Windows installer permission prompts; MSI downloads wait for Install now or Cancel.
 

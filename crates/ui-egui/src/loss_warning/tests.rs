@@ -304,3 +304,14 @@ fn signature_fact_is_cleared_only_after_the_browser_finishes_writing() {
         assert_eq!(app.session.dirty, !success);
     }
 }
+
+#[test]
+fn alt_chunk_loss_is_reported_for_odt_and_other_exports() {
+    let facts = DocFacts { alt_chunks: 1, ..Default::default() };
+    for target in ["odt", "rtf", "html", "pdf", "txt", "wordml2003"] {
+        assert_eq!(lost_items(facts, target), vec![LossItem::EmbeddedContent], "{target}");
+    }
+    for target in ["docx", "dotx", "docm", "dotm", "xml", "flatopc", "json"] {
+        assert!(lost_items(facts, target).is_empty(), "{target}");
+    }
+}

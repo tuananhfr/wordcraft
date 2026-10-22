@@ -746,9 +746,21 @@ impl InlineObject {
     }
 }
 
+/// Opaque DOCX embedded content anchored before a paragraph.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PreservedAltChunk {
+    pub relationship_id: String,
+    pub relationship_type: String,
+    pub target: String,
+    pub content_type: String,
+    pub bytes: std::sync::Arc<Vec<u8>>,
+}
+
 /// A paragraph.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Paragraph {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preserved_before: Vec<PreservedAltChunk>,
     pub text: String,
     pub runs: Vec<Run>,
     #[serde(default, skip_serializing_if = "ParaProps::is_empty")]
@@ -768,7 +780,8 @@ pub struct Paragraph {
 
 impl PartialEq for Paragraph {
     fn eq(&self, o: &Self) -> bool {
-        self.text == o.text
+        self.preserved_before == o.preserved_before
+            && self.text == o.text
             && self.runs == o.runs
             && self.props == o.props
             && self.mark == o.mark
@@ -786,6 +799,7 @@ impl Default for Paragraph {
 impl Paragraph {
     pub fn new() -> Self {
         Paragraph {
+            preserved_before: Vec::new(),
             text: String::new(),
             runs: Vec::new(),
             props: ParaProps::default(),
@@ -1179,6 +1193,7 @@ impl Paragraph {
         // The new paragraph's mark takes the formatting at the split, but never a hyperlink.
         let carry = self.props_at(off).unlinked();
         let mut tail = Paragraph {
+            preserved_before: Vec::new(),
             text: tail_text,
             runs: tail_runs,
             props: self.props.clone(),
@@ -1198,7 +1213,8 @@ impl Paragraph {
 
     /// Append `other`'s content (its paragraph properties are dropped; its section break kept).
     pub fn append(&mut self, other: Paragraph) {
-        let Paragraph { text, runs, objects, section, .. } = other;
+        let Paragraph { text, runs, objects, section, preserved_before, .. } = other;
+        self.preserved_before.extend(preserved_before);
         self.text.push_str(&text);
         self.runs.extend(runs);
         self.objects.extend(objects);
