@@ -22,6 +22,7 @@ struct Fake {
     skipped: Mutex<Option<String>>,
     downloads: AtomicUsize,
     installed: AtomicBool,
+    installs: AtomicUsize,
     fail_download: AtomicBool,
     wait_download: AtomicBool,
     check_error: AtomicBool,
@@ -40,6 +41,7 @@ impl Default for Fake {
             skipped: Mutex::new(None),
             downloads: AtomicUsize::new(0),
             installed: AtomicBool::new(false),
+            installs: AtomicUsize::new(0),
             fail_download: AtomicBool::new(false),
             wait_download: AtomicBool::new(false),
             check_error: AtomicBool::new(false),
@@ -78,6 +80,7 @@ impl UpdateHook for Fake {
         if cancel.load(Ordering::Relaxed) { Err("cancelled".into()) } else { Ok(()) }
     }
     fn install_and_restart(&self) -> Result<(), String> {
+        self.installs.fetch_add(1, Ordering::SeqCst);
         self.installed.store(true, Ordering::SeqCst);
         Ok(())
     }
@@ -288,14 +291,101 @@ fn download_page_only_never_downloads_or_installs() {
     assert!(!fake.installed.load(Ordering::SeqCst));
 }
 
+fn wait_past_auto_install(h: &mut Harness<'static, WordApp>) {
+    for _ in 0..100 {
+        h.run_steps(2);
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
 #[test]
-fn windows_msi_ready_notice_explains_permission_prompt() {
+fn windows_msi_waits_for_click_and_installs_once() {
     let fake = Arc::new(Fake { msi: true, ..Fake::default() });
     let mut h = harness(fake.clone());
     wait_for(&mut h, "Update now");
     h.get_by_label("Update now").click();
     wait_for(&mut h, "Windows will ask for installation permission");
-    assert!(!fake.installed.load(Ordering::SeqCst));
+    wait_past_auto_install(&mut h);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 0);
+    h.get_by_label("Install now").click();
+    h.get_by_label("Install now").click();
+    h.run_steps(5);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn windows_msi_cancel_allows_forced_check_and_download_again() {
+    let fake = Arc::new(Fake { msi: true, ..Fake::default() });
+    let mut h = harness(fake.clone());
+    wait_for(&mut h, "Update now");
+    h.get_by_label("Update now").click();
+    wait_for(&mut h, "Install now");
+    h.get_by_label("Cancel").click();
+    h.run_steps(3);
+    assert!(h.query_by_label("Install now").is_none());
+    h.state_mut().check_for_updates();
+    wait_for(&mut h, "Update now");
+    assert!(fake.forced.load(Ordering::SeqCst));
+    h.get_by_label("Update now").click();
+    wait_for(&mut h, "Install now");
+    assert_eq!(fake.downloads.load(Ordering::SeqCst), 2);
+    h.get_by_label("Cancel").click();
+    wait_past_auto_install(&mut h);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn windows_msi_click_guards_edits_during_download_and_cancel_aborts() {
+    let fake = Arc::new(Fake { msi: true, ..Fake::default() });
+    fake.wait_download.store(true, Ordering::SeqCst);
+    let mut h = harness(fake.clone());
+    wait_for(&mut h, "Update now");
+    h.get_by_label("Update now").click();
+    wait_for(&mut h, "Cancel");
+    h.state_mut().run("text.insert", serde_json::json!({"text":"New edits"})).unwrap();
+    fake.wait_download.store(false, Ordering::SeqCst);
+    wait_for(&mut h, "Install now");
+    assert!(h.state().dialog.is_none());
+    h.get_by_label("Install now").click();
+    h.run_steps(3);
+    assert!(h.state().dialog.is_some());
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 0);
+    h.state_mut().run("ui.saveChanges", serde_json::json!({"answer":"cancel"})).unwrap();
+    wait_past_auto_install(&mut h);
+    assert!(h.state().session.dirty);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 0);
+    h.get_by_label("Install now").click();
+    h.run_steps(3);
+    h.state_mut().run("ui.saveChanges", serde_json::json!({"answer":"dontSave"})).unwrap();
+    h.run_steps(3);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn closing_app_while_msi_waits_never_installs() {
+    let fake = Arc::new(Fake { msi: true, ..Fake::default() });
+    let mut h = harness(fake.clone());
+    wait_for(&mut h, "Update now");
+    h.get_by_label("Update now").click();
+    wait_for(&mut h, "Install now");
+    assert!(h.state_mut().close_requested());
+    h.run_steps(3);
+    drop(h);
+    assert_eq!(fake.installs.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn windows_msi_waiting_notice_light_screenshot() {
+    let Some(dir) = std::env::var_os("WORDCRAFT_UPDATE_SCREENSHOTS") else { return };
+    let dir = std::path::PathBuf::from(dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut h = harness(Arc::new(Fake { msi: true, ..Fake::default() }));
+    h.state_mut().ui.language = "vi".into();
+    h.state_mut().run("ui.theme", serde_json::json!({"value":"light"})).unwrap();
+    wait_for(&mut h, "Cập nhật ngay");
+    h.get_by_label("Cập nhật ngay").click();
+    wait_for(&mut h, "Cài đặt ngay");
+    h.render().unwrap().save(dir.join("msi-waiting-light.png")).unwrap();
 }
 
 #[test]
@@ -340,6 +430,7 @@ fn every_native_update_string_has_a_translation_in_every_catalog() {
         "Update cancelled",
         "Update network unavailable: {detail}",
         "Update now",
+        "Install now",
         "Update server returned HTTP {detail}",
         "Update to {version} failed: {reason}",
         "Updated to version {version}",

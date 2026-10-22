@@ -1,6 +1,6 @@
 # ERPCons changes
 
-- Updates (desktop): Check signed ERPCons releases automatically or from Help, save unsaved documents before downloading and installing, and explain Windows installer permission prompts.
+- Updates (desktop): Check signed ERPCons releases automatically or from Help, save unsaved documents before downloading and installing, and explain Windows installer permission prompts; MSI downloads wait for Install now or Cancel.
 
 - File associations (desktop): Show the ERPCons app icon on documents macOS opens with Văn bản – ERPCons.
 

@@ -188,7 +188,11 @@ mod native {
                         match result {
                             Ok(()) => {
                                 self.updates.ready = true;
-                                self.updates.ready_at = Some(std::time::Instant::now() + std::time::Duration::from_millis(800));
+                                self.updates.ready_at = if self.updates.offer.as_ref().is_some_and(|offer| offer.windows_msi) {
+                                    None
+                                } else {
+                                    Some(std::time::Instant::now() + std::time::Duration::from_millis(800))
+                                };
                                 self.updates.message = Some(if self.updates.offer.as_ref().is_some_and(|offer| offer.windows_msi) {
                                     tl!("The app will close, Windows will ask for installation permission — choose Yes — then the app will reopen automatically").into()
                                 } else {
@@ -206,7 +210,7 @@ mod native {
         }
 
         pub(crate) fn request_update(&mut self, ctx: &egui::Context) {
-            if self.dialog.is_some() || self.file_dialog_open() {
+            if self.quit_requested || self.dialog.is_some() || self.file_dialog_open() {
                 return;
             }
             self.updates.ready_at = None;
@@ -334,6 +338,7 @@ mod native {
             return;
         }
         let mut later = false;
+        let mut cancel_ready = false;
         let mut skip = false;
         let mut update = false;
         let mut retry = false;
@@ -386,7 +391,10 @@ mod native {
                                 retry = ui.button(tl!("Retry")).clicked();
                                 later = ui.button(tl!("Close")).clicked();
                             } else if app.updates.ready {
-                                if app.updates.ready_at.is_none() {
+                                if app.updates.offer.as_ref().is_some_and(|offer| offer.windows_msi) {
+                                    update = ui.add(crate::widgets::primary_button(ui, tl!("Install now"))).clicked();
+                                    cancel_ready = ui.button(tl!("Cancel")).clicked();
+                                } else if app.updates.ready_at.is_none() {
                                     update = ui.button(tl!("Retry")).clicked();
                                 }
                             } else if let Some(offer) = &app.updates.offer {
@@ -417,6 +425,14 @@ mod native {
         }
         if let Some(url) = notes {
             app.update_open_url(&url);
+        }
+        if cancel_ready {
+            app.updates.ready = false;
+            app.updates.ready_at = None;
+            app.updates.offer = None;
+            app.updates.message = None;
+            app.updates.approved.clear();
+            app.updates.open = false;
         }
         if later {
             app.updates.open = false;
