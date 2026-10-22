@@ -1,5 +1,9 @@
 # ERPCons changes
 
+- SBOM (desktop): attach a deterministic CycloneDX 1.5 Cargo dependency inventory to every desktop release and include it in SHA256SUMS; the generator also supports the web package.
+
+- Draft state (web, WEB-04/T23): report per-document edits, pending checkpoints, committed drafts and storage failures to the office shell, preserving adopted restore keys and embedded recovery.
+
 - Image clipboard (WORD-05): copies carry pictures as `data:` URIs up to 4 MiB each and 16 MiB in total, and a copy of one picture also as a PNG bitmap; pastes never fetch URLs and replace pictures they cannot keep with their alt text or `▧` and a notice counting them by cause (both). Embedded in the ERP page, the web app keeps its own IndexedDB recovery copy of the host document, keyed by the parent's `docId` or file name and off with `drafts: "host"` (WORD-06, contract in `packaging/web/README.md`). Vietnamese PDF export test (T18).
 
 - (desktop) Repository variable `ERPCONS_SKIP_MACOS=true` releases Windows and Linux installers without waiting for a macOS runner; update.json then lists no Mac asset.

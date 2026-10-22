@@ -23,6 +23,16 @@ const WAIT_TICK: std::time::Duration = std::time::Duration::from_millis(1000);
 /// `put(key, name, format, bytes)`.
 pub type PutDraft = Box<dyn Fn(&str, &str, &str, &[u8]) -> Result<(), String>>;
 
+/// A web document's current draft identity and edit version.
+#[cfg(target_arch = "wasm32")]
+pub struct DraftObservation {
+    pub key: String,
+    pub name: String,
+    pub revision: u64,
+    pub unsaved: bool,
+    pub active: bool,
+}
+
 /// The page's draft storage ([`crate::Services::drafts`]).
 pub struct DraftBridge {
     /// Desktop storage restores copies through Save As; the web shell owns its recovery UI.
@@ -31,6 +41,10 @@ pub struct DraftBridge {
     /// Whether the page offers draft storage right now; asked every frame, so it must be cheap.
     pub available: Box<dyn Fn() -> bool>,
     pub put: PutDraft,
+    #[cfg(target_arch = "wasm32")]
+    pub observe: Option<Box<dyn Fn(Vec<DraftObservation>)>>,
+    #[cfg(target_arch = "wasm32")]
+    pub failed: Rc<RefCell<Vec<String>>>,
     pub remove: Box<dyn Fn(&str) -> Result<(), String>>,
     /// Shared with the host's hide/pagehide listeners.
     pub hidden: Rc<RefCell<HiddenFlush>>,
@@ -159,7 +173,15 @@ impl WordApp {
         for f in flushed {
             self.drafts.planner.put_done(&f.key, f.version, f.at, f.serialize_ms);
         }
+        #[cfg(target_arch = "wasm32")]
+        if let Ok(mut failed) = bridge.failed.try_borrow_mut() {
+            for key in std::mem::take(&mut *failed) {
+                self.drafts.planner.checkpoint_failed(&key, now);
+            }
+        }
         self.open_restored_draft(ctx, now);
+        #[cfg(target_arch = "wasm32")]
+        self.report_draft_observations();
         let plan = self.drafts.planner.plan(now, &self.draft_observed());
         if let Some(bridge) = &self.services.drafts {
             for key in &plan.remove {
@@ -176,8 +198,30 @@ impl WordApp {
         }
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn report_draft_observations(&self) {
+        let Some(observe) = self.services.drafts.as_ref().and_then(|b| b.observe.as_ref()) else { return };
+        let inputs = self
+            .draft_observed()
+            .into_iter()
+            .filter_map(|o| {
+                let (session, untitled) = self.find_document(o.version.document)?;
+                Some(DraftObservation {
+                    key: self.drafts.planner.storage_key(o.version.document),
+                    name: save_name_of(session, untitled),
+                    revision: o.version.rev,
+                    unsaved: o.unsaved,
+                    active: o.version.document == self.session.document_id(),
+                })
+            })
+            .collect();
+        observe(inputs);
+    }
+
     /// Keep what a flush when the page is hidden would put up to date (end of every frame).
     pub(crate) fn refresh_draft_snapshot(&self) {
+        #[cfg(target_arch = "wasm32")]
+        self.report_draft_observations();
         let Some(bridge) = &self.services.drafts else { return };
         let due: Vec<(String, Version)> = if (bridge.available)() {
             self.draft_observed().into_iter().filter_map(|o| self.drafts.planner.flush_due(o).map(|key| (key, o.version))).collect()

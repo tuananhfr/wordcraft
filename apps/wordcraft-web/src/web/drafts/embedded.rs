@@ -77,6 +77,8 @@ pub(super) fn connect() -> Option<(DraftBridge, Embedded)> {
     }
     let (available, put, remove) = (store.clone(), store.clone(), store.clone());
     let bridge = DraftBridge {
+        observe: None,
+        failed: Rc::default(),
         // The shell's `erpDrafts` stub reports unsaved changes to the ERP page, recovery or not.
         available: Box::new(move || super::shell().is_some() || available.recovery.try_borrow().is_ok_and(|r| r.ready())),
         put: Box::new(move |key, name, format, bytes| put.put(key, name, format, bytes)),

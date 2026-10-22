@@ -18,6 +18,9 @@ mod editor_closed;
 #[cfg(any(target_arch = "wasm32", test))]
 mod embedded_drafts;
 
+#[cfg(any(target_arch = "wasm32", test))]
+mod draft_state;
+
 #[cfg(target_arch = "wasm32")]
 mod web;
 

@@ -131,6 +131,11 @@ jobs:
           cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.AppImage" artifacts/ERPCons-VanBan-linux-x86_64.AppImage
           cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.deb" artifacts/erpcons-vanban_amd64.deb
           cp "dist/release/ERPCons-VanBan-$WORDCRAFT_VERSION-linux-x86_64.rpm" artifacts/erpcons-vanban.x86_64.rpm
+      - name: Generate desktop SBOM
+        run: |
+          python3 -m unittest discover -s packaging/sbom -v
+          python3 packaging/sbom/cargo_sbom.py --target x86_64-unknown-linux-gnu \
+            --output "artifacts/wordcraft-$WORDCRAFT_VERSION.cdx.json"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: erpcons-desktop-linux

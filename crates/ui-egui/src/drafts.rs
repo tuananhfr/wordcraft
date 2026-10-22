@@ -179,6 +179,21 @@ impl Planner {
         }
     }
 
+    /// Async storage failure must make the planner retry bytes it already handed off.
+    #[cfg(any(target_arch = "wasm32", test))]
+    pub fn checkpoint_failed(&mut self, key: &str, now: f64) {
+        if let Some(t) = self.docs.iter_mut().find(|t| t.key == key) {
+            t.drafted = None;
+            t.retry_at = now + RETRY_MS;
+        }
+    }
+
+    /// The adopted storage key, or the initial document key before its first plan.
+    #[cfg(target_arch = "wasm32")]
+    pub fn storage_key(&self, document: u64) -> String {
+        self.docs.iter().find(|t| t.seen.document == document).map(|t| t.key.clone()).unwrap_or_else(|| key_for(document))
+    }
+
     /// The key to put the document under when the page is hidden right now: it is unsaved and
     /// has changed since its last put. Waits and transient edits don't count then.
     pub fn flush_due(&self, observed: Observed) -> Option<String> {
@@ -195,6 +210,20 @@ impl Planner {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn async_checkpoint_failure_retries_after_backoff() {
+        let mut planner = Planner::default();
+        let observed = Observed { version: v(1, 1), unsaved: true, transient: false };
+        planner.plan(0.0, &[observed]);
+        let plan = planner.plan(IDLE_MS, &[observed]);
+        let key = plan.put.first().map(|p| p.key.clone()).unwrap_or_default();
+        assert!(!key.is_empty());
+        planner.put_done(&key, observed.version, IDLE_MS, 1.0);
+        planner.checkpoint_failed(&key, IDLE_MS + 1.0);
+        assert!(planner.plan(IDLE_MS + RETRY_MS, &[observed]).put.is_empty());
+        assert_eq!(planner.plan(IDLE_MS + RETRY_MS + 1.0, &[observed]).put.len(), 1);
+    }
 
     fn v(document: u64, rev: u64) -> Version {
         Version { document, rev, meta: 0 }
