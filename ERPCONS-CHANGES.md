@@ -1,5 +1,6 @@
 # ERPCons changes
 
+- Ribbon focus (both): restore page keyboard focus immediately after style gallery and other chrome clicks so the first typed text reaches the document.
 - File access (desktop): route the bounded Word 2003 XML sniff through the checked engine I/O gateway, preserving its 64 KiB limit and false-on-error behavior.
 
 - SBOM (desktop): attach a deterministic CycloneDX 1.5 Cargo dependency inventory to every desktop release and include it in SHA256SUMS; the generator also supports the web package.

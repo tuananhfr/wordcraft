@@ -80,6 +80,7 @@ pub struct CanvasState {
     /// file name in the window caption can be drawn.
     pub(crate) ime_faces: Vec<std::sync::Arc<wordcraft_fonts::FontFace>>,
     pub want_focus: bool,
+    pub(crate) focus_id: Option<egui::Id>,
     pub context_issue: Option<serde_json::Value>,
     pub context_synonyms: Option<serde_json::Value>,
     /// The right-click context menu is open (the mini toolbar stands down while it is).
@@ -181,6 +182,7 @@ impl Default for CanvasState {
             scale: PX_PER_PT,
             canvas_rect: None,
             focused: false,
+            focus_id: None,
             render_ms: 0.0,
             ime_preedit: String::new(),
             ime_faces: Vec::new(),
@@ -1351,6 +1353,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             m.set_focus_lock_filter(resp.id, egui::EventFilter { tab: true, horizontal_arrows: true, vertical_arrows: true, escape: true })
         });
     }
+    app.canvas.focus_id = Some(resp.id);
     app.canvas.focused = resp.has_focus();
     // Screen readers: the document under the canvas, with the caret (#488).
     crate::a11y::expose(app, ui.ctx(), resp.id, &layout, &rects, area);
