@@ -417,6 +417,17 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, String> {
     Err(format!("{path}: files are opened through the browser on the web"))
 }
 
+/// The first `max` bytes of a file the automation roots allow reading (format sniffing).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn read_file_prefix(path: &std::path::Path, max: u64) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    crate::file_access::check_read(&path.to_string_lossy())?;
+    let file = std::fs::File::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut bytes = Vec::new();
+    file.take(max).read_to_end(&mut bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(bytes)
+}
+
 /// [`read_file`] for a file that must be a regular file of at most `max` bytes, checked before
 /// anything is read (a font named by the user, which could be any size).
 #[cfg(not(target_arch = "wasm32"))]
