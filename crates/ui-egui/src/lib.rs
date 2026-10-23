@@ -1769,6 +1769,8 @@ impl WordApp {
 
     /// Lay out the window.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        // Hidden canvases have no accessibility node to receive focus in this pass.
+        self.canvas.focus_id = None;
         let t0 = now_ms();
         let ctx = ui.ctx().clone();
         i18n::set_current(i18n::Lang::from_pref(&self.ui.language));
@@ -1863,8 +1865,15 @@ impl WordApp {
             return;
         }
         let on_chrome = ctx.layer_id_at(pos).is_none_or(|l| l.order == egui::Order::Background);
-        if on_chrome && ctx.memory(|m| m.focused().is_none()) && !egui::Popup::is_any_open(ctx) {
-            self.canvas.want_focus = true;
+        if on_chrome
+            && ctx.memory(|m| m.focused().is_none())
+            && !egui::Popup::is_any_open(ctx)
+            && self.has_document()
+            && let Some(id) = self.canvas.focus_id
+        {
+            // Text is handled before the next frame updates canvas focus, so restore it now.
+            ctx.memory_mut(|m| m.request_focus(id));
+            self.canvas.focused = true;
             ctx.request_repaint();
         }
     }

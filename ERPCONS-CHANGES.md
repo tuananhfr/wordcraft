@@ -1,5 +1,7 @@
 # ERPCons changes
 
+- Ribbon focus (both): restore page keyboard focus immediately after style gallery and other chrome clicks so the first typed text reaches the document.
+
 - SBOM (desktop): attach a deterministic CycloneDX 1.5 Cargo dependency inventory to every desktop release and include it in SHA256SUMS; the generator also supports the web package.
 
 - Draft state (web, WEB-04/T23): report per-document edits, pending checkpoints, committed drafts and storage failures to the office shell, preserving adopted restore keys and embedded recovery.
