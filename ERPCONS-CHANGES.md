@@ -1,5 +1,6 @@
 # ERPCons changes
 
+- PI ID account (both, off unless configured): File › Account, a title-bar account button in place of the author initials and a paid-licence expiry notice appear only with an account hook: desktop builds made with `ERPCONS_PI_ISSUER` (`erpcons-account` v0.1.0 on a worker thread), and the web app when the office shell offers an enabled `window.erpAccount` v1. `WordApp::allowed(feature)` is in place for future gating; nothing is gated.
 - Ribbon focus (both): restore page keyboard focus immediately after style gallery and other chrome clicks so the first typed text reaches the document.
 - File access (desktop): route the bounded Word 2003 XML sniff through the checked engine I/O gateway, preserving its 64 KiB limit and false-on-error behavior.
 

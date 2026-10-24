@@ -19,6 +19,14 @@ const PAGES: [(&str, &str); 10] = [
     ("options", "Options"),
 ];
 
+/// The navigation pages; Account (before Options, as in Word) only when the host has an account hook.
+fn nav_pages(account: bool) -> impl Iterator<Item = (&'static str, &'static str)> {
+    PAGES.into_iter().flat_map(move |page| {
+        let before = (account && page.0 == "options").then_some((crate::account::ACCOUNT_PAGE, "Account"));
+        before.into_iter().chain(std::iter::once(page))
+    })
+}
+
 pub fn show(app: &mut WordApp, ui: &mut Ui) {
     let t = Tokens::get(ui.ctx());
     // No document open (#1129): only the pages that open or create one, and Options.
@@ -63,7 +71,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 app.canvas.want_focus = true;
             }
             ui.add_space(if mac { 12.0 } else { 6.0 });
-            for (id, label) in PAGES {
+            for (id, label) in nav_pages(app.services.account.is_some()) {
                 // No document open (#1129): Info, Save, Save As, Print and Export are greyed out.
                 let on = has_document || works_without_document(id);
                 let (r, resp) = ui.add_enabled_ui(on, |ui| ui.allocate_exact_size(vec2(200.0, 38.0), Sense::click())).inner;
@@ -131,6 +139,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             "info" => info_page(app, ui),
             "print" | "export" => export_page(app, ui),
             "options" => crate::options::page(app, ui),
+            crate::account::ACCOUNT_PAGE if app.services.account.is_some() => crate::account::page(app, ui),
             _ => home_page(app, ui),
         });
     });
@@ -138,10 +147,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
 
 /// The Backstage pages that work while no document is open (#1129).
 fn works_without_document(page: &str) -> bool {
-    matches!(page, "home" | "new" | "open" | "options")
+    matches!(page, "home" | "new" | "open" | "options" | crate::account::ACCOUNT_PAGE)
 }
 
-fn heading(ui: &mut Ui, s: &str) {
+pub(crate) fn heading(ui: &mut Ui, s: &str) {
     ui.label(egui::RichText::new(tl!(s)).font(semibold(26.0)));
     ui.add_space(16.0);
 }

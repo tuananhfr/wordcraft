@@ -260,11 +260,15 @@ pub fn title_bar(app: &mut WordApp, ui: &mut Ui) {
                         crate::document_close::show(app, ui, control_h);
                     }
                     // Account / community.
-                    let (r, resp) = ui.allocate_exact_size(vec2(control_h, control_h), Sense::click());
-                    ui.painter().circle_filled(r.center(), control_h / 2.0 - 1.0, t.accent);
-                    let initials: String = app.session.user_initials().chars().take(2).collect();
-                    ui.painter().text(r.center(), Align2::CENTER_CENTER, initials, semibold(10.5), t.on_accent);
-                    resp.on_hover_text(format!("{} — set your name in File › Options", app.session.author));
+                    if app.services.account.is_some() {
+                        crate::account::title_button(app, ui, control_h);
+                    } else {
+                        let (r, resp) = ui.allocate_exact_size(vec2(control_h, control_h), Sense::click());
+                        ui.painter().circle_filled(r.center(), control_h / 2.0 - 1.0, t.accent);
+                        let initials: String = app.session.user_initials().chars().take(2).collect();
+                        ui.painter().text(r.center(), Align2::CENTER_CENTER, initials, semibold(10.5), t.on_accent);
+                        resp.on_hover_text(format!("{} — set your name in File › Options", app.session.author));
+                    }
                     ui.add_space(8.0);
                     search_box(app, ui, &t, if narrow { 32.0 } else { 260.0 }, control_h, !narrow);
                     right_start = ui.min_rect().min.x;
@@ -610,7 +614,7 @@ impl WordApp {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     #[test]
@@ -736,7 +740,7 @@ mod tests {
 
     /// The visible rects of the texts drawn in the title bar and the status bar of a whole window
     /// `w` wide, after a few frames.
-    fn chrome_texts(a: &mut WordApp, w: f32) -> Vec<(String, egui::Rect)> {
+    pub(crate) fn chrome_texts(a: &mut WordApp, w: f32) -> Vec<(String, egui::Rect)> {
         let ctx = egui::Context::default();
         let screen = egui::Rect::from_min_size(egui::Pos2::ZERO, vec2(w, 844.0));
         let mut drawn = Vec::new();

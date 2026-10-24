@@ -2586,3 +2586,43 @@ preview	Title	Tytuł
 	Use Stop Protection to enable Undo or Redo.	Zatrzymaj ochronę, aby włączyć Cofnij lub Ponów.
 
 	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Niewklejone obrazy: {external} zewnętrznych adresów URL, {large} za dużych, {unsupported} nieobsługiwanych lub uszkodzonych.
+
+# ERPCons: optional PI ID account (File › Account, title bar, expiry notice, desktop sign-in pages).
+	Account	Konto
+	Sign in with PI ID	Zaloguj się przez PI ID
+	Signing in is optional: every feature works without an account.	Logowanie jest opcjonalne: każda funkcja działa bez konta.
+	Continue in your browser…	Kontynuuj w przeglądarce…
+	PI ID account	Konto PI ID
+	Your session has expired. Sign in again.	Sesja wygasła. Zaloguj się ponownie.
+	Sign in again	Zaloguj się ponownie
+	Organization	Organizacja
+	Personal	Osobiste
+	License	Licencja
+	You will need to sign in again the next time you open the app.	Przy następnym uruchomieniu aplikacji trzeba będzie zalogować się ponownie.
+	Connected to PI ID	Połączono z PI ID
+	Offline. Your account syncs when you reconnect.	Offline. Konto zsynchronizuje się po ponownym połączeniu.
+	Sign out	Wyloguj się
+	Plan: Free	Plan: bezpłatny
+	This device is activated until {date}.	To urządzenie jest aktywowane do {date}.
+	Paid features are valid until {date}.	Płatne funkcje są ważne do {date}.
+	Paid features are active.	Płatne funkcje są aktywne.
+	Your license expired on {date}. Free features keep working.	Licencja wygasła {date}. Bezpłatne funkcje nadal działają.
+	This device was removed from your account. Free features keep working.	To urządzenie zostało usunięte z konta. Bezpłatne funkcje nadal działają.
+	Your account has reached its device limit, so this device is not activated.	Konto osiągnęło limit urządzeń, więc to urządzenie nie jest aktywowane.
+	Signed in for this session only: this computer has no credential store.	Zalogowano tylko na tę sesję: ten komputer nie ma magazynu poświadczeń.
+	Signing in…	Logowanie…
+	Sign in	Zaloguj się
+	Paid features expire on {date} ({days} days left). Connect to the internet to renew them.	Płatne funkcje wygasają {date} (pozostało dni: {days}). Połącz się z internetem, aby je odnowić.
+	Could not reach PI ID. Check your connection and try again.	Nie można połączyć się z PI ID. Sprawdź połączenie i spróbuj ponownie.
+	PI ID took too long to answer. Try again.	PI ID odpowiada zbyt długo. Spróbuj ponownie.
+	PI ID refused the request. Free features keep working.	PI ID odrzucił żądanie. Bezpłatne funkcje nadal działają.
+	PI ID is busy. Try again in {minutes} min.	PI ID jest zajęty. Spróbuj ponownie za {minutes} min.
+	PI ID is busy. Try again in a few minutes.	PI ID jest zajęty. Spróbuj ponownie za kilka minut.
+	Your account has reached its device limit. Remove a device in PI ID, then retry.	Konto osiągnęło limit urządzeń. Usuń urządzenie w PI ID i spróbuj ponownie.
+	Your PI ID account is suspended. Free features keep working.	Konto PI ID jest zawieszone. Bezpłatne funkcje nadal działają.
+	This organization is not available to your account.	Ta organizacja nie jest dostępna dla Twojego konta.
+	This version of the app is too old for PI ID. Update the app, then try again.	Ta wersja aplikacji jest zbyt stara dla PI ID. Zaktualizuj aplikację i spróbuj ponownie.
+	PI ID is temporarily unavailable. Try again later.	PI ID jest chwilowo niedostępny. Spróbuj później.
+	Something went wrong with PI ID. Try again.	Coś poszło nie tak z PI ID. Spróbuj ponownie.
+	Signed in to PI ID. You can close this tab and go back to the app.	Zalogowano do PI ID. Możesz zamknąć tę kartę i wrócić do aplikacji.
+	Sign-in did not finish. Close this tab and try again in the app.	Logowanie nie zostało ukończone. Zamknij tę kartę i spróbuj ponownie w aplikacji.
