@@ -22,6 +22,7 @@ macro_rules! tl {
 
 pub mod a11y;
 pub mod a11y_pane;
+pub mod account;
 mod alt_chunk_notice;
 pub mod autoscroll;
 pub mod backstage;
@@ -187,6 +188,9 @@ pub struct Services {
     /// Web: the page's draft storage, which keeps the unsaved document for recovery after a
     /// crash or a closed tab ([`draft_bridge`]).
     pub drafts: Option<draft_bridge::DraftBridge>,
+    /// ERPCons: the optional PI ID account ([`account`]). `None` (the default) shows no account UI
+    /// and allows every feature.
+    pub account: Option<Box<dyn account::AccountHook>>,
 }
 
 /// What [`Services::make_default_app`] did.
@@ -515,6 +519,7 @@ pub struct WordApp {
     font_notice: font_notice::State,
     #[cfg(not(target_arch = "wasm32"))]
     updates: updates::Updates,
+    account: account::AccountState,
 }
 
 /// The answer to "Do you want to save changes?" (`ui.saveChanges`).
@@ -615,6 +620,7 @@ impl WordApp {
             font_notice: Default::default(),
             #[cfg(not(target_arch = "wasm32"))]
             updates: Default::default(),
+            account: Default::default(),
         }
     }
 
@@ -1607,6 +1613,7 @@ impl WordApp {
         if self.ctx.is_none() {
             self.ctx = Some(ctx.clone());
         }
+        self.attach_account(ctx);
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_updates();
         self.poll_printing(ctx);
@@ -1811,6 +1818,7 @@ impl WordApp {
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
                 alt_chunk_notice::show(self, ui);
                 font_notice::show(self, ui);
+                account::warning_notice(self, ui);
                 canvas::show(self, ui);
             });
         }
@@ -2184,6 +2192,9 @@ mod tests_narrow;
 
 #[cfg(test)]
 mod tests_focus;
+
+#[cfg(test)]
+mod tests_account;
 
 #[cfg(test)]
 mod tests {

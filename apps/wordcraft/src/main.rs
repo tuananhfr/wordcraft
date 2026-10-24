@@ -9,6 +9,7 @@
 #![cfg_attr(all(target_os = "windows", not(debug_assertions)), windows_subsystem = "windows")]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+mod account;
 mod animations;
 #[cfg(target_os = "macos")]
 mod apple_events;
@@ -208,10 +209,12 @@ fn save_prefs(app: &WordApp) {
 /// Native file dialogs, shown without blocking the window (`file_dialogs`, #94), File › Print
 /// through the system spooler (`print`), the system clipboard's text, formatted copies,
 /// pictures and format names (`clipboard`, #45, #584, #687, #833), the system's animation setting
-/// (`animations`), and making WordCraft the default app for Word documents (`default_apps`, #295).
+/// (`animations`), making WordCraft the default app for Word documents (`default_apps`, #295), and
+/// the optional PI ID account (`account`; only in builds with a PI issuer).
 fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
     Services {
         product_name: Some(PRODUCT_NAME),
+        account: account::hook(),
         updates: wordcraft_control_key::settings_dir().map(|dir| {
             std::sync::Arc::new(updates::DesktopUpdates::new(dir.join("update-state.json")))
                 as std::sync::Arc<dyn wordcraft_ui_egui::updates::UpdateHook>

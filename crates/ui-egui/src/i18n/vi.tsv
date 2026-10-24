@@ -2577,3 +2577,43 @@ preview	Title	Tiêu đề
 	Use Stop Protection to enable Undo or Redo.	Dừng bảo vệ để bật Hoàn tác hoặc Làm lại.
 
 	Images not pasted: {external} external URLs, {large} over the size limit, {unsupported} unsupported or damaged.	Không dán được ảnh: {external} ảnh chỉ có URL bên ngoài, {large} ảnh vượt giới hạn dung lượng, {unsupported} ảnh có định dạng không hỗ trợ hoặc bị hỏng.
+
+# ERPCons: optional PI ID account (File › Account, title bar, expiry notice, desktop sign-in pages).
+	Account	Tài khoản
+	Sign in with PI ID	Đăng nhập bằng PI ID
+	Signing in is optional: every feature works without an account.	Đăng nhập là tùy chọn: mọi tính năng đều dùng được khi không có tài khoản.
+	Continue in your browser…	Tiếp tục trong trình duyệt…
+	PI ID account	Tài khoản PI ID
+	Your session has expired. Sign in again.	Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.
+	Sign in again	Đăng nhập lại
+	Organization	Tổ chức
+	Personal	Cá nhân
+	License	Giấy phép
+	You will need to sign in again the next time you open the app.	Lần sau mở ứng dụng, bạn sẽ cần đăng nhập lại.
+	Connected to PI ID	Đã kết nối PI ID
+	Offline. Your account syncs when you reconnect.	Ngoại tuyến. Tài khoản sẽ đồng bộ khi có mạng trở lại.
+	Sign out	Đăng xuất
+	Plan: Free	Gói: Miễn phí
+	This device is activated until {date}.	Thiết bị này được kích hoạt đến {date}.
+	Paid features are valid until {date}.	Tính năng trả phí dùng được đến {date}.
+	Paid features are active.	Tính năng trả phí đang hoạt động.
+	Your license expired on {date}. Free features keep working.	Giấy phép đã hết hạn ngày {date}. Các tính năng miễn phí vẫn dùng bình thường.
+	This device was removed from your account. Free features keep working.	Thiết bị này đã bị gỡ khỏi tài khoản. Các tính năng miễn phí vẫn dùng bình thường.
+	Your account has reached its device limit, so this device is not activated.	Tài khoản đã đạt giới hạn số thiết bị nên thiết bị này chưa được kích hoạt.
+	Signed in for this session only: this computer has no credential store.	Chỉ đăng nhập trong phiên này: máy tính này không có kho lưu thông tin đăng nhập.
+	Signing in…	Đang đăng nhập…
+	Sign in	Đăng nhập
+	Paid features expire on {date} ({days} days left). Connect to the internet to renew them.	Tính năng trả phí hết hạn ngày {date} (còn {days} ngày). Hãy kết nối Internet để gia hạn.
+	Could not reach PI ID. Check your connection and try again.	Không kết nối được PI ID. Hãy kiểm tra mạng rồi thử lại.
+	PI ID took too long to answer. Try again.	PI ID phản hồi quá lâu. Hãy thử lại.
+	PI ID refused the request. Free features keep working.	PI ID đã từ chối yêu cầu. Các tính năng miễn phí vẫn dùng bình thường.
+	PI ID is busy. Try again in {minutes} min.	PI ID đang bận. Hãy thử lại sau {minutes} phút.
+	PI ID is busy. Try again in a few minutes.	PI ID đang bận. Hãy thử lại sau ít phút.
+	Your account has reached its device limit. Remove a device in PI ID, then retry.	Tài khoản đã đạt giới hạn số thiết bị. Hãy gỡ bớt một thiết bị trong PI ID rồi thử lại.
+	Your PI ID account is suspended. Free features keep working.	Tài khoản PI ID đang bị tạm khóa. Các tính năng miễn phí vẫn dùng bình thường.
+	This organization is not available to your account.	Tổ chức này không dùng được với tài khoản của bạn.
+	This version of the app is too old for PI ID. Update the app, then try again.	Phiên bản ứng dụng này đã quá cũ để dùng PI ID. Hãy cập nhật ứng dụng rồi thử lại.
+	PI ID is temporarily unavailable. Try again later.	PI ID tạm thời không phản hồi. Hãy thử lại sau.
+	Something went wrong with PI ID. Try again.	Đã có lỗi với PI ID. Hãy thử lại.
+	Signed in to PI ID. You can close this tab and go back to the app.	Đã đăng nhập PI ID. Bạn có thể đóng thẻ này và quay lại ứng dụng.
+	Sign-in did not finish. Close this tab and try again in the app.	Chưa đăng nhập xong. Hãy đóng thẻ này và thử lại trong ứng dụng.

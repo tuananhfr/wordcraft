@@ -63,6 +63,7 @@ pub fn start() {
                     let (bridge, drafts) = drafts::connect().unzip();
                     let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves, &clipboard);
                     services.drafts = bridge;
+                    services.account = crate::account::connect();
                     let mut app = WordApp::new(session, services);
                     app.autosave = false;
                     app.ui.language = language::initial();
