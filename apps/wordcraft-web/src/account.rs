@@ -68,6 +68,7 @@ fn error_from_json(value: &Value) -> Option<AccountError> {
 pub(crate) fn error_from_code(code: &str, retry_after_secs: Option<u64>) -> AccountError {
     match code {
         "cancelled" => AccountError::Cancelled,
+        "popup_blocked" => AccountError::PopupBlocked,
         "network" | "discovery_failed" => AccountError::Network,
         "rate_limited" => AccountError::RateLimited { retry_after_secs },
         "dependency_unavailable" => AccountError::ServiceUnavailable,
@@ -314,7 +315,7 @@ mod tests {
             ("unknown_org", AccountError::OrgUnavailable),
             ("forbidden", AccountError::Denied),
             ("quota_exceeded", AccountError::Denied),
-            ("popup_blocked", AccountError::Other),
+            ("popup_blocked", AccountError::PopupBlocked),
             ("storage", AccountError::Other),
             ("state_mismatch", AccountError::Other),
             ("sign_in_failed", AccountError::Other),
