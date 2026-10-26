@@ -38,6 +38,11 @@ zbus = "=5.19.0"
 # The browser clock (`SystemTime::now()`/`Instant::now()` panic on wasm32).
 js-sys = "0.3"
 
+# Desktop only: the system time zone, so licence dates show the local calendar day (the web
+# build asks the browser through `js-sys`).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
 [dev-dependencies]
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }
 zip = { workspace = true }

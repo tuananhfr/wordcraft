@@ -1,6 +1,6 @@
 //! File › Account, the title bar's account button and the paid licence expiry notice.
 
-use egui::{Align2, Rect, RichText, Sense, Stroke, Ui, vec2};
+use egui::{Align2, Rect, Response, RichText, Sense, Stroke, TextWrapMode, Ui, vec2};
 
 use super::{AccountError, AccountView, LicenceView, SignedInView};
 use crate::theme::{Tokens, medium, regular, semibold};
@@ -65,9 +65,11 @@ pub(crate) fn page(app: &mut WordApp, ui: &mut Ui) {
 
 fn signed_in(ui: &mut Ui, view: &SignedInView, t: &Tokens, action: &mut Option<Action>) {
     let name = if view.name.trim().is_empty() { tl!("PI ID account") } else { view.name.as_str() };
-    ui.label(RichText::new(name).font(semibold(18.0)));
+    // egui wraps a word wider than the page at any letter or `@`/`.`/`_`, which splits names and
+    // addresses on phone-wide pages; one elided line keeps them whole, with the full text on hover.
+    ui.add(egui::Label::new(RichText::new(name).font(semibold(18.0))).truncate());
     if let Some(email) = &view.email {
-        ui.label(RichText::new(email).color(t.text_dim));
+        ui.add(egui::Label::new(RichText::new(email).color(t.text_dim)).truncate());
     }
     if view.reauth_required {
         ui.add_space(8.0);
@@ -79,15 +81,9 @@ fn signed_in(ui: &mut Ui, view: &SignedInView, t: &Tokens, action: &mut Option<A
     ui.add_space(14.0);
     ui.label(RichText::new(tl!("Organization")).font(semibold(15.0)));
     let personal = std::iter::once((None, tl!("Personal").to_string()));
-    let orgs = view.orgs.iter().map(|org| {
-        let label = match &org.role {
-            Some(role) if !role.is_empty() => format!("{} ({role})", org.name),
-            _ => org.name.clone(),
-        };
-        (Some(org.id.clone()), label)
-    });
+    let orgs = view.orgs.iter().map(|org| (Some(org.id.clone()), org.name.clone()));
     for (id, label) in personal.chain(orgs) {
-        if ui.radio(view.active_org == id, label).clicked() && view.active_org != id {
+        if one_line_radio(ui, view.active_org == id, &label).clicked() && view.active_org != id {
             *action = Some(Action::SelectOrg(id));
         }
     }
@@ -109,6 +105,19 @@ fn signed_in(ui: &mut Ui, view: &SignedInView, t: &Tokens, action: &mut Option<A
     if ui.button(RichText::new(tl!("Sign out")).font(medium(14.0))).clicked() {
         *action = Some(Action::SignOut);
     }
+}
+
+/// A radio button whose label stays on one line, elided with the full text on hover when it does not fit.
+fn one_line_radio(ui: &mut Ui, selected: bool, label: &str) -> Response {
+    let text_width = egui::WidgetText::from(label).into_galley(ui, Some(TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Button).size().x;
+    let fits = ui.spacing().icon_width + ui.spacing().icon_spacing + text_width <= ui.available_width();
+    let response = ui
+        .scope(|ui| {
+            ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
+            ui.radio(selected, label)
+        })
+        .inner;
+    if fits { response } else { response.on_hover_text(label) }
 }
 
 fn licence_lines(licence: LicenceView) -> Vec<String> {
@@ -165,7 +174,7 @@ fn display_name(view: &SignedInView) -> String {
 }
 
 fn initial(view: &SignedInView) -> Option<String> {
-    view.name.chars().chain(view.email.iter().flat_map(|e| e.chars())).find(|c| c.is_alphanumeric()).map(|c| c.to_uppercase().collect())
+    crate::account::avatar_letter(&view.name, view.email.as_deref())
 }
 
 /// The lease expiry notice above the page, shown only while paid features hang on that lease
@@ -207,15 +216,26 @@ pub(crate) fn warning_notice(app: &mut WordApp, ui: &mut Ui) {
 
 /// A local calendar date: `dd/mm/yyyy` in Vietnamese, the ISO date WordCraft shows elsewhere otherwise.
 pub fn date_text(unix_secs: i64) -> String {
-    let local = unix_secs.saturating_add(local_offset_secs());
-    let (y, m, d) = wordcraft_engine::cmd::civil_from_days(local.div_euclid(86_400));
+    let (y, m, d) = local_ymd(unix_secs);
     if i18n::current().code() == "vi" { format!("{d:02}/{m:02}/{y:04}") } else { format!("{y:04}-{m:02}-{d:02}") }
 }
 
-// The desktop build has no time-zone source without a new dependency, so it shows the UTC date.
 #[cfg(not(target_arch = "wasm32"))]
-fn local_offset_secs() -> i64 {
-    0
+fn local_ymd(unix_secs: i64) -> (i64, u32, u32) {
+    use chrono::Datelike;
+    match chrono::DateTime::from_timestamp(unix_secs, 0) {
+        Some(utc) => {
+            let local = utc.with_timezone(&chrono::Local);
+            (i64::from(local.year()), local.month(), local.day())
+        }
+        // Beyond chrono's ±262,000-year range only a corrupt timestamp lands here; the UTC day still renders.
+        None => wordcraft_engine::cmd::civil_from_days(unix_secs.div_euclid(86_400)),
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn local_ymd(unix_secs: i64) -> (i64, u32, u32) {
+    wordcraft_engine::cmd::civil_from_days(unix_secs.saturating_add(local_offset_secs()).div_euclid(86_400))
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -228,6 +248,7 @@ fn local_offset_secs() -> i64 {
 pub fn error_text(error: AccountError) -> Option<String> {
     let text = match error {
         AccountError::Cancelled => return None,
+        AccountError::PopupBlocked => tl!("The browser blocked the sign-in window. Allow pop-ups for this site and try again."),
         AccountError::Network => tl!("Could not reach PI ID. Check your connection and try again."),
         AccountError::Timeout => tl!("PI ID took too long to answer. Try again."),
         AccountError::Denied => tl!("PI ID refused the request. Free features keep working."),

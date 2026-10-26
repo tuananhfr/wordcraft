@@ -181,7 +181,7 @@ fn signed_in_lists_the_organizations_switches_and_signs_out() {
     assert!(h.query_by_label("an.nguyen@example.com").is_some());
     assert!(h.query_by_label("Plan: Free").is_some());
     assert!(h.query_by_label("Connected to PI ID").is_some());
-    assert!(h.query_by_label("Công ty A (admin)").is_some());
+    assert!(h.query_by_label("Công ty A").is_some());
     h.get_by_label("Personal").click();
     h.run_steps(2);
     assert!(fake.calls().is_empty(), "the active context is not switched again");
@@ -266,14 +266,50 @@ fn errors_show_in_plain_language_and_a_cancelled_sign_in_shows_nothing() {
     h.run_steps(2);
     assert!(h.query_by_label_contains("PI ID is").is_none());
     assert_eq!(error_text(AccountError::Cancelled), None);
+    fake.set_error(Some(AccountError::PopupBlocked));
+    h.run_steps(2);
+    assert!(h.query_by_label("The browser blocked the sign-in window. Allow pop-ups for this site and try again.").is_some());
+    assert!(h.query_by_label("Sign in with PI ID").is_some(), "the guest can try again");
     let previous = i18n::current();
     i18n::set_current(i18n::Lang::from_pref("vi"));
     assert_eq!(error_text(AccountError::Network).as_deref(), Some("Không kết nối được PI ID. Hãy kiểm tra mạng rồi thử lại."));
     assert_eq!(error_text(AccountError::RateLimited { retry_after_secs: None }).as_deref(), Some("PI ID đang bận. Hãy thử lại sau ít phút."));
+    assert_eq!(
+        error_text(AccountError::PopupBlocked).as_deref(),
+        Some("Trình duyệt đã chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên cho trang này rồi thử lại.")
+    );
     assert_eq!(date_text(EXPIRES), "24/10/2026");
     i18n::set_current(i18n::Lang::EN);
     assert_eq!(date_text(EXPIRES), "2026-10-24");
     i18n::set_current(previous);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn desktop_dates_show_the_local_calendar_day() {
+    const CHILD: &str = "WORDCRAFT_TEST_LOCAL_DATE_CHILD";
+    const NAME: &str = "tests_account::desktop_dates_show_the_local_calendar_day";
+    // 2026-10-24 20:00 UTC is already 25 October at UTC+7.
+    const EVENING_UTC: i64 = 1_792_872_000;
+    if std::env::var_os(CHILD).is_some() {
+        i18n::set_current(i18n::Lang::EN);
+        let local = chrono::DateTime::from_timestamp(EVENING_UTC, 0).unwrap().with_timezone(&chrono::Local);
+        assert_eq!(date_text(EVENING_UTC), local.format("%Y-%m-%d").to_string());
+        // chrono reads `TZ` only on Unix; on Windows the comparison above uses the host's own zone.
+        #[cfg(unix)]
+        assert_eq!(date_text(EVENING_UTC), "2026-10-25", "TZ=<+07>-7 must move the day forward");
+        return;
+    }
+    // The gate container runs in UTC, where local and UTC days agree. `TZ` is set only on a child run of this
+    // one test, so no other test in this process sees the zone change.
+    let out = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([NAME, "--exact", "--test-threads=1", "--nocapture"])
+        .env(CHILD, "1")
+        .env("TZ", "<+07>-7")
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success() && stdout.contains("1 passed"), "child run failed:\n{stdout}\n{}", String::from_utf8_lossy(&out.stderr));
 }
 
 #[test]
@@ -284,13 +320,60 @@ fn the_account_button_keeps_narrow_title_bars_from_overlapping() {
         a.session.path = Some("Báo cáo tiến độ thi công công trình nhà ở quý ba.docx".into());
         a.run("text.insert", json!({"text": " edited"})).unwrap();
         let texts = crate::chrome::tests::chrome_texts(&mut a, w);
-        assert!(texts.iter().any(|(s, _)| s == "N"), "{w}: the initial shows");
+        assert!(texts.iter().any(|(s, _)| s == "A"), "{w}: the given name's initial shows");
         for (i, (s, r)) in texts.iter().enumerate() {
             assert!(r.min.x >= -0.5 && r.max.x <= w + 0.5, "{w}: {s:?} at {r:?} is off the window");
             for (s2, r2) in &texts[i + 1..] {
                 assert!(!r.shrink(0.5).intersects(r2.shrink(0.5)), "{w}: {s:?} {r:?} overlaps {s2:?} {r2:?}");
             }
         }
+    }
+}
+
+#[test]
+fn a_phone_wide_account_page_keeps_names_and_addresses_whole_inside_the_page() {
+    let name = "Nguyễn Hoàng Bảo Ngọc Phương";
+    let email = "nguyen.hoang.bao.ngoc@congty-xaydung-vidu.com.vn";
+    let long_org = "Công ty Cổ phần Xây dựng và Kiến trúc Ví dụ";
+    let view = SignedInView {
+        name: name.into(),
+        email: Some(email.into()),
+        orgs: vec![org("org_a", long_org, Some("license_admin")), org("org_b", "Văn phòng Kiến trúc Mẫu", None)],
+        ..signed_in(LicenceView::Active { expires_at: EXPIRES, pro: false })
+    };
+    let width = 390.0;
+    let fake = Fake::new(AccountView::SignedIn(view));
+    let mut h = harness_in(Some(&fake), width, "en");
+    account_page(&mut h);
+    // The Backstage page starts at its heading and keeps a 40 px margin from the window's right edge.
+    let heading = h.query_all_by_label("Account").map(|n| n.rect()).find(|r| r.min.x >= 200.0).expect("the page heading");
+    let (left, right) = (heading.min.x, width - 40.0);
+    // Below the heading: the title bar's button carries the user's name too.
+    let rect = |label: &str| {
+        let rects: Vec<_> = h.query_all_by_label(label).map(|n| n.rect()).filter(|r| r.min.y > heading.min.y).collect();
+        assert_eq!(rects.len(), 1, "{label:?} on the page: {rects:?}");
+        rects[0]
+    };
+    let one_row = rect("Plan: Free").height();
+    let radio_row = rect("Personal").height();
+    for (label, row) in [(name, 18.0 * 1.4), (email, one_row), (long_org, radio_row), ("Văn phòng Kiến trúc Mẫu", radio_row)] {
+        let r = rect(label);
+        assert!(r.height() <= row + 0.5, "{label:?} wraps: {r:?}");
+    }
+    for label in [
+        name,
+        email,
+        long_org,
+        "Personal",
+        "Organization",
+        "License",
+        "Plan: Free",
+        "This device is activated until 2026-10-24.",
+        "Connected to PI ID",
+        "Sign out",
+    ] {
+        let r = rect(label);
+        assert!(r.min.x >= left - 0.5 && r.max.x <= right + 0.5, "{label:?} at {r:?} leaves the page {left}..{right}");
     }
 }
 
@@ -333,6 +416,7 @@ fn every_account_string_is_translated_in_vietnamese_and_polish() {
         "This version of the app is too old for PI ID. Update the app, then try again.",
         "PI ID is temporarily unavailable. Try again later.",
         "Something went wrong with PI ID. Try again.",
+        "The browser blocked the sign-in window. Allow pop-ups for this site and try again.",
         "Signed in to PI ID. You can close this tab and go back to the app.",
         "Sign-in did not finish. Close this tab and try again in the app.",
     ];
@@ -362,7 +446,7 @@ fn account_screenshots() {
         ("title-bar-signed-in", AccountView::SignedIn(signed_in(LicenceView::Free)), None, false),
     ];
     for (name, view, error, page) in shots {
-        for width in [1200.0, 390.0] {
+        for width in [1280.0, 390.0] {
             let fake = Fake::new(view.clone());
             fake.set_error(error);
             let mut h = harness_in(Some(&fake), width, "vi");

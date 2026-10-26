@@ -95,6 +95,7 @@ pub struct WarningView {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AccountError {
     Cancelled,
+    PopupBlocked,
     Network,
     Timeout,
     Denied,
@@ -114,6 +115,13 @@ pub enum AccountError {
 pub fn is_pro_feature(feature: &str) -> bool {
     let builtin_free = feature.split_once('.').is_some_and(|(_, name)| name == "use");
     !(feature.ends_with(".view") || feature.ends_with(".export") || builtin_free)
+}
+
+/// The avatar letter: the given name's first letter (Vietnamese names put it last, as the office
+/// shell does), else the email's.
+pub fn avatar_letter(name: &str, email: Option<&str>) -> Option<String> {
+    let given = name.split_whitespace().next_back().unwrap_or_default();
+    given.chars().chain(email.unwrap_or_default().chars()).find(|c| c.is_alphanumeric()).map(|c| c.to_uppercase().collect())
 }
 
 /// What the app keeps between frames about the account.
@@ -156,6 +164,13 @@ impl WordApp {
 #[cfg(test)]
 mod tests {
     use super::is_pro_feature;
+
+    #[test]
+    fn the_avatar_shows_the_given_name_like_the_office_shell() {
+        assert_eq!(super::avatar_letter("Nguyễn Văn An", None).as_deref(), Some("A"));
+        assert_eq!(super::avatar_letter(" ", Some("binh@example.com")).as_deref(), Some("B"));
+        assert_eq!(super::avatar_letter("", None), None);
+    }
 
     #[test]
     fn only_features_outside_the_free_built_ins_are_pro() {
