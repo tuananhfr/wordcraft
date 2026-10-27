@@ -134,7 +134,11 @@ impl WordApp {
     /// later frame for an asynchronous one. Ignored while another dialog is open.
     pub(crate) fn ask_file(&mut self, req: FileDialogRequest, after: AfterPick) -> Asked {
         if self.file_dialog_open() {
-            log::debug!("file dialog already open; ignoring {req:?}");
+            let asked = match &req {
+                FileDialogRequest::Open { purpose } => purpose.as_str(),
+                FileDialogRequest::Save { .. } => "save",
+            };
+            log::debug!("file dialog already open; ignoring another ({asked})");
             self.status(tl!("A file dialog is already open."));
             return Asked::Busy;
         }

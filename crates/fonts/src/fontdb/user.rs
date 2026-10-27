@@ -230,7 +230,7 @@ impl FontDb {
                     None
                 }
                 Err(e) => {
-                    log::warn!("couldn't store the font {name} in {}: {e}", dir.display());
+                    log::warn!("couldn't store the font {name} in {}: {e}", crate::log_safe::home_relative(&dir));
                     Some(format!("added for this session only: couldn't store it in {}: {e}", dir.display()))
                 }
             },
@@ -333,7 +333,7 @@ impl FontDb {
                 && let Err(e) = std::fs::remove_file(p)
                 && e.kind() != std::io::ErrorKind::NotFound
             {
-                log::warn!("couldn't delete the font file {}: {e}", p.display());
+                log::warn!("couldn't delete the font file {}: {e}", crate::log_safe::home_relative(p));
             }
         }
         self.fonts_changed();
@@ -376,7 +376,7 @@ impl FontDb {
                     loaded.push(f);
                 }
                 Err(e) => {
-                    log::warn!("skipped the user font {}: {e}", p.display());
+                    log::warn!("skipped the user font {}: {e}", crate::log_safe::home_relative(&p));
                     skipped.push((file, e.to_string()));
                 }
             }

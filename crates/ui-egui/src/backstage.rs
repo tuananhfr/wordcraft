@@ -19,11 +19,16 @@ const PAGES: [(&str, &str); 10] = [
     ("options", "Options"),
 ];
 
-/// The navigation pages; Account (before Options, as in Word) only when the host has an account hook.
-fn nav_pages(account: bool) -> impl Iterator<Item = (&'static str, &'static str)> {
+/// Share… is not a page: it opens the system share sheet ([`WordApp::can_share`]).
+const SHARE_ENTRY: &str = "share";
+
+/// The navigation pages; Account (before Options, as in Word) only when the host has an account
+/// hook, Share… (after Export) only when it can share files.
+fn nav_pages(account: bool, share: bool) -> impl Iterator<Item = (&'static str, &'static str)> {
     PAGES.into_iter().flat_map(move |page| {
         let before = (account && page.0 == "options").then_some((crate::account::ACCOUNT_PAGE, "Account"));
-        before.into_iter().chain(std::iter::once(page))
+        let after = (share && page.0 == "export").then_some((SHARE_ENTRY, "Share…"));
+        before.into_iter().chain(std::iter::once(page)).chain(after)
     })
 }
 
@@ -71,7 +76,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 app.canvas.want_focus = true;
             }
             ui.add_space(if mac { 12.0 } else { 6.0 });
-            for (id, label) in nav_pages(app.services.account.is_some()) {
+            for (id, label) in nav_pages(app.services.account.is_some(), app.can_share()) {
                 // No document open (#1129): Info, Save, Save As, Print and Export are greyed out.
                 let on = has_document || works_without_document(id);
                 let (r, resp) = ui.add_enabled_ui(on, |ui| ui.allocate_exact_size(vec2(200.0, 38.0), Sense::click())).inner;
@@ -113,6 +118,11 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                         // are unsaved changes, and Cancel leaves the Backstage where it was.
                         "close" => {
                             let _ = app.run("file.close", json!({}));
+                        }
+                        SHARE_ENTRY => {
+                            if let Err(error) = app.share_document(crate::share::pointer_click(&resp)) {
+                                app.status(error);
+                            }
                         }
                         _ => app.ui.backstage_page = id.into(),
                     }

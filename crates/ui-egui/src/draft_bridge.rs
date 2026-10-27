@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use serde_json::json;
 use wordcraft_engine::Session;
+use wordcraft_fonts::log_safe;
 
 use crate::WordApp;
 use crate::drafts::{Observed, Planner, Version};
@@ -97,7 +98,7 @@ pub fn flush_hidden(cell: &RefCell<HiddenFlush>, put: &dyn Fn(&str, &str, &str, 
                 let at = crate::now_ms();
                 cell.flushed.push(Flushed { key: s.key, version: s.version, at, serialize_ms: at - t0 });
             }
-            Err(e) => log::warn!("couldn't keep a draft of {}: {e}", s.name),
+            Err(e) => log::warn!("couldn't keep a draft of a {}: {}", log_safe::file_label(&s.name, None), log_safe::scrub(&e, &s.name)),
         }
     }
 }
@@ -284,7 +285,7 @@ impl WordApp {
                 true
             }
             Err(e) => {
-                log::warn!("couldn't keep a draft of {name}: {e}");
+                log::warn!("couldn't keep a draft of a {}: {}", log_safe::file_label(&name, None), log_safe::scrub(&e, &name));
                 self.drafts.planner.put_failed(document, now);
                 false
             }
@@ -340,7 +341,8 @@ impl WordApp {
             }
             Ok(_) => self.adopt_restored(draft.key, draft.name, now),
             Err(e) => {
-                log::warn!("couldn't restore the draft {}: {e}", draft.name);
+                let shown = log_safe::file_label(&draft.name, Some(draft.bytes.len() as u64));
+                log::warn!("couldn't restore the draft of a {shown}: {}", log_safe::scrub(&e, &draft.name));
                 #[cfg(not(target_arch = "wasm32"))]
                 self.report_desktop_recovery_errors(vec![crate::i18n::fmt(
                     tl!("Could not recover {name}: {error}"),

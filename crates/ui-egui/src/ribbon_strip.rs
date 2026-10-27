@@ -100,8 +100,10 @@ fn share_editing_comments(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     ui.painter().rect_filled(r, 4.0, if resp.hovered() { t.accent_text } else { t.accent });
     icons::paint(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), "share", t.on_accent, t.on_accent);
     ui.painter().text(pos2(r.min.x + 26.0, r.center().y), Align2::LEFT_CENTER, share, medium(12.0), t.on_accent);
-    if resp.on_hover_text(tl!("Export a copy to share (PDF, Word document)")).clicked() {
-        share_copy(app);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, share));
+    let resp = resp.on_hover_text(tl!("Export a copy to share (PDF, Word document)"));
+    if resp.clicked() {
+        share_copy(app, crate::share::pointer_click(&resp));
     }
     ui.add_space(6.0);
     let track = app.session.doc.settings.track_changes;
@@ -128,8 +130,9 @@ fn more_menu(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
     let resp = resp.on_hover_text(label);
     egui::Popup::menu(&resp).show(|ui| {
-        if ui.button(tl!("Share")).on_hover_text(tl!("Export a copy to share (PDF, Word document)")).clicked() {
-            share_copy(app);
+        let share = ui.button(tl!("Share")).on_hover_text(tl!("Export a copy to share (PDF, Word document)"));
+        if share.clicked() {
+            share_copy(app, crate::share::pointer_click(&share));
             ui.close();
         }
         ui.separator();
@@ -142,7 +145,15 @@ fn more_menu(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     });
 }
 
-fn share_copy(app: &mut WordApp) {
+/// Straight to the share sheet where the host can share files (`pointer`: see
+/// [`WordApp::share_document`]), otherwise File › Export.
+fn share_copy(app: &mut WordApp, pointer: bool) {
+    if app.can_share() {
+        if let Err(error) = app.share_document(pointer) {
+            app.status(error);
+        }
+        return;
+    }
     let _ = app.run("ui.backstage", json!({"value": true, "page": "export"}));
 }
 

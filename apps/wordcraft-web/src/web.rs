@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use wasm_bindgen::JsCast as _;
 use wordcraft_engine::Session;
+use wordcraft_fonts::log_safe;
 use wordcraft_ui_egui::{Download, Inbox, PickerAnswer, Services, WordApp};
 
 use crate::clipboard::ClipboardBridge;
@@ -16,6 +17,7 @@ const RECIPIENT_EXTS: &[&str] = &["csv", "tsv", "txt", "xlsx", "xlsm", "ods"];
 mod drafts;
 mod font_store;
 mod language;
+mod share;
 const CANVAS_ID: &str = "wordcraft_canvas";
 const LOADING_ID: &str = "wordcraft_loading";
 
@@ -64,6 +66,9 @@ pub fn start() {
                     let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves, &clipboard);
                     services.drafts = bridge;
                     services.account = crate::account::connect();
+                    services.share = share::connect();
+                    let drops = crate::intake::Drops::default();
+                    services.intake_result = Some(drops.service());
                     let mut app = WordApp::new(session, services);
                     app.autosave = false;
                     app.ui.language = language::initial();
@@ -72,7 +77,7 @@ pub fn start() {
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox, drafts, language, clipboard }))
+                    Ok(Box::new(WebShell { app, inbox, drops, drafts, language, clipboard }))
                 }),
             )
             .await;
@@ -94,6 +99,8 @@ fn query() -> String {
 struct WebShell {
     app: WordApp,
     inbox: Inbox,
+    /// Dropped files in the inbox, for the office shell's intake hook.
+    drops: crate::intake::Drops,
     clipboard: ClipboardBridge,
     /// The office shell's draft storage, unless the page is embedded.
     drafts: Option<drafts::Drafts>,
@@ -115,15 +122,21 @@ impl eframe::App for WebShell {
         let dropped = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
         for f in dropped {
             let inbox = self.inbox.clone();
+            let drops = self.drops.clone();
             let ctx = ctx.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let name = f.path().file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "dropped".into());
+                let size = f.web_file().map_or(0, |file| file.size() as usize);
                 match f.bytes_async().await {
                     Ok(bytes) => {
+                        drops.arrived(&name, bytes.len());
                         inbox.lock().unwrap_or_else(|e| e.into_inner()).push((name, bytes));
                         ctx.request_repaint();
                     }
-                    Err(e) => log::error!("couldn't read dropped file {name}: {e}"),
+                    Err(e) => {
+                        log::error!("couldn't read a dropped {}: {e}", log_safe::file_label(&name, Some(size as u64)));
+                        crate::intake::report(&name, size, false);
+                    }
                 }
             });
         }
@@ -295,11 +308,11 @@ fn trigger_save_file_picker(
         let answer = match wasm_bindgen_futures::JsFuture::from(prom).await {
             Ok(handle_val) => match write_file_handle(&handle_val, &bytes_vec).await {
                 Ok(()) => {
-                    log::info!("saved {name} through the save picker");
+                    log::info!("saved a {} through the save picker", log_safe::file_label(&name, Some(bytes_vec.len() as u64)));
                     Ok(())
                 }
                 Err(e) => {
-                    log::error!("couldn't write {name}: {e}");
+                    log::error!("couldn't write a {}: {}", log_safe::file_label(&name, Some(bytes_vec.len() as u64)), log_safe::scrub(&e, &name));
                     Err(Some(e))
                 }
             },
@@ -447,6 +460,9 @@ fn mime_for(name: &str) -> &'static str {
         Some("jpg" | "jpeg") => "image/jpeg",
         Some("pdf") => "application/pdf",
         Some("docx") => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        Some("docm") => "application/vnd.ms-word.document.macroEnabled.12",
+        Some("dotx") => "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+        Some("dotm") => "application/vnd.ms-word.template.macroEnabled.12",
         Some("odt") => "application/vnd.oasis.opendocument.text",
         Some("rtf") => "application/rtf",
         Some("html") => "text/html",

@@ -69,13 +69,15 @@ impl PendingSave {
 
 impl WordApp {
     pub(crate) fn warn_before_save(&mut self, command: &str, params: &Value) -> bool {
-        if !matches!(command, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng" | "file.printPdf") {
+        let share = command == crate::share::SHARE;
+        if !share && !matches!(command, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng" | "file.printPdf") {
             return false;
         }
         if matches!(command, "file.save" | "file.saveAs") && self.picker_saving(self.session.document_id()) {
             return false;
         }
-        let web = self.services.download.is_some();
+        // A shared copy is named as the browser's Save names it, whatever the host.
+        let web = self.services.download.is_some() || share;
         let name = params.get("path").and_then(Value::as_str).map(str::to_string).or_else(|| {
             if web {
                 Some(self.default_save_name())
@@ -146,6 +148,13 @@ impl WordApp {
     }
 
     pub(crate) fn choose_loss_copy(&mut self, pending: PendingSave) {
+        // A shared file is already a copy: the original stays as it is either way.
+        if pending.command == crate::share::SHARE {
+            if let Err(error) = self.accept_loss(pending) {
+                self.status(error);
+            }
+            return;
+        }
         let name = copy_name(&pending.name, &pending.format);
         if self.services.download.is_some() {
             if let Err(error) = self.write_loss_copy(pending, Some(name)) {
@@ -180,7 +189,7 @@ impl WordApp {
                 let bytes = wordcraft_engine::io::save_bytes_with(&path, &app.session.doc, password, &opts)?;
                 let answer = download(&path, &bytes).map_err(|error| app.browser_write_failed(None, &error))?;
                 if let crate::Download::Pending(rx) = answer {
-                    app.track_picker_save(rx, &path, false, false);
+                    app.track_picker_save(rx, &path, bytes.len(), false, false);
                 }
             } else {
                 if app.session.path.as_ref().is_some_and(|original| same_file(original, std::path::Path::new(&path))) {
@@ -242,29 +251,35 @@ pub(crate) fn body(app: &mut WordApp, ui: &mut egui::Ui, pending: &PendingSave) 
         ui.label(format!("• {label}"));
     }
     let mut answer = None;
+    let mut pointer = false;
     ui.horizontal_wrapped(|ui| {
-        if ui.button(tl!("Save anyway")).clicked() {
-            answer = Some(0);
-        }
-        if ui.button(tl!("Save a copy")).clicked() {
-            answer = Some(1);
-        }
-        if ui.button(tl!("Cancel")).clicked() {
-            answer = Some(2);
+        for (i, label) in [tl!("Save anyway"), tl!("Save a copy"), tl!("Cancel")].into_iter().enumerate() {
+            let button = ui.button(label);
+            if button.clicked() {
+                answer = Some(i);
+                pointer = crate::share::pointer_click(&button);
+            }
         }
     });
     if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         return true;
     }
+    let answered = || {
+        let mut pending = pending.clone();
+        if pending.command == crate::share::SHARE {
+            pending.params["download"] = json!(!pointer);
+        }
+        pending
+    };
     match answer {
         Some(0) => {
-            if let Err(error) = app.accept_loss(pending.clone()) {
+            if let Err(error) = app.accept_loss(answered()) {
                 app.status(error);
             }
             true
         }
         Some(1) => {
-            app.choose_loss_copy(pending.clone());
+            app.choose_loss_copy(answered());
             true
         }
         Some(_) => true,

@@ -46,7 +46,12 @@ pub fn poll(inbox: &Inbox, app: &mut WordApp, ctx: &egui::Context) {
                         // Leave Backstage, as opening from the Open dialog does.
                         Ok(_) => app.ui.backstage = false,
                         Err(e) => {
-                            log::warn!("{p}: {e}");
+                            let size = std::fs::metadata(p).ok().map(|m| m.len());
+                            log::warn!(
+                                "couldn't open a {}: {}",
+                                wordcraft_fonts::log_safe::file_label(p, size),
+                                wordcraft_fonts::log_safe::scrub(&e, p)
+                            );
                             let e = e.to_string();
                             let msg = wordcraft_ui_egui::tl!("Couldn't open {path}: {error}");
                             app.status(wordcraft_ui_egui::i18n::fmt(msg, &[("path", p), ("error", &e)]));

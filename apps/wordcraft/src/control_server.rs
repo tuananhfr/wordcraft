@@ -68,7 +68,7 @@ pub fn start(port: u16, ctx: egui::Context, settings: Option<&Path>) -> Option<(
         }
     };
     match &key_file {
-        Some(f) => log::info!("control server listening on 127.0.0.1:{port}, key in {}", f.path().display()),
+        Some(f) => log::info!("control server listening on 127.0.0.1:{port}, key in {}", wordcraft_fonts::log_safe::home_relative(f.path())),
         None => log::info!("control server listening on 127.0.0.1:{port}"),
     }
     Some((serve_on(listener, ctx, key, FIRST_REQUEST), key_file))

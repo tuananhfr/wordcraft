@@ -3,6 +3,7 @@
 use std::sync::mpsc::{Receiver, TryRecvError};
 
 use serde_json::{Value, json};
+use wordcraft_fonts::log_safe;
 
 use crate::file_dialogs::{AfterSave, Download, PickerAnswer};
 use crate::{WordApp, i18n, keeps_everything};
@@ -14,6 +15,7 @@ mod tests;
 pub(crate) struct PickerSave {
     rx: Receiver<PickerAnswer>,
     name: String,
+    bytes: usize,
     document: u64,
     revision: u64,
     keeps_everything: bool,
@@ -29,6 +31,7 @@ impl WordApp {
         let name = params.get("path").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| self.default_save_name());
         let name = if id == "file.exportPdf" && !name.ends_with(".pdf") { format!("{name}.pdf") } else { name };
         let saving = matches!(id, "file.save" | "file.saveAs");
+        let sharing = id == crate::share::SHARE;
         if saving && self.picker_saving(self.session.document_id()) {
             return Ok(json!({"downloaded": name, "pending": true}));
         }
@@ -45,9 +48,9 @@ impl WordApp {
         if matches!(id, "file.save" | "file.saveAs") {
             self.session.stamp_save();
         }
-        // Word documents are encrypted with the document's password, if it has one.
-        let password =
-            if matches!(id, "file.save" | "file.saveAs") { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
+        // Word documents are encrypted with the document's password, if it has one; a shared copy
+        // is the same file a save downloads, so it stays protected.
+        let password = if saving || sharing { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
         let opts = wordcraft_engine::cmd::file::export_options(&self.session, params);
         let document = self.session.document_id();
         let bytes = match wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts) {
@@ -59,6 +62,10 @@ impl WordApp {
                 return Err(e);
             }
         };
+        // The share sheet needs the click's user activation, so it is asked here, before any download.
+        if sharing && crate::share::may_share(params) && self.services.share.as_ref().is_some_and(|share| share(&name, &bytes)) {
+            return Ok(json!({"shared": name, "bytes": bytes.len()}));
+        }
         let picker = match self.services.download.as_ref().map(|d| d(&name, &bytes)) {
             Some(Err(e)) => {
                 let msg = self.browser_write_failed(saving.then_some(document), &e);
@@ -76,7 +83,7 @@ impl WordApp {
         }
         let pending = picker.is_some();
         if let Some(rx) = picker {
-            self.track_picker_save(rx, &name, complete_save, saving);
+            self.track_picker_save(rx, &name, bytes.len(), complete_save, saving);
         } else if saving {
             self.save_failures.saved(document);
         }
@@ -84,13 +91,13 @@ impl WordApp {
     }
 
     /// Remember a save the browser's picker finishes later ([`Download::Pending`]).
-    pub(crate) fn track_picker_save(&mut self, rx: Receiver<PickerAnswer>, name: &str, keeps_everything: bool, save: bool) {
+    pub(crate) fn track_picker_save(&mut self, rx: Receiver<PickerAnswer>, name: &str, bytes: usize, keeps_everything: bool, save: bool) {
         let document = self.session.document_id();
         let revision = self.session.rev();
         if save {
             self.session.dirty = true;
         }
-        self.picker_saves.push(PickerSave { rx, name: name.to_string(), document, revision, keeps_everything, save, then: None });
+        self.picker_saves.push(PickerSave { rx, name: name.to_string(), bytes, document, revision, keeps_everything, save, then: None });
     }
 
     /// Whether a save of `document` is still in the browser's save picker.
@@ -168,7 +175,8 @@ impl WordApp {
                     self.mark_document_unsaved(save.document);
                 }
                 if let Some(error) = error {
-                    let reason = format!("download of {} failed: {error}", save.name);
+                    let shown = log_safe::file_label(&save.name, Some(save.bytes as u64));
+                    let reason = format!("download of a {shown} failed: {}", log_safe::scrub(&error, &save.name));
                     self.browser_write_failed(save.save.then_some(save.document), &reason);
                 }
             }

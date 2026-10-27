@@ -88,6 +88,7 @@ pub mod ribbon;
 pub mod ribbon_strip;
 pub mod save_status;
 pub mod scroll;
+mod share;
 pub mod system_clipboard;
 pub mod table_mouse;
 pub mod table_pen;
@@ -139,6 +140,13 @@ pub struct Services {
     /// anchor download is [`Download::Done`] (the browser can't tell the page whether the user
     /// then kept the file); a save picker is [`Download::Pending`] until the user answers it.
     pub download: Option<Box<dyn Fn(&str, &[u8]) -> Result<Download, String>>>,
+    /// Web (ERPCons office shell): offer a copy (file name, bytes) to the system share sheet,
+    /// called within the click that asked. `false` when the host didn't take it, and the copy
+    /// downloads instead. `None` (desktop, browsers that can't share files) hides Share….
+    pub share: Option<Box<dyn Fn(&str, &[u8]) -> bool>>,
+    /// Web (ERPCons office shell): told how each file from `inbox` went (its name, byte length,
+    /// and whether it opened or was inserted), once the app has decided.
+    pub intake_result: Option<Box<dyn Fn(&str, usize, bool)>>,
     /// Web: told whether the document has unsaved changes after each pass, for the browser's
     /// leave-page guard (`beforeunload` runs between frames and can't ask the app).
     pub on_dirty: Option<Box<dyn Fn(bool)>>,
@@ -804,6 +812,9 @@ impl WordApp {
                 });
             }
             return r;
+        }
+        if id == share::SHARE {
+            return self.share_copy(&params);
         }
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
             return self.browser_save(id, &params);
@@ -1738,7 +1749,8 @@ impl WordApp {
                 return;
             }
             if let Err(e) = self.session.run("file.save", &json!({})) {
-                log::warn!("AutoSave failed: {e}");
+                let path = self.session.path.as_deref().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
+                log::warn!("AutoSave failed: {}", wordcraft_fonts::log_safe::scrub(&e.to_string(), &path));
                 self.note_save_failed(self.session.document_id(), &e.to_string());
                 self.autosave_path = None;
                 self.status(i18n::fmt(tl!("AutoSave failed: {error}. Save the document to turn AutoSave back on."), &[("error", &e.to_string())]));
@@ -1910,6 +1922,10 @@ impl WordApp {
             } else {
                 self.run("file.open", json!({"path": name, "data": wordcraft_engine::cmd::insert::base64_encode(&bytes)}))
             };
+            // A password prompt counts as opened: the file was read as a protected document.
+            if let Some(report) = &self.services.intake_result {
+                report(&name, bytes.len(), r.is_ok());
+            }
             if r.is_ok() {
                 self.ui.backstage = false;
             }
@@ -2195,6 +2211,9 @@ mod tests_focus;
 
 #[cfg(test)]
 mod tests_account;
+
+#[cfg(test)]
+mod tests_intake;
 
 #[cfg(test)]
 mod tests {

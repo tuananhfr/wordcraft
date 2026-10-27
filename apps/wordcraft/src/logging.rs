@@ -243,7 +243,7 @@ impl AppLogger {
             }
             Err(e) => {
                 sink.no_file();
-                Err(format!("{}: {e}", dir.display()))
+                Err(format!("{}: {e}", wordcraft_fonts::log_safe::home_relative(dir)))
             }
         }
     }

@@ -6,6 +6,8 @@
 mod assets;
 mod ico;
 mod layers;
+#[cfg(test)]
+mod log_privacy;
 mod parity;
 mod stats;
 mod version;

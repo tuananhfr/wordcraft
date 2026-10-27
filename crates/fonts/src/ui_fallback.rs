@@ -158,7 +158,7 @@ pub(crate) fn find_ui_font(dirs: &[std::path::PathBuf], names: &[&str], needed: 
         if best.as_ref().is_some_and(|(b, _)| *b >= covered) {
             continue;
         }
-        log::debug!("interface CJK fallback: {family} ({}), {covered} of {} characters", path.display(), needed.len());
+        log::debug!("interface CJK fallback: {family} ({}), {covered} of {} characters", crate::log_safe::home_relative(&path), needed.len());
         best = Some((covered, SystemUiFont { family, bytes, index }));
         if covered >= needed.len() {
             break;

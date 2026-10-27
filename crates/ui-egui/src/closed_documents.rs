@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
+use wordcraft_fonts::log_safe;
 
 use crate::WordApp;
 use crate::open_documents::{save_name_of, title_of};
@@ -41,7 +42,7 @@ pub(crate) struct ClosedDocuments {
 impl ClosedDocuments {
     fn push(&mut self, closed: ClosedDocument) {
         if closed.bytes.len() > MAX_CLOSED_BYTES {
-            log::warn!("{} is too large to keep for reopening", closed.title);
+            log::warn!("a closed {} is too large to keep for reopening", log_safe::file_label(&closed.file_name, Some(closed.bytes.len() as u64)));
             return;
         }
         self.stack.push(closed);
@@ -88,7 +89,9 @@ impl WordApp {
                 };
                 self.closed.push(closed);
             }
-            Err(e) => log::warn!("couldn't keep {file_name} for reopening: {e}"),
+            Err(e) => {
+                log::warn!("couldn't keep a closed {} for reopening: {}", log_safe::file_label(&file_name, None), log_safe::scrub(&e, &file_name))
+            }
         }
     }
 

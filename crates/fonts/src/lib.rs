@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 mod fontdb;
+pub mod log_safe;
 pub mod math;
 mod script;
 mod ui_fallback;

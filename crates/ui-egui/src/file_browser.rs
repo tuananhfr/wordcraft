@@ -291,8 +291,8 @@ impl WordApp {
         let Some(b) = self.file_browser.open.take() else { return };
         self.file_browser.last_dir = Some(b.dir.clone());
         let picked = picked.map(|p| p.to_string_lossy().into_owned());
-        if let Err(e) = self.finish_pick(b.after, picked) {
-            log::warn!("file browser: {e}");
+        if let Err(e) = self.finish_pick(b.after, picked.clone()) {
+            log::warn!("file browser: {}", wordcraft_fonts::log_safe::scrub(&e, picked.as_deref().unwrap_or_default()));
         }
         self.canvas.want_focus = true;
     }

@@ -29,6 +29,7 @@ mod updates;
 const PRODUCT_NAME: &str = "Văn bản – ERPCons";
 
 use wordcraft_engine::Session;
+use wordcraft_fonts::log_safe;
 use wordcraft_ui_egui::{
     Services, UiState, WordApp,
     window_geometry::{WindowGeometry, take_rescue},
@@ -179,7 +180,7 @@ fn load_user_fonts() {
     let Some(dir) = wordcraft_control_key::settings_dir().map(|d| d.join("fonts")) else { return };
     let (loaded, skipped) = wordcraft_fonts::FontDb::global().load_user_fonts(&dir);
     if !loaded.is_empty() || !skipped.is_empty() {
-        log::info!("user fonts: {} loaded, {} skipped from {}", loaded.len(), skipped.len(), dir.display());
+        log::info!("user fonts: {} loaded, {} skipped from {}", loaded.len(), skipped.len(), log_safe::home_relative(&dir));
     }
 }
 
@@ -199,7 +200,7 @@ fn save_prefs(app: &WordApp) {
     match prefs_path() {
         Some(path) => {
             if let Err(e) = preferences::save(&path, &app.prefs()) {
-                log::warn!("could not save UI preferences {}: {e}", path.display());
+                log::warn!("could not save UI preferences {}: {e}", log_safe::home_relative(&path));
             }
         }
         None => log::warn!("could not save UI preferences: settings directory unavailable"),
@@ -278,7 +279,7 @@ fn main() -> eframe::Result {
     if let Some(logger) = logger {
         match log_dir().filter(|_| prefs_enabled()) {
             Some(dir) => match logger.attach_dir(&dir) {
-                Ok(path) => log::info!("{PRODUCT_NAME} {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), path.display()),
+                Ok(path) => log::info!("{PRODUCT_NAME} {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), log_safe::home_relative(&path)),
                 // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
                 Err(e) => log::warn!("no log file: {e}"),
             },
@@ -386,7 +387,8 @@ fn main() -> eframe::Result {
             }
             for f in files {
                 if let Err(e) = app.run("file.open", serde_json::json!({"path": f})) {
-                    log::warn!("{f}: {e}");
+                    let size = std::fs::metadata(&f).ok().map(|m| m.len());
+                    log::warn!("couldn't open a {}: {}", log_safe::file_label(&f, size), log_safe::scrub(&e, &f));
                 }
             }
             Ok(Box::new(App(
