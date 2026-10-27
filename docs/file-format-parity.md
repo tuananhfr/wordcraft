@@ -1,6 +1,6 @@
 # File-format parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-13 · **Change:** trivial (VML text boxes keep their internal margins, fit to their text and vertical alignment; hidden drawings not shown; previously trivial: equations as MathML in HTML export, copy and paste, #816; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-27 · **Change:** trivial (`w:altChunk` HTML, MHTML, RTF and text chunks imported on open; previously trivial: VML text boxes keep their internal margins, fit to their text and vertical alignment; hidden drawings not shown; previously trivial: equations as MathML in HTML export, copy and paste, #816; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
 
 Every format Word opens or saves, what WordCraft does with it, and how it's tested. Fidelity is the
 share of a typical real-world file's content and formatting that survives (read: shows correctly;
@@ -77,7 +77,8 @@ Measured by grepping `crates/docx/src/read` and `src/write` for the OOXML elemen
 | Ruby (`w:ruby`: `w:rubyPr`, `w:rt`, `w:rubyBase`) | ✅ | ✅ | #288; base and ruby text with their run formatting, alignment, sizes, raise, language |
 | Document grid (`w:docGrid`: type, line pitch, `w:charSpace`), paragraph `w:snapToGrid` | ✅ | ✅ | #391; run-level `w:snapToGrid` not read |
 | `w:eastAsianLayout`, `w:fitText` | ❌ | ❌ | East Asian layout |
-| Glossary document (building blocks), `w:altChunk`, sub-documents | ❌ | ❌ | |
+| `w:altChunk` | 🟡 | 🟡 | HTML, XHTML, MHTML (with its pictures), RTF and plain-text chunks become document content on open (styles, lists and pictures adopted as a paste; sections kept) and are saved as that content, as Word does; layout as the HTML importer reads it (cell widths, cell alignment and `text-transform` ignored). Other chunks (DOCX) are preserved, not shown, with a notice |
+| Glossary document (building blocks), sub-documents | ❌ | ❌ | |
 | Hostile input | ✅ | — | `malformed.rs`, capped allocations, never-crash standard |
 | Document paragraph defaults (`w:pPrDefault`) | ✅ | ✅ | Omission and explicit empty defaults remain distinct across repeated saves; nonempty defaults and later default-spacing edits are written |
 

@@ -49,7 +49,7 @@ mod tests {
             relationship_id: "old".into(),
             relationship_type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk".into(),
             target: "word/chunk.html".into(),
-            content_type: "text/html".into(),
+            content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml".into(),
             bytes: std::sync::Arc::new(b"B-CHUNK".to_vec()),
         });
         let mut app = WordApp::new(wordcraft_engine::Session::new(Document::new()), Default::default());

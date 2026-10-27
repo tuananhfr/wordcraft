@@ -14,6 +14,7 @@ pub mod html;
 pub mod latex;
 pub mod markdown;
 pub mod mathml;
+pub mod mhtml;
 pub mod model;
 pub mod odt;
 pub mod rtf;

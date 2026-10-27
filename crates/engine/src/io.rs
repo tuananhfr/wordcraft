@@ -2,6 +2,7 @@
 
 use wordcraft_doc::Document;
 
+mod alt_chunk;
 pub mod legacy;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -120,7 +121,11 @@ pub fn open_bytes_with(name: &str, bytes: &[u8], password: Option<&str>) -> Resu
 
 /// Open bytes with encryption and legacy-conversion metadata.
 pub fn open_bytes_detailed(name: &str, bytes: &[u8], password: Option<&str>) -> Result<legacy::OpenedDocument, String> {
-    legacy::opened(name, bytes, open_bytes_inner(name, bytes, password))
+    let opened = open_bytes_inner(name, bytes, password).map(|(mut doc, encrypted)| {
+        alt_chunk::expand(&mut doc);
+        (doc, encrypted)
+    });
+    legacy::opened(name, bytes, opened)
 }
 
 fn open_bytes_inner(name: &str, bytes: &[u8], password: Option<&str>) -> Result<(Document, bool), String> {
