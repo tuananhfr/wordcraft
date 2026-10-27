@@ -247,8 +247,8 @@ impl WordApp {
         }
     }
 
-    /// Every open document, shown or not. Unsaved: dirty, or a save of it still in the browser's
-    /// save picker.
+    /// Every open document, shown or not, but the host's: its recovery is the host's own. Unsaved:
+    /// dirty, or a save of it still in the browser's save picker.
     fn draft_observed(&self) -> Vec<Observed> {
         if !self.has_document() {
             return Vec::new();
@@ -256,6 +256,7 @@ impl WordApp {
         let shown = self.session.document_id();
         self.document_tabs()
             .iter()
+            .filter(|t| !self.host_owns(t.document))
             .filter_map(|t| self.find_document(t.document))
             .map(|(session, untitled)| Observed {
                 version: draft_version(session, untitled),

@@ -67,6 +67,8 @@ pub fn start() {
                     services.drafts = bridge;
                     services.account = crate::account::connect();
                     services.share = share::connect();
+                    let host = crate::host::connect();
+                    services.host = host.as_ref().map(crate::host::Host::link);
                     let drops = crate::intake::Drops::default();
                     services.intake_result = Some(drops.service());
                     let mut app = WordApp::new(session, services);
@@ -77,7 +79,7 @@ pub fn start() {
                     if !sample {
                         app.start_screen();
                     }
-                    Ok(Box::new(WebShell { app, inbox, drops, drafts, language, clipboard }))
+                    Ok(Box::new(WebShell { app, inbox, drops, drafts, host, language, clipboard }))
                 }),
             )
             .await;
@@ -104,6 +106,8 @@ struct WebShell {
     clipboard: ClipboardBridge,
     /// The office shell's draft storage, unless the page is embedded.
     drafts: Option<drafts::Drafts>,
+    /// The office shell's online documents (`window.erpHost`), when it offers them.
+    host: Option<crate::host::Host>,
     /// The language setting last remembered for the site.
     language: String,
 }
@@ -142,6 +146,9 @@ impl eframe::App for WebShell {
         }
         if let Some(drafts) = &mut self.drafts {
             drafts.announce_ready(ctx);
+        }
+        if let Some(host) = &mut self.host {
+            host.announce(ctx);
         }
         self.app.logic(ctx);
         for notice in self.clipboard.take_notices() {
@@ -217,6 +224,7 @@ fn animations_enabled() -> Box<dyn Fn() -> Option<bool>> {
 
 /// Closing, reloading or leaving the tab with unsaved changes asks first. Browsers show their own
 /// confirmation (a page can only ask for it), so there is no Save button: Cancel, then File › Save.
+/// `dirty` leaves out documents saved to `erpHost`: the shell guards those.
 fn guard_unload(dirty: Rc<Cell<bool>>, saves: Rc<PickerSaves>) -> Result<(), String> {
     let window = web_sys::window().ok_or("no window")?;
     let on_unload = wasm_bindgen::closure::Closure::<dyn FnMut(web_sys::BeforeUnloadEvent)>::new(move |e: web_sys::BeforeUnloadEvent| {

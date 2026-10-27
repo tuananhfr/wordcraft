@@ -22,6 +22,9 @@ mod editor_closed;
 mod embedded_drafts;
 
 #[cfg(any(target_arch = "wasm32", test))]
+mod host;
+
+#[cfg(any(target_arch = "wasm32", test))]
 mod intake;
 
 #[cfg(any(target_arch = "wasm32", test))]

@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 /// Where the app's log records are written.
 const SCANNED: &[&str] = &["apps", "crates/ui-egui/src", "crates/engine/src", "crates/fonts/src"];
 
-/// Identifiers that hold, or are likely to hold, a document's name, path or URL.
-const SUSPECT: &[&str] = &["name", "path", "paths", "url", "title", "file", "file_name", "dir", "display", "p", "f", "req"];
+/// Identifiers that hold, or are likely to hold, a document's name, path or URL, or the office
+/// shell's id of a server document.
+const SUSPECT: &[&str] = &["name", "path", "paths", "url", "title", "file", "file_name", "dir", "display", "p", "f", "req", "doc_id"];
 
 /// Records that interpolate such an identifier but no user document: (file, text in the record).
 const ALLOWED: &[(&str, &str)] = &[
@@ -139,7 +140,7 @@ fn top_level_args(args: &str) -> Vec<&str> {
 }
 
 fn suspect(ident: &str) -> bool {
-    SUSPECT.contains(&ident) || ["_name", "_path", "_url", "_title"].iter().any(|s| ident.ends_with(s))
+    SUSPECT.contains(&ident) || ["_name", "_path", "_url", "_title", "_doc_id"].iter().any(|s| ident.ends_with(s))
 }
 
 /// Errors are named like this; one from opening or saving a document starts with its name or path.
@@ -204,6 +205,7 @@ fn the_scanner_sees_names_paths_urls_and_document_errors() {
         log::warn!("open {file_name:?}");
         log::warn!("couldn't keep a {}: {}", log_safe::file_label(&name, None), log_safe::scrub(&e, &name));
         log::info!("{{literal}} and {count} of {total}");
+        log::warn!("erpHost.save failed for {}", host.doc_id);
         log::error!("missing <canvas id=\"{CANVAS_ID}\">");
         let bytes = wordcraft_engine::io::save_bytes_with(&name, &doc, None, &opts);
         if let Err(e) = bytes {
@@ -211,9 +213,9 @@ fn the_scanner_sees_names_paths_urls_and_document_errors() {
         }
     "#;
     let flagged: Vec<bool> = records(source).iter().map(|(at, r)| names_document(source, *at, r)).collect();
-    assert_eq!(flagged.len(), 9);
+    assert_eq!(flagged.len(), 10);
     let flagged_count = flagged.iter().filter(|f| **f).count();
-    assert_eq!(flagged_count, 6, "{flagged:?}");
+    assert_eq!(flagged_count, 7, "{flagged:?}");
     let far = format!("save_bytes(x);{}log::warn!(\"clipboard: {{e}}\");", "\n".repeat(20));
     assert!(!records(&far).iter().any(|(at, r)| names_document(&far, *at, r)), "an error far from any open or save");
 }

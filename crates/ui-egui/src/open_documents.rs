@@ -171,6 +171,13 @@ impl WordApp {
         self.session.dirty || self.docs.parked().any(|(_, p)| p.session.dirty)
     }
 
+    /// Whether an open document that doesn't save to the host has unsaved changes: the host
+    /// guards its own (`erp-host.md` rule 10).
+    pub(crate) fn any_local_document_dirty(&self) -> bool {
+        let local = |s: &Session| s.dirty && !self.host_owns(s.document_id());
+        local(&self.session) || self.docs.parked().any(|(_, p)| local(&p.session))
+    }
+
     /// Mark the open document with this id as having unsaved changes (a save that didn't happen).
     pub(crate) fn mark_document_unsaved(&mut self, document: u64) {
         if self.session.document_id() == document {
@@ -228,7 +235,7 @@ impl WordApp {
 
     /// Another document is shown: what the interface held about the last one would act on the
     /// wrong document.
-    fn document_switched(&mut self) {
+    pub(crate) fn document_switched(&mut self) {
         self.canvas.document_switched();
         self.controls = Default::default();
         self.dialog = None;

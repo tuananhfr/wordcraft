@@ -66,6 +66,7 @@ pub mod fling;
 mod focus;
 mod font_notice;
 pub mod frame;
+pub mod host_docs;
 pub mod i18n;
 pub mod icons;
 pub mod ink;
@@ -147,8 +148,9 @@ pub struct Services {
     /// Web (ERPCons office shell): told how each file from `inbox` went (its name, byte length,
     /// and whether it opened or was inserted), once the app has decided.
     pub intake_result: Option<Box<dyn Fn(&str, usize, bool)>>,
-    /// Web: told whether the document has unsaved changes after each pass, for the browser's
-    /// leave-page guard (`beforeunload` runs between frames and can't ask the app).
+    /// Web: told whether a document has unsaved changes after each pass, for the browser's
+    /// leave-page guard (`beforeunload` runs between frames and can't ask the app). Documents
+    /// saved to [`Services::host`] don't count: the host guards them.
     pub on_dirty: Option<Box<dyn Fn(bool)>>,
     /// Web: hand PDF bytes to the browser's print dialog (no download or intermediate file).
     /// Desktop uses `print_native` instead. An error means nothing was opened.
@@ -199,6 +201,8 @@ pub struct Services {
     /// ERPCons: the optional PI ID account ([`account`]). `None` (the default) shows no account UI
     /// and allows every feature.
     pub account: Option<Box<dyn account::AccountHook>>,
+    /// Web (ERPCons office shell): documents opened from and saved to the server ([`host_docs`]).
+    pub host: Option<host_docs::HostLink>,
 }
 
 /// What [`Services::make_default_app`] did.
@@ -513,6 +517,8 @@ pub struct WordApp {
     no_document: Option<u64>,
     /// Web: drafting the document into the page's draft storage ([`draft_bridge`]).
     drafts: draft_bridge::DraftState,
+    /// Web: what the host documents' saves hold back ([`host_docs`]).
+    host: host_docs::HostState,
     /// The number the shown document is called by while untitled ("Document2"); see
     /// [`open_documents::untitled_name`].
     untitled: u32,
@@ -619,6 +625,7 @@ impl WordApp {
             info_editing: None,
             no_document: None,
             drafts: Default::default(),
+            host: Default::default(),
             untitled: 1,
             docs: Default::default(),
             closed: Default::default(),
@@ -815,6 +822,11 @@ impl WordApp {
         }
         if id == share::SHARE {
             return self.share_copy(&params);
+        }
+        if id == "file.save"
+            && let Some(r) = self.host_save()
+        {
+            return r;
         }
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
             return self.browser_save(id, &params);
@@ -1637,6 +1649,7 @@ impl WordApp {
         self.poll_reopening();
         self.drain_inbox();
         self.drafts_tick(ctx, now_ms());
+        self.host_tick(ctx, now_ms());
         self.watch_fonts(ctx);
         self.autosave_tick(now_ms());
         if self.autosaves() && self.session.dirty {
@@ -1671,6 +1684,7 @@ impl WordApp {
         self.install_ui_fonts(ctx, lang);
         self.report_dirty();
         self.refresh_draft_snapshot();
+        self.host_observe(now_ms());
     }
 
     /// Install the interface fonts when the language, the CJK fallback, or a caption fallback
@@ -1691,7 +1705,7 @@ impl WordApp {
     /// Tell the host whether the document has unsaved changes ([`Services::on_dirty`]).
     fn report_dirty(&self) {
         if let Some(f) = &self.services.on_dirty {
-            f(self.any_document_dirty());
+            f(self.any_local_document_dirty());
         }
     }
 
@@ -1863,6 +1877,7 @@ impl WordApp {
         // Typing and formatting land here, after `logic` has reported.
         self.report_dirty();
         self.refresh_draft_snapshot();
+        self.host_observe(now_ms());
     }
 
     /// A click on the window's chrome (ribbon tabs and empty ribbon space, galleries, check

@@ -68,10 +68,11 @@ impl WordApp {
     }
 
     /// Keep the document at tab `i`, which is about to close, for reopening. An untouched blank
-    /// document has nothing worth bringing back.
+    /// document has nothing worth bringing back; a host document reopens from the host, which
+    /// holds its unsaved bytes (`erp-host.md` rule 11).
     pub(crate) fn keep_closed(&mut self, i: usize) {
         let Some((session, untitled)) = self.document_at(i) else { return };
-        if session.is_untouched_blank() || self.no_document == Some(session.document_id()) {
+        if session.is_untouched_blank() || self.no_document == Some(session.document_id()) || self.host_owns(session.document_id()) {
             return;
         }
         let file_name = save_name_of(session, untitled);
