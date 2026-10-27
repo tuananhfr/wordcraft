@@ -8,6 +8,9 @@ use crate::model::{base64_decode, base64_encode};
 const MAX_PARTS: usize = 1024;
 const MAX_HEADERS: usize = 256;
 const MAX_BOUNDARY: usize = 200;
+/// `data:` URI text inlined in all: what the HTML importer takes in pictures, base64-encoded. One
+/// picture referenced many times would otherwise multiply without bound.
+const MAX_INLINED: usize = crate::html::MAX_INLINE_TOTAL_BYTES / 3 * 4 + 1024;
 
 struct Entity<'a> {
     headers: Vec<(String, String)>,
@@ -66,7 +69,12 @@ pub fn to_html(bytes: &[u8]) -> Option<String> {
         if i == root || !mime.starts_with("image/") {
             continue;
         }
-        let uri = format!("data:{mime};base64,{}", base64_encode(&part.decoded()));
+        let data = part.decoded();
+        // The importer drops a larger picture anyway.
+        if data.len() > crate::html::MAX_INLINE_IMAGE_BYTES {
+            continue;
+        }
+        let uri = format!("data:{mime};base64,{}", base64_encode(&data));
         if let Some(id) = part.content_id() {
             pictures.insert(format!("cid:{id}"), uri.clone());
         }
@@ -218,6 +226,7 @@ fn inline_pictures(html: &str, pictures: &HashMap<String, String>) -> String {
     let mut out = String::with_capacity(html.len());
     let mut copied = 0usize;
     let mut from = 0usize;
+    let mut inlined = 0usize;
     while let Some(n) = lower.get(from..).and_then(|r| r.find("src")) {
         let name = from + n;
         from = name + 3;
@@ -248,6 +257,10 @@ fn inline_pictures(html: &str, pictures: &HashMap<String, String>) -> String {
         };
         let (Some(value), Some(before)) = (html.get(start..end), html.get(copied..start)) else { continue };
         let Some(uri) = pictures.get(value.trim()).or_else(|| pictures.get(&crate::html::unescape(value.trim()))) else { continue };
+        inlined = inlined.saturating_add(uri.len());
+        if inlined > MAX_INLINED {
+            break;
+        }
         out.push_str(before);
         if quoted {
             out.push_str(uri);
@@ -326,6 +339,29 @@ mod tests {
         assert!(to_html(b"<html><body>plain</body></html>").is_none());
         assert!(to_html(b"").is_none());
         assert!(to_html(b"Content-Type: multipart/related; boundary=b\n\n--b\nContent-Type: image/png\n\nxx\n--b--").is_none());
+    }
+
+    #[test]
+    fn a_picture_referenced_many_times_stays_within_the_importer_budget() {
+        let picture = vec![7u8; 100_000];
+        let html = "<img src=\"cid:p\">".repeat(10_000);
+        let mht = format!(
+            "Content-Type: multipart/related; boundary=b\n\n--b\nContent-Type: text/html\n\n{html}\n--b\nContent-Type: image/png\nContent-Transfer-Encoding: base64\nContent-ID: <p>\n\n{}\n--b--",
+            b64(&picture)
+        );
+        let out = to_html(mht.as_bytes()).unwrap();
+        assert!(out.len() <= MAX_INLINED + html.len(), "{} bytes", out.len());
+        assert!(out.contains("data:image/png;base64,") && out.ends_with("<img src=\"cid:p\">"));
+    }
+
+    #[test]
+    fn a_picture_the_importer_would_drop_is_not_inlined() {
+        let picture = vec![7u8; crate::html::MAX_INLINE_IMAGE_BYTES + 1];
+        let mht = format!(
+            "Content-Type: multipart/related; boundary=b\n\n--b\nContent-Type: text/html\n\n<img src=\"cid:p\">\n--b\nContent-Type: image/png\nContent-Transfer-Encoding: base64\nContent-ID: <p>\n\n{}\n--b--",
+            b64(&picture)
+        );
+        assert_eq!(to_html(mht.as_bytes()).unwrap(), "<img src=\"cid:p\">");
     }
 
     #[test]
