@@ -33,11 +33,16 @@ fn available(app: &WordApp) -> bool {
     crate::table_resize::available(app) && app.canvas.table_resize.is_none()
 }
 
+/// A read-only document keeps the selection areas: no insert buttons, no move handle.
+fn offered(app: &WordApp, spot: Spot) -> bool {
+    !app.read_only() || matches!(spot, Spot::Column(_) | Spot::Row(_) | Spot::Cell(..))
+}
+
 /// The spot under screen point `p`: page, page point, resize reach and the spot.
 fn target_at(app: &WordApp, layout: &DocLayout, rects: &[Rect], scale: f32, p: Pos2) -> Option<(usize, f32, f32, f32, Target)> {
     let (page, x, y) = crate::canvas::page_at(rects, layout, scale, p)?;
     let reach = REACH_PX / page_scale(rects, layout, scale, page)?;
-    let t = table_mouse::target_at(layout, &app.session.doc, app.session.sel.focus.story, page, x, y, reach)?;
+    let t = table_mouse::target_at(layout, &app.session.doc, app.session.sel.focus.story, page, x, y, reach).filter(|t| offered(app, t.spot))?;
     Some((page, x, y, reach, t))
 }
 
@@ -165,13 +170,13 @@ pub fn paint(app: &WordApp, painter: &egui::Painter, t: &Tokens, layout: &DocLay
     let Some(sc) = page_scale(rects, layout, scale, page) else { return };
     let (doc, story, reach) = (&app.session.doc, app.session.sel.focus.story, REACH_PX / sc);
     let s = |x: f32, y: f32| to_screen(rects, layout, scale, page, x, y);
-    if let Some(g) = table_mouse::handle_table(layout, doc, story, page, x, y, reach) {
+    if let Some(g) = table_mouse::handle_table(layout, doc, story, page, x, y, reach).filter(|_| !app.read_only()) {
         let h = table_mouse::handle(&g);
         if let (Some(a), Some(b)) = (s(h.x, h.y), s(h.right(), h.bottom())) {
             move_handle(painter, Rect::from_two_pos(a, b), t);
         }
     }
-    let Some(target) = table_mouse::target_at(layout, doc, story, page, x, y, reach) else { return };
+    let Some(target) = table_mouse::target_at(layout, doc, story, page, x, y, reach).filter(|t| offered(app, t.spot)) else { return };
     match table_mouse::insert_mark(&target) {
         Some(m) => {
             if let (Some(c), Some(a), Some(b)) = (s(m.center.0, m.center.1), s(m.from.0, m.from.1), s(m.to.0, m.to.1)) {

@@ -22,6 +22,7 @@ macro_rules! tl {
 
 pub mod a11y;
 pub mod a11y_pane;
+mod access_gate;
 pub mod account;
 mod alt_chunk_notice;
 pub mod autoscroll;
@@ -66,6 +67,7 @@ pub mod fling;
 mod focus;
 mod font_notice;
 pub mod frame;
+pub mod host_docs;
 pub mod i18n;
 pub mod icons;
 pub mod ink;
@@ -147,8 +149,9 @@ pub struct Services {
     /// Web (ERPCons office shell): told how each file from `inbox` went (its name, byte length,
     /// and whether it opened or was inserted), once the app has decided.
     pub intake_result: Option<Box<dyn Fn(&str, usize, bool)>>,
-    /// Web: told whether the document has unsaved changes after each pass, for the browser's
-    /// leave-page guard (`beforeunload` runs between frames and can't ask the app).
+    /// Web: told whether a document has unsaved changes after each pass, for the browser's
+    /// leave-page guard (`beforeunload` runs between frames and can't ask the app). Documents
+    /// saved to [`Services::host`] don't count: the host guards them.
     pub on_dirty: Option<Box<dyn Fn(bool)>>,
     /// Web: hand PDF bytes to the browser's print dialog (no download or intermediate file).
     /// Desktop uses `print_native` instead. An error means nothing was opened.
@@ -199,6 +202,8 @@ pub struct Services {
     /// ERPCons: the optional PI ID account ([`account`]). `None` (the default) shows no account UI
     /// and allows every feature.
     pub account: Option<Box<dyn account::AccountHook>>,
+    /// Web (ERPCons office shell): documents opened from and saved to the server ([`host_docs`]).
+    pub host: Option<host_docs::HostLink>,
 }
 
 /// What [`Services::make_default_app`] did.
@@ -513,6 +518,8 @@ pub struct WordApp {
     no_document: Option<u64>,
     /// Web: drafting the document into the page's draft storage ([`draft_bridge`]).
     drafts: draft_bridge::DraftState,
+    /// Web: what the host documents' saves hold back ([`host_docs`]).
+    host: host_docs::HostState,
     /// The number the shown document is called by while untitled ("Document2"); see
     /// [`open_documents::untitled_name`].
     untitled: u32,
@@ -619,6 +626,7 @@ impl WordApp {
             info_editing: None,
             no_document: None,
             drafts: Default::default(),
+            host: Default::default(),
             untitled: 1,
             docs: Default::default(),
             closed: Default::default(),
@@ -663,8 +671,7 @@ impl WordApp {
     /// preferences.
     pub fn prefs(&self) -> UiState {
         let mut ui = self.ui.clone();
-        ui.author = self.session.author.clone();
-        ui.initials = self.session.initials.clone();
+        (ui.author, ui.initials) = self.prefs_author();
         ui.dictionary = wordcraft_engine::proof::user_dictionary();
         ui.editing = self.session.prefs.clone();
         ui.read_aloud_rate = self.session.read_aloud.rate();
@@ -719,6 +726,9 @@ impl WordApp {
     /// Close, Envelopes, Labels and Finish & Merge on a document with unsaved changes first ask
     /// Save / Don't Save / Cancel, and the command runs once that is answered (`ui.saveChanges`).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
+        }
         if system_clipboard::request(self, id, &params) {
             return Ok(json!({"pending": "clipboard"}));
         }
@@ -794,6 +804,10 @@ impl WordApp {
             self.status(e.clone());
             return Err(e);
         }
+        // Before the interface commands and the browser's Save As, which never reach the engine.
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
+        }
         if let Some(r) = self.ui_command(id, &params) {
             return r;
         }
@@ -815,6 +829,11 @@ impl WordApp {
         }
         if id == share::SHARE {
             return self.share_copy(&params);
+        }
+        if id == "file.save"
+            && let Some(r) = self.host_save()
+        {
+            return r;
         }
         if self.services.download.is_some() && matches!(id, "file.save" | "file.saveAs" | "file.exportPdf" | "file.exportPng") {
             return self.browser_save(id, &params);
@@ -976,6 +995,10 @@ impl WordApp {
     /// [`WordApp::execute`] for something the user did: a document that turns out to be
     /// password-protected asks for the password (and opens with it) instead of failing (#55).
     pub(crate) fn execute_user(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        // A refused save must not ask about losing content first.
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
+        }
         if self.warn_before_save(id, &params) {
             return Ok(json!({"pending": "lossWarning"}));
         }
@@ -1637,6 +1660,7 @@ impl WordApp {
         self.poll_reopening();
         self.drain_inbox();
         self.drafts_tick(ctx, now_ms());
+        self.host_tick(ctx, now_ms());
         self.watch_fonts(ctx);
         self.autosave_tick(now_ms());
         if self.autosaves() && self.session.dirty {
@@ -1671,6 +1695,7 @@ impl WordApp {
         self.install_ui_fonts(ctx, lang);
         self.report_dirty();
         self.refresh_draft_snapshot();
+        self.host_observe(now_ms());
     }
 
     /// Install the interface fonts when the language, the CJK fallback, or a caption fallback
@@ -1691,7 +1716,7 @@ impl WordApp {
     /// Tell the host whether the document has unsaved changes ([`Services::on_dirty`]).
     fn report_dirty(&self) {
         if let Some(f) = &self.services.on_dirty {
-            f(self.any_document_dirty());
+            f(self.any_local_document_dirty());
         }
     }
 
@@ -1836,6 +1861,7 @@ impl WordApp {
         }
         focus::hint(self, &ctx);
         content_controls::popup(self, &ctx);
+        access_gate::close_refused(self);
         dialogs::show(self, &ctx);
         #[cfg(not(target_arch = "wasm32"))]
         updates::dialog(self, &ctx);
@@ -1859,10 +1885,12 @@ impl WordApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.sent_title = title;
         }
+        access_gate::end_frame(self, &ctx);
         self.frame_ms = now_ms() - t0;
         // Typing and formatting land here, after `logic` has reported.
         self.report_dirty();
         self.refresh_draft_snapshot();
+        self.host_observe(now_ms());
     }
 
     /// A click on the window's chrome (ribbon tabs and empty ribbon space, galleries, check
@@ -1904,6 +1932,12 @@ impl WordApp {
         let Some(inbox) = self.services.inbox.clone() else { return };
         let files = std::mem::take(&mut *inbox.lock().unwrap_or_else(|e| e.into_inner()));
         for (name, bytes) in files {
+            if self.refuse_drop() {
+                if let Some(report) = &self.services.intake_result {
+                    report(&name, bytes.len(), false);
+                }
+                continue;
+            }
             let lower = name.to_ascii_lowercase();
             let img = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".wmf", ".emf"].iter().any(|e| lower.ends_with(e));
             // Any recipient file ends the pending picker request, so a later .txt drop opens normally.

@@ -40,6 +40,9 @@ pub struct CanvasState {
     pub scroll_to_caret: bool,
     /// A heading navigation click aligns its page against the navigation pane, not just visible.
     pub(crate) nav_to_caret: bool,
+    /// Text to bring to the top of the window on the next frame, and how far its line starts
+    /// above the window's edge: a reloaded document keeps what the user was reading.
+    pub(crate) top_anchor: Option<(Pos, f32)>,
     /// Touchpad travel not yet converted to an entire reading-column turn.
     read_wheel_accum: f32,
     /// Last actual viewport seen during a resize, distinct from the committed reading page size.
@@ -162,6 +165,7 @@ impl Default for CanvasState {
             markup_facts: std::cell::Cell::new(None),
             scroll_to_caret: true,
             nav_to_caret: false,
+            top_anchor: None,
             read_wheel_accum: 0.0,
             read_viewport: None,
             read_resized_at: 0.0,
@@ -314,6 +318,7 @@ impl CanvasState {
             read_first_visible: self.read_first_visible.take(),
             read_target_page: self.read_target_page,
             balloon: self.balloon,
+            top_anchor: self.top_anchor.take(),
             table_tool: self.table_tool.take(),
             ..CanvasState::default()
         };
@@ -887,6 +892,18 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     if let Some(c) = caret {
         app.session.page_hint = c.page;
     }
+    if let Some((pos, above)) = app.canvas.top_anchor.take()
+        && let Some(c) = layout.caret_on(&pos, 0)
+        && let Some(pr) = geo.rects.get(c.page)
+    {
+        app.canvas.scroll_to_caret = false;
+        app.canvas.read_target_page = None;
+        app.canvas.scroll_request = Some(if app.session.view.read_mode {
+            vec2((pr.left() - GAP).max(0.0), 0.0)
+        } else {
+            vec2(app.canvas.scroll_offset.x, (pr.top() + c.top * geo.scale + above).max(0.0))
+        });
+    }
     let mut scroll_target: Option<Rect> = None;
     if app.canvas.nav_to_caret {
         app.canvas.read_target_page = None;
@@ -1220,8 +1237,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 }
             }
         }
-        // Caret.
-        let focused = resp.has_focus() || app.canvas.focused;
+        // Caret. None on a read-only document: nothing can be typed there (selecting still works).
+        let focused = (resp.has_focus() || app.canvas.focused) && !app.read_only();
         // Editing an equation: shade it and draw the caret inside it.
         let mut math_caret = false;
         if let Some(m) = app.session.math.clone()
@@ -1251,7 +1268,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(530 - (since as u64 % 530)));
                     let cr = Rect::from_min_max(pos2(x, y0), pos2(x + 1.0, y1));
                     ui.ctx().output_mut(|o| {
-                        o.ime = Some(egui::output::IMEOutput {
+                        o.ime = (!app.read_only()).then_some(egui::output::IMEOutput {
                             rect: cr,
                             cursor_rect: cr,
                             purpose: Default::default(),
@@ -1289,9 +1306,10 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             if focused {
                 ui.ctx().request_repaint_after(std::time::Duration::from_millis(530 - (since as u64 % 530)));
             }
-            // IME candidate window placement.
+            // IME candidate window placement. A read-only document asks for no input method, so
+            // phones don't raise their keyboard over it.
             let cr = Rect::from_min_max(pos2(x, y0), pos2(x + 1.0, y1));
-            if focused {
+            if focused && !app.read_only() {
                 ui.ctx().output_mut(|o| {
                     o.ime =
                         Some(egui::output::IMEOutput { rect: cr, cursor_rect: cr, purpose: Default::default(), should_interrupt_composition: false });
@@ -1770,13 +1788,15 @@ fn active_balloon(app: &mut WordApp, ui: &mut Ui, painter: &egui::Painter, id: u
         child.label(egui::RichText::new(name(app, *rid)).font(bold.clone()).color(t.text));
         crate::panes::comment_editor(app, &mut child, *rid, Some(font.clone()), false);
     }
-    if app.canvas.balloon_reply && crate::panes::reply_editor(app, &mut child, id, Some(font.clone()), focus) {
+    // No reply field on a read-only document (its draft is kept, see `host_docs::draft_keep`).
+    if app.canvas.balloon_reply && !app.read_only() && crate::panes::reply_editor(app, &mut child, id, Some(font.clone()), focus) {
         app.canvas.balloon_reply = false;
     }
     let (mut reply, mut resolve, mut delete) = (false, false, false);
     child.add_space(2.0);
+    let editable = !app.read_only();
     child.horizontal(|ui| {
-        let button = |ui: &mut Ui, s: &str| ui.add(egui::Button::new(egui::RichText::new(s).font(small.clone())).small()).clicked();
+        let button = |ui: &mut Ui, s: &str| ui.add_enabled(editable, egui::Button::new(egui::RichText::new(s).font(small.clone())).small()).clicked();
         reply = button(ui, tl!("Reply"));
         resolve = button(ui, if resolved { tl!("Reopen") } else { tl!("Resolve") });
         delete = button(ui, tl!("Delete"));
@@ -1810,15 +1830,18 @@ pub fn select_balloon(app: &mut WordApp, ctx: &egui::Context, id: u32) {
     app.canvas.balloon_h = 0.0;
 }
 
+/// Comment `id` and its replies: what its balloon shows as editable fields.
+pub(crate) fn balloon_thread(app: &WordApp, id: u32) -> Vec<u32> {
+    std::iter::once(id).chain(app.session.doc.comments.iter().filter(|(_, c)| c.parent == Some(id)).map(|(k, _)| *k)).collect()
+}
+
 /// Leave the selected balloon, writing back what was typed in it (its fields may not be drawn
 /// again to notice they lost focus).
 pub fn deselect_balloon(app: &mut WordApp, ctx: &egui::Context) {
     let Some(id) = app.canvas.balloon.take() else { return };
     app.canvas.balloon_reply = false;
     app.canvas.balloon_focus = false;
-    let thread: Vec<u32> =
-        std::iter::once(id).chain(app.session.doc.comments.iter().filter(|(_, c)| c.parent == Some(id)).map(|(k, _)| *k)).collect();
-    for c in thread {
+    for c in balloon_thread(app, id) {
         crate::panes::commit_comment(app, ctx, c);
     }
     crate::panes::commit_reply(app, ctx, id);
@@ -2268,7 +2291,7 @@ fn rulers(app: &mut WordApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layo
         // Dragging the left-indent marker.
         let id = ui.id().with("ruler_left");
         let mr = Rect::from_center_size(pos2(left, bar.max.y - 3.0), vec2(12.0, 12.0));
-        let r = ui.interact(mr, id, Sense::drag());
+        let r = crate::access_gate::drag_handle(app, ui, mr, id, None);
         if r.dragged()
             && let Some(pp) = r.interact_pointer_pos()
         {
@@ -2280,7 +2303,7 @@ fn rulers(app: &mut WordApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layo
             let _ = app.run("para.indents", json!({"left": snapped}));
         }
         let fr = Rect::from_center_size(pos2(first, bar.min.y + 3.0), vec2(12.0, 10.0));
-        let r = ui.interact(fr, ui.id().with("ruler_first"), Sense::drag());
+        let r = crate::access_gate::drag_handle(app, ui, fr, ui.id().with("ruler_first"), None);
         if r.dragged()
             && let Some(pp) = r.interact_pointer_pos()
         {
@@ -2291,7 +2314,7 @@ fn rulers(app: &mut WordApp, ui: &mut Ui, h: Rect, v: Rect, rects: &[Rect], layo
             let _ = app.run("para.indents", json!({"firstLine": (pt / 4.5).round() * 4.5}));
         }
         let rr = Rect::from_center_size(pos2(right, bar.max.y - 3.0), vec2(12.0, 12.0));
-        let r = ui.interact(rr, ui.id().with("ruler_right"), Sense::drag());
+        let r = crate::access_gate::drag_handle(app, ui, rr, ui.id().with("ruler_right"), None);
         if r.dragged()
             && let Some(pp) = r.interact_pointer_pos()
         {
@@ -2465,7 +2488,7 @@ pub(crate) fn dragged_margin(edge: MarginEdge, at: f32, s: &wordcraft_doc::secti
 fn margin_handle(app: &mut WordApp, ui: &Ui, edge: MarginEdge, zone: Rect, to_pt: impl Fn(Pos2) -> f32, sect: &wordcraft_doc::section::SectionProps) {
     let cursor =
         if matches!(edge, MarginEdge::Left | MarginEdge::Right) { egui::CursorIcon::ResizeHorizontal } else { egui::CursorIcon::ResizeVertical };
-    let r = ui.interact(zone, ui.id().with(("ruler_margin", edge)), Sense::drag()).on_hover_cursor(cursor);
+    let r = crate::access_gate::drag_handle(app, ui, zone, ui.id().with(("ruler_margin", edge)), Some(cursor));
     let r = if r.dragged() { r } else { r.on_hover_text(tl!(edge.label())) };
     if r.dragged()
         && let Some(pp) = r.interact_pointer_pos()
@@ -2542,6 +2565,24 @@ pub fn caret_screen(app: &mut WordApp) -> Option<(Pos2, f32)> {
     Some((p, c.height.max(c.width) * scale))
 }
 
+/// What the top of the window showed last frame: the body text there and how far its line starts
+/// above the window's top edge (screen points), for [`CanvasState::top_anchor`]. `None` before
+/// the page has been drawn.
+pub(crate) fn first_visible(app: &mut WordApp) -> Option<(Pos, f32)> {
+    if app.session.view.read_mode {
+        return app.canvas.read_first_visible.clone().map(|p| (p, 0.0));
+    }
+    let viewport = app.canvas.viewport?;
+    let layout = app.session.layout();
+    let probe = pos2(viewport.center().x, viewport.min.y + 1.0);
+    let (page, x, y) = page_at(&app.canvas.page_rects, &layout, app.canvas.scale, probe)?;
+    let pos = layout.hit(page, x, y, StoryRef::Body)?;
+    let c = layout.caret_on(&pos, page)?;
+    let pr = app.canvas.page_rects.get(c.page)?;
+    let scale = layout.pages.get(c.page).map_or(app.canvas.scale, |p| page_screen_scale(*pr, p, app.canvas.scale));
+    Some((pos, viewport.min.y - (pr.min.y + c.top * scale)))
+}
+
 pub fn pos_from_screen(app: &mut WordApp, p: Pos2) -> Option<Pos> {
     let layout = app.session.layout();
     let (page, x, y) = page_at(&app.canvas.page_rects, &layout, app.canvas.scale, p)?;
@@ -2597,13 +2638,14 @@ fn context_menu(app: &mut WordApp, ui: &mut Ui) {
     ui.set_min_width(220.0);
     let item = |ui: &mut Ui, app: &mut WordApp, label: &str, id: &str, params: serde_json::Value| {
         let sc = crate::widgets::shortcut_text(app, id);
-        let on = crate::widgets::enabled(app, id);
+        let on = crate::access_gate::offered(app, id, &params);
         if ui.add_enabled(on, egui::Button::new(tl!(label)).shortcut_text(sc)).clicked() {
             let _ = app.run(id, params);
             ui.close();
         }
     };
-    if let Some(issue) = app.canvas.context_issue.clone() {
+    // Spelling suggestions and synonyms only offer to change the text.
+    if let Some(issue) = app.canvas.context_issue.clone().filter(|_| !app.read_only()) {
         let sugg: Vec<String> = issue
             .get("suggestions")
             .and_then(|v| v.as_array())
@@ -2627,7 +2669,8 @@ fn context_menu(app: &mut WordApp, ui: &mut Ui) {
         ui.separator();
     }
     item(ui, app, "Cut", "edit.cut", json!({}));
-    if ui.add(egui::Button::new(tl!("Copy")).shortcut_text(crate::widgets::shortcut_text(app, "edit.copy"))).clicked() {
+    let copy = egui::Button::new(tl!("Copy")).shortcut_text(crate::widgets::shortcut_text(app, "edit.copy"));
+    if ui.add_enabled(crate::widgets::enabled(app, "edit.copy"), copy).clicked() {
         if let Ok(r) = app.run("edit.copy", json!({})) {
             crate::system_clipboard::put_result(app, ui.ctx(), &r);
         }
@@ -2635,7 +2678,7 @@ fn context_menu(app: &mut WordApp, ui: &mut Ui) {
     }
     item(ui, app, "Paste", "edit.paste", json!({}));
     ui.separator();
-    if let Some(syn) = app.canvas.context_synonyms.clone().and_then(|v| v.as_array().cloned()).filter(|a| !a.is_empty()) {
+    if let Some(syn) = app.canvas.context_synonyms.clone().and_then(|v| v.as_array().cloned()).filter(|a| !a.is_empty() && !app.read_only()) {
         ui.menu_button(tl!("Synonyms"), |ui| {
             for w in syn.iter().filter_map(|x| x.as_str()) {
                 if ui.button(w).clicked() {

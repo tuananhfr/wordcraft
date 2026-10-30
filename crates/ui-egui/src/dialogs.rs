@@ -970,6 +970,9 @@ impl Dialog {
     }
 
     pub fn open(name: &str, app: &mut WordApp) -> Option<Dialog> {
+        if app.refuse_dialog(name) {
+            return None;
+        }
         if let Some(d) = crate::dialogs_insert::open(name, app) {
             return Some(Dialog::Insert(Box::new(d)));
         }
@@ -1736,8 +1739,15 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
         Dialog::Tabs { form } => crate::dialogs_para::tabs(app, ui, form),
         Dialog::Borders { form } => crate::dialogs_para::borders(app, ui, form),
         Dialog::Find { query, replace, match_case, whole_word, regex, extra, tab, goto_what, goto_target, message, focus } => {
+            let can_replace = !app.read_only();
+            if !can_replace && *tab == FindTab::Replace {
+                *tab = FindTab::Find;
+            }
             ui.horizontal(|ui| {
                 for (t, label) in [(FindTab::Find, "Find"), (FindTab::Replace, "Replace"), (FindTab::GoTo, "Go To")] {
+                    if t == FindTab::Replace && !can_replace {
+                        continue;
+                    }
                     if ui.selectable_label(*tab == t, tl!(label)).clicked() && *tab != t {
                         *tab = t;
                         message.clear();

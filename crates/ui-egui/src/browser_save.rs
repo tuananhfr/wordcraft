@@ -30,7 +30,9 @@ impl WordApp {
     pub(crate) fn browser_save(&mut self, id: &str, params: &Value) -> Result<Value, String> {
         let name = params.get("path").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| self.default_save_name());
         let name = if id == "file.exportPdf" && !name.ends_with(".pdf") { format!("{name}.pdf") } else { name };
-        let saving = matches!(id, "file.save" | "file.saveAs");
+        // Save As of a host document downloads a copy: only the host's save makes it saved.
+        let host_copy = id == "file.saveAs" && self.host_owns(self.session.document_id());
+        let saving = matches!(id, "file.save" | "file.saveAs") && !host_copy;
         let sharing = id == crate::share::SHARE;
         if saving && self.picker_saving(self.session.document_id()) {
             return Ok(json!({"downloaded": name, "pending": true}));
@@ -45,12 +47,12 @@ impl WordApp {
             self.session.run("file.encrypt", &json!({"password": pw})).map_err(|e| e.to_string())?;
         }
         // A save is a save, download or not: advance the revision and modified stamp (#262).
-        if matches!(id, "file.save" | "file.saveAs") {
+        if saving {
             self.session.stamp_save();
         }
         // Word documents are encrypted with the document's password, if it has one; a shared copy
         // is the same file a save downloads, so it stays protected.
-        let password = if saving || sharing { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
+        let password = if saving || sharing || host_copy { self.session.password.as_ref().map(wordcraft_engine::Password::as_str) } else { None };
         let opts = wordcraft_engine::cmd::file::export_options(&self.session, params);
         let document = self.session.document_id();
         let bytes = match wordcraft_engine::io::save_bytes_with(&name, &self.session.doc, password, &opts) {
@@ -120,7 +122,9 @@ impl WordApp {
             && pending.document_id() == document
         {
             pending.after = Some(AfterSave::Continue { then, params, document });
+            return;
         }
+        self.host_continue_after_save(document, then, params);
     }
 
     /// Finish the picker saves that have been answered (every frame, from `logic`).

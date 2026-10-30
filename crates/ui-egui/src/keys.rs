@@ -280,7 +280,8 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
     if app.ui.keytips != crate::keytips::Phase::Off {
         return;
     }
-    let events = ctx.input(|i| i.events.clone());
+    let mut events = ctx.input(|i| i.events.clone());
+    crate::access_gate::canvas_input(app, &mut events);
     if app.session.view.read_mode {
         // Read Mode is for navigation and selection, not typing into the document. The ribbon's
         // Edit Document button or Escape returns to Print Layout before editing.

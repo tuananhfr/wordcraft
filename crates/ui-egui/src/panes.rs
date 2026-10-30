@@ -361,7 +361,8 @@ fn comments(app: &mut WordApp, ui: &mut Ui) {
         let _ = app.run("view.commentsPane", json!({"value": false}));
         return;
     }
-    if crate::widgets::icon_text_button(ui, "newComment", tl!("New Comment"), regular(12.5)).clicked() {
+    let editable = !app.read_only();
+    if ui.add_enabled_ui(editable, |ui| crate::widgets::icon_text_button(ui, "newComment", tl!("New Comment"), regular(12.5))).inner.clicked() {
         let _ = app.run("review.newComment", json!({"text": ""}));
     }
     ui.separator();
@@ -384,8 +385,9 @@ fn comments(app: &mut WordApp, ui: &mut Ui) {
                     }
                 });
                 // Editable comment text (one undo step per edit, like the balloons).
-                comment_editor(app, ui, id as u32, None, false);
-                let open_key = egui::Id::new(("comment_reply_open", id));
+                let focus = ui.data_mut(|d| d.remove_temp::<bool>(edit_focus_key(id as u32))).unwrap_or(false);
+                comment_editor(app, ui, id as u32, None, focus);
+                let open_key = reply_open_key(id as u32);
                 let mut replying = ui.data(|d| d.get_temp::<bool>(open_key)).unwrap_or(false);
                 ui.horizontal(|ui| {
                     if ui.small_button(tl!("Go to")).clicked()
@@ -393,21 +395,22 @@ fn comments(app: &mut WordApp, ui: &mut Ui) {
                     {
                         let _ = app.run("caret.set", json!({"pos": a}));
                     }
-                    if ui.small_button(tl!("Reply")).clicked() {
+                    if ui.add_enabled(editable, egui::Button::new(tl!("Reply")).small()).clicked() {
                         replying = true;
                         ui.data_mut(|d| d.insert_temp(open_key, true));
-                        ui.data_mut(|d| d.insert_temp(egui::Id::new(("comment_reply_focus", id)), true));
+                        ui.data_mut(|d| d.insert_temp(reply_focus_key(id as u32), true));
                     }
                     let resolved = c.get("resolved").and_then(Value::as_bool).unwrap_or(false);
-                    if ui.small_button(if resolved { tl!("Reopen") } else { tl!("Resolve") }).clicked() {
+                    if ui.add_enabled(editable, egui::Button::new(if resolved { tl!("Reopen") } else { tl!("Resolve") }).small()).clicked() {
                         let _ = app.run("review.resolveComment", json!({"id": id}));
                     }
-                    if ui.small_button(tl!("Delete")).clicked() {
+                    if ui.add_enabled(editable, egui::Button::new(tl!("Delete")).small()).clicked() {
                         let _ = app.run("review.deleteComment", json!({"id": id}));
                     }
                 });
-                if replying {
-                    let focus = ui.data_mut(|d| d.remove_temp::<bool>(egui::Id::new(("comment_reply_focus", id)))).unwrap_or(false);
+                // A read-only document keeps an open reply field and its draft for when editing comes back.
+                if replying && editable {
+                    let focus = ui.data_mut(|d| d.remove_temp::<bool>(reply_focus_key(id as u32))).unwrap_or(false);
                     if reply_editor(app, ui, id as u32, None, focus) {
                         ui.data_mut(|d| d.remove::<bool>(open_key));
                     }
@@ -418,12 +421,27 @@ fn comments(app: &mut WordApp, ui: &mut Ui) {
     });
 }
 
-fn edit_key(id: u32) -> egui::Id {
+pub(crate) fn edit_key(id: u32) -> egui::Id {
     egui::Id::new(("comment_edit", id))
 }
 
-fn reply_key(id: u32) -> egui::Id {
+pub(crate) fn reply_key(id: u32) -> egui::Id {
     egui::Id::new(("comment_reply", id))
+}
+
+/// The Comments pane: comment `id`'s reply field is open.
+pub(crate) fn reply_open_key(id: u32) -> egui::Id {
+    egui::Id::new(("comment_reply_open", id as u64))
+}
+
+/// The Comments pane: the next frame gives comment `id`'s reply field the keyboard.
+pub(crate) fn reply_focus_key(id: u32) -> egui::Id {
+    egui::Id::new(("comment_reply_focus", id as u64))
+}
+
+/// The Comments pane: the next frame gives comment `id`'s text the keyboard.
+pub(crate) fn edit_focus_key(id: u32) -> egui::Id {
+    egui::Id::new(("comment_edit_focus", id as u64))
 }
 
 /// A comment's text, editable in place (the Comments pane and the balloons). Typing stays in a
@@ -432,8 +450,14 @@ fn reply_key(id: u32) -> egui::Id {
 pub(crate) fn comment_editor(app: &mut WordApp, ui: &mut Ui, id: u32, font: Option<egui::FontId>, focus: bool) {
     let Some(part) = app.session.doc.comments.get(&id).map(|c| c.part) else { return };
     let key = edit_key(id);
-    let mut text = ui.data(|d| d.get_temp::<String>(key)).unwrap_or_else(|| app.session.doc.plain_text(StoryRef::Part(part)));
-    let mut edit = egui::TextEdit::multiline(&mut text).desired_rows(1).desired_width(f32::INFINITY).hint_text(tl!("Add a comment"));
+    // A read-only document shows the comment as it is; a draft waits for editing to come back.
+    let draft = if app.read_only() { None } else { ui.data(|d| d.get_temp::<String>(key)) };
+    let mut text = draft.unwrap_or_else(|| app.session.doc.plain_text(StoryRef::Part(part)));
+    let mut edit = egui::TextEdit::multiline(&mut text)
+        .desired_rows(1)
+        .desired_width(f32::INFINITY)
+        .hint_text(tl!("Add a comment"))
+        .interactive(!app.read_only());
     if let Some(f) = font {
         edit = edit.font(f);
     }
@@ -451,6 +475,10 @@ pub(crate) fn comment_editor(app: &mut WordApp, ui: &mut Ui, id: u32, font: Opti
 
 /// Write a comment's draft text back, when it has one that differs from the comment.
 pub(crate) fn commit_comment(app: &mut WordApp, ctx: &egui::Context, id: u32) {
+    // A read-only document keeps the draft, unposted, for when `setMode` turns editing back on.
+    if app.read_only() {
+        return;
+    }
     let Some(text) = ctx.data_mut(|d| d.remove_temp::<String>(edit_key(id))) else { return };
     let Some(part) = app.session.doc.comments.get(&id).map(|c| c.part) else { return };
     if text != app.session.doc.plain_text(StoryRef::Part(part)) {
@@ -491,6 +519,9 @@ pub(crate) fn reply_editor(app: &mut WordApp, ui: &mut Ui, id: u32, font: Option
 
 /// Post a pending reply draft to comment `id` (nothing when there is none or it is blank).
 pub(crate) fn commit_reply(app: &mut WordApp, ctx: &egui::Context, id: u32) {
+    if app.read_only() {
+        return;
+    }
     let Some(text) = ctx.data_mut(|d| d.remove_temp::<String>(reply_key(id))) else { return };
     if !text.trim().is_empty() {
         let root = thread_root(app, id);

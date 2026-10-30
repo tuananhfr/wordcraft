@@ -43,7 +43,7 @@ pub fn key_text(sc: &str) -> String {
 fn tooltip(app: &WordApp, resp: Response, label: &str, id: &str) -> Response {
     let sc = shortcut_text(app, id);
     let desc = app.session.registry.get(id).map(|s| crate::i18n::location(s.location)).unwrap_or_default();
-    let enabled = app.session.registry.get(id).map(|s| (s.enabled)(&app.session).is_none()).unwrap_or(true);
+    let enabled = app.session.registry.get(id).map(|s| app.session.refusal(s).is_none()).unwrap_or(true);
     resp.on_hover_ui(|ui| {
         ui.set_max_width(260.0);
         if sc.is_empty() {
@@ -92,6 +92,10 @@ fn keytip_badge(ui: &Ui, rect: Rect, id: &str, name: &str) {
 pub fn enabled(app: &WordApp, id: &str) -> bool {
     // No document open (#1129): only what opens one, Help and the settings.
     if !app.has_document() && !crate::works_without_document(id) {
+        return false;
+    }
+    // A read-only or no-download document greys out what its host doesn't allow.
+    if !app.access_allows(id) {
         return false;
     }
     match app.session.registry.get(id) {
@@ -166,7 +170,7 @@ fn big_button(ui: &mut Ui, app: &mut WordApp, icon: &str, label: &str, id: &str,
     let w = (galley_w + 12.0).max(44.0);
     let (r, resp) = ui.allocate_exact_size(vec2(w, CONTENT_H), Sense::click());
     keytip_badge(ui, r, id, &label.replace('\n', " "));
-    let on = enabled(app, id);
+    let on = crate::access_gate::offered(app, id, &params);
     bg(ui, r, &resp, checked, &t);
     let ic = Rect::from_center_size(pos2(r.center().x, r.min.y + BIG_ICON_Y), vec2(32.0, 32.0));
     let (c, a) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
@@ -192,7 +196,7 @@ pub fn small(ui: &mut Ui, app: &mut WordApp, icon: &str, label: Option<&str>, ti
     let text_w = label.map(|l| ui.ctx().fonts_mut(|f| f.layout_no_wrap(l.to_string(), regular(11.5), t.text).size().x) + 6.0).unwrap_or(0.0);
     let (r, resp) = ui.allocate_exact_size(vec2(24.0 + text_w, 22.0), Sense::click());
     keytip_badge(ui, r, id, tip);
-    let on = enabled(app, id);
+    let on = crate::access_gate::offered(app, id, &params);
     bg(ui, r, &resp, checked, &t);
     let ic = Rect::from_center_size(pos2(r.min.x + 12.0, r.center().y), vec2(17.0, 17.0));
     let (c, a) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
@@ -229,20 +233,26 @@ pub fn split(
     bg(ui, r, &resp, checked, &t);
     bg(ui, ar, &aresp, false, &t);
     let ic = Rect::from_center_size(r.center(), vec2(17.0, 17.0));
-    icons::paint(ui.painter(), ic, icon, t.icon, t.accent);
-    if let Some(sw) = swatch {
+    // Greyed only by the host's grant, so a split button without a host looks as it always did.
+    let on = app.access_allows(id);
+    let (c, a) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
+    icons::paint(ui.painter(), ic, icon, c, a);
+    if let Some(sw) = swatch.filter(|_| on) {
         ui.painter().rect_filled(Rect::from_min_max(pos2(r.min.x + 4.0, r.max.y - 5.0), pos2(r.max.x - 4.0, r.max.y - 2.0)), 0.0, sw);
     }
-    icons::paint(ui.painter(), Rect::from_center_size(ar.center(), vec2(DROPDOWN, DROPDOWN)), "dropdown", t.icon, t.accent);
+    icons::paint(ui.painter(), Rect::from_center_size(ar.center(), vec2(DROPDOWN, DROPDOWN)), "dropdown", c, a);
     let resp = tooltip(app, resp, tip, id);
     command_menu(&resp, app, id);
-    if resp.clicked() {
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, tip));
+    if resp.clicked() && on {
         run_from_ribbon(app, id, params);
     }
-    egui::Popup::menu(&aresp).show(|ui| {
-        ui.set_min_width(180.0);
-        menu(ui, app);
-    });
+    if on {
+        egui::Popup::menu(&aresp).show(|ui| {
+            ui.set_min_width(180.0);
+            menu(ui, app);
+        });
+    }
 }
 
 /// Whether a menu button whose menu is about command `id` is on ("" = always).
