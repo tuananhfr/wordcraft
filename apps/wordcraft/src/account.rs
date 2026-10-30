@@ -56,7 +56,8 @@ struct Shared {
     account: OnceLock<Arc<Account>>,
     snapshot: Mutex<AccountSnapshot>,
     ctx: OnceLock<egui::Context>,
-    /// Cancel pressed before the library started waiting; its own flag is reset when `sign_in` starts.
+    /// Cancel pressed before the library started waiting; its own flag is reset when `sign_in` or
+    /// `select_org` starts.
     cancelled: AtomicBool,
 }
 
@@ -136,7 +137,7 @@ impl AccountHook for DesktopAccount {
     }
 
     fn cancel_sign_in(&self) {
-        // Not queued: the worker is blocked inside `sign_in` until this unblocks it.
+        // Not queued: the worker is blocked inside `sign_in` or `select_org` until this unblocks it.
         self.shared.cancelled.store(true, Ordering::SeqCst);
         if let Some(account) = self.shared.account.get() {
             account.cancel_sign_in();
@@ -148,6 +149,12 @@ impl AccountHook for DesktopAccount {
     }
 
     fn select_org(&self, org_id: Option<String>) {
+        // PI switches organization through the browser (ADR 0011): the same wait and Cancel as sign-in.
+        self.shared.cancelled.store(false, Ordering::SeqCst);
+        self.shared.publish(|s| {
+            s.view = AccountView::SigningIn;
+            s.error = None;
+        });
         self.send(Command::SelectOrg(org_id));
     }
 
@@ -270,12 +277,12 @@ impl Worker {
                 }
                 return self.publish_status();
             }
-            Command::SignIn => self.sign_in(),
+            Command::SignIn => self.browser_flow(|account, open| account.sign_in(open)),
+            Command::SelectOrg(org) => self.browser_flow(|account, open| account.select_org(org.as_deref(), open)),
             command => {
                 self.shared.publish(|s| s.busy = true);
                 match command {
                     Command::SignOut => self.account.sign_out(),
-                    Command::SelectOrg(org) => self.account.select_org(org.as_deref()),
                     _ => self.account.retry_activation(),
                 }
             }
@@ -286,15 +293,20 @@ impl Worker {
         self.publish(result.err().as_ref().and_then(error_view), false);
     }
 
-    fn sign_in(&mut self) -> Result<(), Error> {
-        let (shared, account, opener) = (&self.shared, &self.account, &self.opener);
-        let result = account.sign_in(|url| {
+    /// Sign-in or organization switch: both block on the browser until its callback or Cancel.
+    fn browser_flow(&mut self, run: impl FnOnce(&Account, &dyn Fn(&str) -> Result<(), String>) -> Result<(), Error>) -> Result<(), Error> {
+        // A background reload may have replaced the wait the UI showed before this command arrived.
+        self.shared.publish(|s| s.view = AccountView::SigningIn);
+        let (shared, opener) = (&self.shared, &self.opener);
+        let account: &Account = &self.account;
+        let open = |url: &str| {
             if shared.cancelled.load(Ordering::SeqCst) {
                 account.cancel_sign_in();
                 return Ok(());
             }
             opener(url)
-        });
+        };
+        let result = run(account, &open);
         if result.is_ok() {
             self.next_refresh = Instant::now() + REFRESH_EVERY;
         }
@@ -347,7 +359,8 @@ fn view_of(status: &Status) -> AccountView {
 
 fn licence_of(licence: &LicenceState) -> LicenceView {
     match licence {
-        LicenceState::NotActivated => LicenceView::Free,
+        // Reported only with offline licensing, which Office keeps off; no plan or seat is the free tier.
+        LicenceState::NotActivated | LicenceState::NotEntitled => LicenceView::Free,
         LicenceState::Active { features, expires_at, .. } => {
             LicenceView::Active { expires_at: *expires_at, pro: features.iter().any(|f| is_pro_feature(f)) }
         }

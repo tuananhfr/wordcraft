@@ -43,7 +43,7 @@ fn status_maps_to_the_view() {
         s.user = None;
     }
     let AccountView::SignedIn(view) = view_of(&no_user) else { panic!("signed in") };
-    assert_eq!((view.name.as_str(), view.email), ("", None), "before /v1/me answered");
+    assert_eq!((view.name.as_str(), view.email), ("", None), "before PI's /me answered");
 }
 
 #[test]
@@ -51,6 +51,7 @@ fn licence_states_map_to_the_view() {
     let active =
         |features: &[&str]| LicenceState::Active { lease_id: "l".into(), features: features.iter().map(|f| f.to_string()).collect(), expires_at: 5 };
     assert_eq!(licence_of(&LicenceState::NotActivated), LicenceView::Free);
+    assert_eq!(licence_of(&LicenceState::NotEntitled), LicenceView::Free);
     assert_eq!(licence_of(&active(&["vanban.view", "vanban.export"])), LicenceView::Active { expires_at: 5, pro: false });
     assert_eq!(licence_of(&active(&["vanban.view", "vanban.advanced"])), LicenceView::Active { expires_at: 5, pro: true });
     assert_eq!(licence_of(&LicenceState::Inactive { lease_id: "l".into(), expires_at: 9 }), LicenceView::Inactive { expires_at: 9 });
@@ -69,6 +70,7 @@ fn library_errors_map_to_the_error_line() {
             retry_after: retry.map(Duration::from_secs),
             max_devices: None,
             active_devices: None,
+            errors: Box::default(),
         })
     };
     let cases = [
@@ -188,8 +190,8 @@ fn signs_in_switches_org_and_signs_out_against_pi_mock() {
     assert_eq!(snapshot.error, None);
     assert_eq!(view.email.as_deref(), Some("an.nguyen@example.com"));
     assert!(!view.name.is_empty());
-    assert_eq!(view.active_org, None);
-    assert!(matches!(view.licence, LicenceView::Active { pro: false, .. }), "{:?}", view.licence);
+    assert_eq!(view.active_org, None, "PI's organization page picked personal");
+    assert_eq!(view.licence, LicenceView::Free, "Office keeps offline licensing off");
     assert!(view.online);
     assert!(hook.allowed("vanban.use"));
 
@@ -205,6 +207,8 @@ fn signs_in_switches_org_and_signs_out_against_pi_mock() {
     let dir = dir.path().to_string_lossy().into_owned();
     for request in server.requests() {
         assert!(!request.body.contains(&dir) && !request.query.contains(&dir), "{} {}", request.method, request.path);
+        // No device, lease or entitlement endpoint: Office keeps offline licensing off (ADR 0011).
+        assert!(!request.path.starts_with("/api/") || request.path == "/api/v1/id/me", "{} {}", request.method, request.path);
     }
 }
 
@@ -220,4 +224,35 @@ fn cancel_unblocks_a_sign_in_waiting_for_the_browser() {
     let snapshot = wait_for(&hook, "cancel", |s| s.view == AccountView::Guest);
     assert_eq!(snapshot.error, Some(AccountError::Cancelled));
     assert_eq!(wordcraft_ui_egui::account::error_text(AccountError::Cancelled), None, "shown as nothing");
+}
+
+#[test]
+fn cancel_unblocks_an_organization_switch_waiting_for_the_browser() {
+    let server = Server::start(Scenario::default());
+    let dir = tempfile::tempdir().unwrap();
+    let browser_answers = Arc::new(AtomicBool::new(true));
+    let answers = browser_answers.clone();
+    let opener: Opener = Box::new(move |url| if answers.load(Ordering::SeqCst) { follow_redirect(url) } else { Ok(()) });
+    let hook = started(&server, &dir, opener);
+    hook.sign_in();
+    wait_for(&hook, "sign-in", |s| matches!(&s.view, AccountView::SignedIn(v) if v.orgs.len() == 2));
+    browser_answers.store(false, Ordering::SeqCst);
+    let code_exchanges = || server.requests().iter().filter(|r| r.path == "/id/token").count();
+    let exchanged = code_exchanges();
+
+    hook.select_org(Some(ORG_A.into()));
+    assert_eq!(hook.snapshot().view, AccountView::SigningIn, "the sign-in wait shows at once");
+    let account = hook.shared.account.get().unwrap();
+    let until = Instant::now() + Duration::from_secs(10);
+    while account.status() != Status::SigningIn {
+        assert!(Instant::now() < until, "the switch did not reach the browser");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(hook.snapshot().view, AccountView::SigningIn, "still waiting with Cancel");
+    hook.cancel_sign_in();
+    let snapshot = wait_for(&hook, "cancel", |s| matches!(s.view, AccountView::SignedIn(_)));
+    assert_eq!(snapshot.error, Some(AccountError::Cancelled));
+    let AccountView::SignedIn(view) = snapshot.view else { panic!("signed in") };
+    assert_eq!(view.active_org, None, "the personal context stays");
+    assert_eq!(code_exchanges(), exchanged, "no new token family");
 }
