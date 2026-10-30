@@ -365,6 +365,8 @@ pub struct Session {
     pub author: String,
     /// Initials for comments (File › Options › General); empty = the name's initials.
     pub initials: String,
+    /// What the embedding host allows with this document (online viewers); never saved.
+    pub access: crate::access::Access,
     /// Format painter: copied formatting waiting to be applied (and whether it stays on).
     pub painter: Option<(CharProps, wordcraft_doc::props::ParaProps, bool)>,
     /// Last message for the status bar / agents.
@@ -602,6 +604,7 @@ impl Session {
             registry: Arc::new(crate::cmd::registry()),
             author: "WordCraft User".into(),
             initials: String::new(),
+            access: Default::default(),
             painter: None,
             status: String::new(),
             history: Vec::new(),
@@ -908,7 +911,9 @@ impl Session {
     }
     /// The shared execution guard for history controls and commands.
     pub fn history_block_reason(&self, redo: bool) -> Option<&'static str> {
-        if self.step_lifts_protection(redo) {
+        if self.access.read_only {
+            Some(crate::access::Refusal::ReadOnly.reason())
+        } else if self.step_lifts_protection(redo) {
             Some("Use Stop Protection to enable Undo or Redo.")
         } else if if redo { self.redo.is_empty() } else { self.history.is_empty() } {
             Some(if redo { "there is nothing to redo" } else { "there is nothing to undo" })
@@ -1121,6 +1126,8 @@ impl Session {
             registry,
             author,
             initials,
+            // The host's grant goes with its document.
+            access: _,
             painter,
             status,
             history: _,
@@ -1234,6 +1241,8 @@ impl Session {
             registry: _,
             author: _,
             initials: _,
+            // The host's grant, like the file path: not an edit to the document.
+            access: _,
             painter: _,
             status: _,
             history,
@@ -1341,6 +1350,12 @@ impl Session {
         }
     }
 
+    /// Why `spec` can't run now (the host's [`crate::access::Access`] first, then the command's
+    /// own state); `None` when it can.
+    pub fn refusal(&self, spec: &crate::CommandSpec) -> Option<&'static str> {
+        self.access.refusal(spec).map(crate::access::Refusal::reason).or_else(|| (spec.enabled)(self))
+    }
+
     /// Run a command by id with JSON params (the single entry point for the UI, CLI, MCP and
     /// control channel). Mutating commands are undoable; a failed command leaves the document as
     /// it was; a panic inside a command becomes an error.
@@ -1362,7 +1377,7 @@ impl Session {
         let join = std::mem::take(&mut self.join_next);
         let reg = self.registry.clone();
         let Some(spec) = reg.get(id) else { return Err(CmdError::Unknown(id.to_string())) };
-        if let Some(why) = (spec.enabled)(self) {
+        if let Some(why) = self.refusal(spec) {
             return Err(CmdError::Disabled(format!("{id}: {why}")));
         }
         // Restrict Editing: refused outright, or allowed as long as it only edits the exceptions.

@@ -94,6 +94,30 @@ fn tab_button(app: &mut WordApp, ui: &mut Ui, tab: &str, custom: bool, collapsed
 
 /// Share, Editing mode and Comments, at the right end of a wide window's tab strip.
 fn share_editing_comments(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
+    if !app.shell_shares() {
+        share_button(app, ui, t);
+        ui.add_space(6.0);
+    }
+    // A read-only document says so and offers no switch to editing.
+    let read_only = app.read_only();
+    let track = app.session.doc.settings.track_changes;
+    let (icon, label) = match (read_only, track) {
+        (true, _) => ("readMode", tl!("Viewing")),
+        (false, true) => ("pencil", tl!("Reviewing")),
+        (false, false) => ("pencil", tl!("Editing")),
+    };
+    let mode = ui.add_enabled_ui(!read_only, |ui| crate::widgets::icon_text_menu_button(ui, icon, label, regular(12.0))).inner;
+    mode.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, !read_only, label));
+    if !read_only {
+        egui::Popup::menu(&mode).show(|ui| editing_choices(app, ui));
+    }
+    ui.add_space(4.0);
+    if crate::widgets::icon_text_button(ui, "comment", tl!("Comments"), regular(12.0)).clicked() {
+        let _ = app.run("view.commentsPane", json!({}));
+    }
+}
+
+fn share_button(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     let share = tl!("Share");
     let share_w = ui.ctx().fonts_mut(|f| f.layout_no_wrap(share.to_string(), medium(12.0), t.text).size().x);
     let (r, resp) = ui.allocate_exact_size(vec2((share_w + 36.0).max(74.0), 24.0), Sense::click());
@@ -104,14 +128,6 @@ fn share_editing_comments(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     let resp = resp.on_hover_text(tl!("Export a copy to share (PDF, Word document)"));
     if resp.clicked() {
         share_copy(app, crate::share::pointer_click(&resp));
-    }
-    ui.add_space(6.0);
-    let track = app.session.doc.settings.track_changes;
-    let mode = crate::widgets::icon_text_menu_button(ui, "pencil", if track { tl!("Reviewing") } else { tl!("Editing") }, regular(12.0));
-    egui::Popup::menu(&mode).show(|ui| editing_choices(app, ui));
-    ui.add_space(4.0);
-    if crate::widgets::icon_text_button(ui, "comment", tl!("Comments"), regular(12.0)).clicked() {
-        let _ = app.run("view.commentsPane", json!({}));
     }
 }
 
@@ -130,12 +146,14 @@ fn more_menu(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
     let resp = resp.on_hover_text(label);
     egui::Popup::menu(&resp).show(|ui| {
-        let share = ui.button(tl!("Share")).on_hover_text(tl!("Export a copy to share (PDF, Word document)"));
-        if share.clicked() {
-            share_copy(app, crate::share::pointer_click(&share));
-            ui.close();
+        if !app.shell_shares() {
+            let share = ui.button(tl!("Share")).on_hover_text(tl!("Export a copy to share (PDF, Word document)"));
+            if share.clicked() {
+                share_copy(app, crate::share::pointer_click(&share));
+                ui.close();
+            }
+            ui.separator();
         }
-        ui.separator();
         editing_choices(app, ui);
         ui.separator();
         if ui.button(tl!("Comments")).clicked() {
@@ -158,6 +176,10 @@ fn share_copy(app: &mut WordApp, pointer: bool) {
 }
 
 fn editing_choices(app: &mut WordApp, ui: &mut Ui) {
+    if app.read_only() {
+        ui.add_enabled(false, egui::Button::new(tl!("Viewing")).selected(true));
+        return;
+    }
     let track = app.session.doc.settings.track_changes;
     if ui.selectable_label(!track, tl!("Editing — edit the document directly")).clicked() {
         let _ = app.run("review.trackChanges", json!({"value": false}));

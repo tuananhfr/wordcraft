@@ -99,6 +99,11 @@ pub(crate) fn available(app: &WordApp) -> bool {
         && crate::ink::cursor(app).is_none()
 }
 
+/// Whether a border can be grabbed: resizing is in reach and the document isn't read-only.
+fn resizable(app: &WordApp) -> bool {
+    available(app) && !app.read_only()
+}
+
 /// The border or handle under screen point `p`, if any.
 fn target_at(app: &WordApp, layout: &DocLayout, rects: &[Rect], scale: f32, p: Pos2) -> Option<(usize, f32, f32, ResizeTarget)> {
     let (page, x, y) = crate::canvas::page_at(rects, layout, scale, p)?;
@@ -150,7 +155,7 @@ pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect]
         }
         return true;
     }
-    if !available(app) || !(ui.input(|i| i.pointer.primary_pressed()) && resp.contains_pointer()) {
+    if !resizable(app) || !(ui.input(|i| i.pointer.primary_pressed()) && resp.contains_pointer()) {
         return false;
     }
     let Some(p) = latest else { return false };
@@ -164,7 +169,7 @@ pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect]
 /// goes on as a drag on the page (`pointer`: dashed preview, Escape cancels, one undo step), but
 /// a column border changes only the column on its left.
 pub(crate) fn grab(app: &mut WordApp, layout: &DocLayout, page: usize, x: f32, y: f32) {
-    if !available(app) {
+    if !resizable(app) {
         return;
     }
     if let Some(mut target) = table_resize::resize_target(layout, &app.session.doc, page, x, y, 1.0) {
@@ -207,7 +212,7 @@ pub(crate) fn moved(app: &WordApp, ctx: &egui::Context, page: usize, column: boo
 pub fn cursor(app: &WordApp, ui: &Ui, resp: &egui::Response, layout: &DocLayout, rects: &[Rect], scale: f32) {
     let edge = match &app.canvas.table_resize {
         Some(d) => Some(d.target.edge),
-        None if resp.hovered() && available(app) => {
+        None if resp.hovered() && resizable(app) => {
             ui.input(|i| i.pointer.latest_pos()).and_then(|p| target_at(app, layout, rects, scale, p)).map(|(_, _, _, t)| t.edge)
         }
         None => None,
@@ -260,7 +265,7 @@ pub fn paint(app: &WordApp, painter: &egui::Painter, t: &Tokens, layout: &DocLay
         }
         return;
     }
-    if !available(app) {
+    if !resizable(app) {
         return;
     }
     // The handle shows while the pointer is over the table (or on the handle itself).

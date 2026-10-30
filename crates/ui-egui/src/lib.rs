@@ -22,6 +22,7 @@ macro_rules! tl {
 
 pub mod a11y;
 pub mod a11y_pane;
+mod access_gate;
 pub mod account;
 mod alt_chunk_notice;
 pub mod autoscroll;
@@ -670,8 +671,7 @@ impl WordApp {
     /// preferences.
     pub fn prefs(&self) -> UiState {
         let mut ui = self.ui.clone();
-        ui.author = self.session.author.clone();
-        ui.initials = self.session.initials.clone();
+        (ui.author, ui.initials) = self.prefs_author();
         ui.dictionary = wordcraft_engine::proof::user_dictionary();
         ui.editing = self.session.prefs.clone();
         ui.read_aloud_rate = self.session.read_aloud.rate();
@@ -726,6 +726,9 @@ impl WordApp {
     /// Close, Envelopes, Labels and Finish & Merge on a document with unsaved changes first ask
     /// Save / Don't Save / Cancel, and the command runs once that is answered (`ui.saveChanges`).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
+        }
         if system_clipboard::request(self, id, &params) {
             return Ok(json!({"pending": "clipboard"}));
         }
@@ -800,6 +803,10 @@ impl WordApp {
             let e = tl!("No document is open. Create a document or open one first.").to_string();
             self.status(e.clone());
             return Err(e);
+        }
+        // Before the interface commands and the browser's Save As, which never reach the engine.
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
         }
         if let Some(r) = self.ui_command(id, &params) {
             return r;
@@ -988,6 +995,10 @@ impl WordApp {
     /// [`WordApp::execute`] for something the user did: a document that turns out to be
     /// password-protected asks for the password (and opens with it) instead of failing (#55).
     pub(crate) fn execute_user(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        // A refused save must not ask about losing content first.
+        if let Some(refused) = self.refuse_by_access(id) {
+            return refused;
+        }
         if self.warn_before_save(id, &params) {
             return Ok(json!({"pending": "lossWarning"}));
         }
@@ -1850,6 +1861,7 @@ impl WordApp {
         }
         focus::hint(self, &ctx);
         content_controls::popup(self, &ctx);
+        access_gate::close_refused(self);
         dialogs::show(self, &ctx);
         #[cfg(not(target_arch = "wasm32"))]
         updates::dialog(self, &ctx);
@@ -1873,6 +1885,7 @@ impl WordApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.sent_title = title;
         }
+        access_gate::end_frame(self, &ctx);
         self.frame_ms = now_ms() - t0;
         // Typing and formatting land here, after `logic` has reported.
         self.report_dirty();
@@ -1919,6 +1932,12 @@ impl WordApp {
         let Some(inbox) = self.services.inbox.clone() else { return };
         let files = std::mem::take(&mut *inbox.lock().unwrap_or_else(|e| e.into_inner()));
         for (name, bytes) in files {
+            if self.refuse_drop() {
+                if let Some(report) = &self.services.intake_result {
+                    report(&name, bytes.len(), false);
+                }
+                continue;
+            }
             let lower = name.to_ascii_lowercase();
             let img = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".wmf", ".emf"].iter().any(|e| lower.ends_with(e));
             // Any recipient file ends the pending picker request, so a later .txt drop opens normally.

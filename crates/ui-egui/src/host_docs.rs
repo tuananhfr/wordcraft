@@ -1,9 +1,10 @@
-//! Web (ERPCons office shell, `window.erpHost` v1, contract `erp-host.md`): documents that live
-//! on the server. The host hands them in ([`HostLink::open`]); Ctrl+S, AutoSave and the host's
-//! flush send them back through [`HostTransport::save`], and a document is saved only as of the
-//! revision the host acknowledged. They are never drafted (`erpDrafts`): the host keeps its own
-//! copy of unacknowledged bytes. Without [`crate::Services::host`] (desktop, the web app on its
-//! own) nothing here runs.
+//! Web (ERPCons office shell, `window.erpHost` v1 and v2, contract `erp-host.md`): documents that
+//! live on the server. The host hands them in ([`HostLink::open`]); Ctrl+S, AutoSave and the
+//! host's flush send them back through [`HostTransport::save`], and a document is saved only as of
+//! the revision the host acknowledged. They are never drafted (`erpDrafts`): the host keeps its own
+//! copy of unacknowledged bytes. v2 adds access modes ([`HostMode`]: read-only documents never
+//! save) and the signed-in user as author. Without [`crate::Services::host`] (desktop, the web app
+//! on its own) nothing here runs.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -15,10 +16,19 @@ use wordcraft_fonts::log_safe;
 use crate::WordApp;
 use crate::open_documents::{save_name_of, untitled_name};
 
+mod access;
 mod autosave;
+mod draft_keep;
 mod saves;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_access;
+#[cfg(test)]
+mod tests_offered;
+#[cfg(test)]
+mod tests_view_look;
+mod view_keep;
 
 use saves::{Saves, Snapshot, Work};
 
@@ -58,6 +68,26 @@ pub enum SaveOutcome {
     },
 }
 
+/// What the host lets the user do with a document (v2 `doc.mode`, `setMode`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum HostMode {
+    #[default]
+    Edit,
+    Comment,
+    View,
+}
+
+impl HostMode {
+    /// Phase 2 has no server comments yet, so `Comment` leaves the content as read-only as `View`.
+    pub fn read_only(self) -> bool {
+        self != HostMode::Edit
+    }
+
+    fn access(self, can_download: bool) -> wordcraft_engine::Access {
+        wordcraft_engine::Access { read_only: self.read_only(), can_download, commenting: self == HostMode::Comment }
+    }
+}
+
 /// A document the host hands in (`open(doc)`).
 pub struct HostOpen {
     pub doc_id: String,
@@ -67,6 +97,26 @@ pub struct HostOpen {
     /// The extension the server stored.
     pub format: String,
     pub bytes: Vec<u8>,
+    pub mode: HostMode,
+    /// Save As, Export, Print and copying are allowed.
+    pub can_download: bool,
+    /// A newer version of a document already open: keep where the user was (v2 `preserveView`).
+    pub preserve_view: bool,
+}
+
+impl Default for HostOpen {
+    fn default() -> Self {
+        HostOpen {
+            doc_id: String::new(),
+            version: 0,
+            title: String::new(),
+            format: String::new(),
+            bytes: Vec::new(),
+            mode: HostMode::Edit,
+            can_download: true,
+            preserve_view: false,
+        }
+    }
 }
 
 /// Gets a save's outcome.
@@ -96,13 +146,28 @@ struct Shared {
     settled: RefCell<Vec<(u64, u64, SaveOutcome)>>,
     acks: RefCell<Vec<(String, u64, u64)>>,
     flushes: RefCell<Vec<Box<dyn FnOnce()>>>,
+    /// `setMode` calls for the next frame: (docId, mode, canDownload).
+    modes: RefCell<Vec<(String, HostMode, bool)>>,
+    /// The last `setUser` for the next frame: the user's name, `None` for no user.
+    user: RefCell<Option<Option<String>>>,
     pumping: Cell<bool>,
     wake: RefCell<Option<egui::Context>>,
+    /// The shell has its own Share button (v2), so the editor shows none.
+    shell_shares: Cell<bool>,
 }
 
 impl HostLink {
     pub fn new(transport: Rc<dyn HostTransport>) -> Self {
         HostLink { transport, shared: Rc::default() }
+    }
+
+    /// A v2 host: sharing is the shell's, from its own Share button.
+    pub fn set_shell_shares(&self) {
+        self.shared.shell_shares.set(true);
+    }
+
+    pub(crate) fn shell_shares(&self) -> bool {
+        self.shared.shell_shares.get()
     }
 
     /// `open(doc)`: the document opens on the next frame.
@@ -128,6 +193,31 @@ impl HostLink {
             acks.push((doc_id.to_string(), revision, version));
         }
         self.pump();
+    }
+
+    /// `setMode(docId, mode, canDownload)`: AutoSave stops at once for a read-only document (rule
+    /// 13; a flush still hands over the edits it has); editing stops on the next frame.
+    pub fn set_mode(&self, doc_id: &str, mode: HostMode, can_download: bool) {
+        self.with_saves(|s| s.set_read_only(doc_id, mode.read_only()));
+        if let Ok(mut opens) = self.shared.opens.try_borrow_mut() {
+            for open in opens.iter_mut().filter(|o| o.doc_id == doc_id) {
+                open.mode = mode;
+                open.can_download = can_download;
+            }
+        }
+        if let Ok(mut modes) = self.shared.modes.try_borrow_mut() {
+            modes.push((doc_id.to_string(), mode, can_download));
+        }
+        self.wake();
+    }
+
+    /// `setUser(user)`: the author of what this user writes into documents; `None` gives the
+    /// name back to the preferences.
+    pub fn set_user(&self, name: Option<String>) {
+        if let Ok(mut user) = self.shared.user.try_borrow_mut() {
+            *user = Some(name);
+        }
+        self.wake();
     }
 
     fn wake(&self) {
@@ -236,9 +326,18 @@ pub(crate) struct HostState {
     /// Commands held back until a host document's save is done ("Save changes?" › Save, Save
     /// All): (document, command, params).
     then: Vec<(u64, String, Value)>,
+    /// The preferences' author name and initials while the host's user stands in for them.
+    pub(crate) prefs_author: Option<(String, String)>,
+    /// Balloon drafts put aside while their document is read-only.
+    kept_drafts: Vec<draft_keep::KeptDraft>,
 }
 
 impl WordApp {
+    /// Whether the host shell shares documents itself, so the ribbon's Share button is hidden.
+    pub(crate) fn shell_shares(&self) -> bool {
+        self.services.host.as_ref().is_some_and(|h| h.shell_shares())
+    }
+
     /// Whether `document` came from the host (and saves there).
     pub(crate) fn host_owns(&self, document: u64) -> bool {
         self.services.host.as_ref().is_some_and(|h| h.owns(document))
@@ -255,6 +354,14 @@ impl WordApp {
         let opens = link.shared.opens.try_borrow_mut().map(|mut o| std::mem::take(&mut *o)).unwrap_or_default();
         for open in opens {
             self.open_host_document(&link, open);
+        }
+        let modes = link.shared.modes.try_borrow_mut().map(|mut m| std::mem::take(&mut *m)).unwrap_or_default();
+        for (doc_id, mode, can_download) in modes {
+            self.apply_host_mode(ctx, &link, &doc_id, mode, can_download);
+        }
+        self.restore_comment_draft(ctx);
+        if let Some(user) = link.shared.user.try_borrow_mut().ok().and_then(|mut u| u.take()) {
+            self.set_host_user(user);
         }
         self.apply_host_outcomes(&link);
         self.host_observe(now);
@@ -384,13 +491,17 @@ impl WordApp {
         let params = json!({"path": host_file_name(&open.title), "data": wordcraft_engine::cmd::insert::base64_encode(&open.bytes)});
         let reloads = link.with_saves(|s| s.by_doc_id(&open.doc_id).map(|d| d.document)).flatten().filter(|d| self.document_index(*d).is_some());
         let opened = match reloads {
-            Some(document) => self.reload_host_document(document, &params),
+            Some(document) => self.reload_host_document(document, &params, open.preserve_view),
             None => self.execute("file.open", params).map(|_| self.session.document_id()),
         };
         match opened {
             Ok(document) => {
+                if let Some(session) = self.session_mut(document) {
+                    session.access = open.mode.access(open.can_download);
+                }
                 let revision = self.find_document(document).map_or(0, |(s, _)| s.rev());
                 let work = link.with_saves(|s| s.add(&open.doc_id, document, open.version, revision)).unwrap_or_default();
+                link.with_saves(|s| s.set_read_only(&open.doc_id, open.mode.read_only()));
                 link.run(work);
                 self.ui.backstage = false;
                 link.transport.opened(&open.doc_id, true, None);
@@ -402,13 +513,19 @@ impl WordApp {
     }
 
     /// Replace `document` with the reloaded bytes, keeping its tab; its unsaved edits go (the
-    /// host asked the user first).
-    fn reload_host_document(&mut self, document: u64, params: &Value) -> Result<u64, String> {
+    /// host asked the user first). `preserve` keeps where the user was ([`view_keep`]).
+    fn reload_host_document(&mut self, document: u64, params: &Value, preserve: bool) -> Result<u64, String> {
         let shown = self.session.document_id() == document;
         let reloaded = self.in_document(document, |app| -> Result<u64, String> {
+            let kept = preserve.then(|| view_keep::keep(app, shown));
             app.session.run("file.open", params).map_err(|e| e.to_string())?;
-            let mut fresh = app.canvas.fresh_view();
-            app.canvas.swap_view(&mut fresh);
+            match kept {
+                Some(kept) => view_keep::restore(app, kept),
+                None => {
+                    let mut fresh = app.canvas.fresh_view();
+                    app.canvas.swap_view(&mut fresh);
+                }
+            }
             app.autosave_path = None;
             crate::alt_chunk_notice::opened(app);
             crate::font_notice::opened(app);

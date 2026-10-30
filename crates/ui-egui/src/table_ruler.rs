@@ -6,7 +6,7 @@
 //! row's column widths (`widths`). A paragraph's indents and tabs in a cell are measured from the
 //! cell's text area (`text_area`).
 
-use egui::{Rect, Sense, Stroke, Ui, pos2, vec2};
+use egui::{Rect, Stroke, Ui, pos2, vec2};
 use wordcraft_layout::{DocLayout, Placed};
 
 use crate::WordApp;
@@ -56,7 +56,7 @@ fn grip(app: &mut WordApp, ui: &Ui, layout: &DocLayout, zone: Rect, column: bool
     } else {
         ("ruler_row", tl!("Table Row Height"), egui::CursorIcon::ResizeRow)
     };
-    let r = ui.interact(zone, ui.id().with((name, i)), Sense::drag()).on_hover_cursor(cursor);
+    let r = crate::access_gate::drag_handle(app, ui, zone, ui.id().with((name, i)), Some(cursor));
     r.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, label));
     let r = if r.dragged() { r } else { r.on_hover_text(label) };
     if r.drag_started() {

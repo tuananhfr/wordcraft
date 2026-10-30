@@ -73,6 +73,9 @@ pub(crate) struct Doc {
     /// Triggers while a save was in flight, as one follow-up of the strongest reason.
     queued: Option<SaveReason>,
     pub(crate) stopped: Option<Stop>,
+    /// Opened for viewing or commenting (v2 rule 13): no AutoSave and no manual save; only a flush
+    /// hands over the edits it had when it was downgraded.
+    pub(crate) read_only: bool,
     clock: Clock,
     /// What `erpHost.dirty` was last told.
     reported_dirty: bool,
@@ -86,6 +89,16 @@ impl Doc {
     /// No save in flight or waiting.
     pub(crate) fn idle(&self) -> bool {
         self.in_flight.is_none() && self.queued.is_none()
+    }
+
+    /// A flush would send it: unsaved edits, nothing stopping it, nothing for the user to confirm.
+    fn flushes(&self) -> bool {
+        self.stopped.is_none() && !self.confirm && self.dirty()
+    }
+
+    /// AutoSave would send it: as a flush, and editable.
+    fn saves(&self) -> bool {
+        self.flushes() && !self.read_only
     }
 }
 
@@ -156,10 +169,21 @@ impl Saves {
             in_flight: None,
             queued: None,
             stopped: None,
+            read_only: false,
             clock: Clock::default(),
             reported_dirty,
         });
         work
+    }
+
+    /// `setMode` (or an `open`'s mode): a downgraded document drops a queued AutoSave follow-up
+    /// (AutoSave is off) but keeps its edits for the next flush; a save in flight still settles.
+    pub(crate) fn set_read_only(&mut self, doc_id: &str, read_only: bool) {
+        let Some(doc) = self.docs.iter_mut().find(|d| d.doc_id == doc_id) else { return };
+        doc.read_only = read_only;
+        if read_only && doc.queued == Some(SaveReason::Auto) {
+            doc.queued = None;
+        }
     }
 
     /// The document closed: forget it. Its `doc_id`, for `erpHost.closed`.
@@ -197,12 +221,8 @@ impl Saves {
     /// AutoSave: the documents whose newest edits are unsent and have waited long enough.
     /// `blocked` documents (mid-composition) and those needing confirmation wait.
     pub(crate) fn autosave(&mut self, now: f64, blocked: impl Fn(u64) -> bool) -> Work {
-        let due: Vec<u64> = self
-            .docs
-            .iter()
-            .filter(|d| d.stopped.is_none() && !d.confirm && d.dirty() && d.seen != d.sent && d.clock.due(now) && !blocked(d.document))
-            .map(|d| d.document)
-            .collect();
+        let due: Vec<u64> =
+            self.docs.iter().filter(|d| d.saves() && d.seen != d.sent && d.clock.due(now) && !blocked(d.document)).map(|d| d.document).collect();
         let mut work = Work::default();
         for document in due {
             work.append(self.save(document, SaveReason::Auto, None));
@@ -212,18 +232,14 @@ impl Saves {
 
     /// The soonest AutoSave is due, for waking the app.
     pub(crate) fn next_autosave(&self) -> Option<f64> {
-        self.docs
-            .iter()
-            .filter(|d| d.stopped.is_none() && !d.confirm && d.dirty() && d.seen != d.sent)
-            .filter_map(|d| d.clock.due_at())
-            .reduce(f64::min)
+        self.docs.iter().filter(|d| d.saves() && d.seen != d.sent).filter_map(|d| d.clock.due_at()).reduce(f64::min)
     }
 
     /// Save `document` now, or right after the save in flight. `fresh` is its current state (a
-    /// manual save sends even an unchanged document).
+    /// manual save sends even an unchanged document). A read-only document is only flushed.
     pub(crate) fn save(&mut self, document: u64, reason: SaveReason, fresh: Option<Snapshot>) -> Work {
         let mut work = Work::default();
-        let Some(doc) = self.by_document_mut(document) else { return work };
+        let Some(doc) = self.by_document_mut(document).filter(|d| !d.read_only || reason == SaveReason::Flush) else { return work };
         if let Some(fresh) = fresh {
             doc.seen = fresh.revision;
             doc.latest = Some(fresh);
@@ -240,12 +256,8 @@ impl Saves {
     /// has been handed over (behind a save in flight). Stopped documents and those needing
     /// confirmation are skipped (rule 4).
     pub(crate) fn flush(&mut self, done: Box<dyn FnOnce()>) -> Work {
-        let due: Vec<(u64, Target)> = self
-            .docs
-            .iter()
-            .filter(|d| d.stopped.is_none() && !d.confirm && d.dirty())
-            .map(|d| (d.document, Target { serial: d.serial, revision: d.seen }))
-            .collect();
+        let due: Vec<(u64, Target)> =
+            self.docs.iter().filter(|d| d.flushes()).map(|d| (d.document, Target { serial: d.serial, revision: d.seen })).collect();
         let mut work = Work::default();
         for (document, _) in &due {
             work.append(self.save(*document, SaveReason::Flush, None));
@@ -554,6 +566,58 @@ mod tests {
         let d = s.by_doc_id("d1").unwrap();
         assert_eq!((d.document, d.acked, d.version), (70, 40, 9));
         assert_eq!(s.observe(70, 40, || false, 1.0, || snap(40)), Some(false), "the host hears the reloaded document is clean");
+    }
+
+    #[test]
+    fn a_document_opened_read_only_is_never_saved_and_flush_resolves_at_once() {
+        let mut s = opened();
+        s.set_read_only("d1", true);
+        assert_eq!(s.observe(7, 10, || false, 0.0, || snap(10)), None, "never dirty");
+        assert!(s.autosave(1e9, |_| false).is_empty());
+        assert_eq!(s.next_autosave(), None);
+        assert!(s.save(7, SaveReason::Manual, Some(snap(10))).is_empty(), "no manual save");
+        let w = s.flush(Box::new(|| {}));
+        assert!(w.sends.is_empty() && w.done.len() == 1, "a flush resolves at once");
+    }
+
+    /// Rule 13's exception: downgraded with unsaved edits, the document stays dirty and only a
+    /// flush hands them over, until they are saved.
+    #[test]
+    fn a_document_downgraded_while_dirty_is_handed_over_by_flush_only() {
+        let mut s = opened();
+        s.observe(7, 11, || false, 0.0, || snap(11));
+        assert_eq!(sent(&s.save(7, SaveReason::Auto, None)), vec![(11, SaveReason::Auto)]);
+        assert_eq!(s.observe(7, 12, || false, 10.0, || snap(12)), None, "still dirty");
+        assert!(s.save(7, SaveReason::Auto, None).is_empty(), "queued behind the save in flight");
+        s.set_read_only("d1", true);
+        assert!(s.settle(serial(&s), 11, SaveOutcome::Saved { version: 4 }).sends.is_empty(), "the queued AutoSave is dropped");
+        assert!(s.by_document(7).unwrap().dirty(), "revision 12 is still unsaved");
+        assert!(s.autosave(1e9, |_| false).is_empty(), "no AutoSave");
+        assert!(s.save(7, SaveReason::Manual, None).is_empty(), "no manual save");
+        let flushed = Rc::new(Cell::new(false));
+        let f = flushed.clone();
+        let w = s.flush(Box::new(move || f.set(true)));
+        assert_eq!(sent(&w), vec![(12, SaveReason::Flush)]);
+        assert_eq!(w.done.len(), 1, "handed over");
+        s.settle(serial(&s), 12, SaveOutcome::Saved { version: 5 });
+        assert_eq!(s.observe(7, 12, || false, 20.0, || snap(12)), Some(false), "saved: clean");
+        let w = s.flush(Box::new(|| {}));
+        assert!(w.sends.is_empty() && w.done.len() == 1, "nothing more to send");
+    }
+
+    /// A downgraded document whose flush fails without a retry stops there.
+    #[test]
+    fn a_downgraded_document_stops_on_a_conflict_or_a_final_failure() {
+        for outcome in [SaveOutcome::Conflict { latest_version: 9 }, SaveOutcome::Failed { retryable: false, message: "x".into() }] {
+            let mut s = opened();
+            s.observe(7, 11, || false, 0.0, || snap(11));
+            s.set_read_only("d1", true);
+            assert_eq!(sent(&s.flush(Box::new(|| {}))), vec![(11, SaveReason::Flush)]);
+            s.settle(serial(&s), 11, outcome.clone());
+            assert!(s.by_document(7).unwrap().dirty());
+            let w = s.flush(Box::new(|| {}));
+            assert!(w.sends.is_empty() && w.done.len() == 1, "stopped: a flush skips it");
+        }
     }
 
     #[test]

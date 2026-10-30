@@ -353,7 +353,7 @@ pub(crate) fn mi(ui: &mut Ui, app: &mut WordApp, label: &str, id: &str, params: 
 /// A menu item whose text is already in the interface language.
 fn mi_text(ui: &mut Ui, app: &mut WordApp, text: &str, id: &str, params: Value) {
     let sc = crate::widgets::shortcut_text(app, id);
-    let enabled = crate::widgets::enabled(app, id);
+    let enabled = crate::access_gate::offered(app, id, &params);
     let resp = ui.add_enabled(enabled, egui::Button::new(text).shortcut_text(sc).min_size(vec2(200.0, 0.0)));
     if resp.clicked() {
         crate::widgets::run_from_ribbon(app, id, params);
@@ -420,7 +420,7 @@ fn mi_check(ui: &mut Ui, app: &mut WordApp, label: &str, checked: bool, id: &str
     // An invisible mark keeps the unchecked labels aligned with the checked one.
     let mark = egui::RichText::new("✓");
     let mark = if checked { mark } else { mark.color(egui::Color32::TRANSPARENT) };
-    let enabled = crate::widgets::enabled(app, id);
+    let enabled = crate::access_gate::offered(app, id, &params);
     let resp = ui.add_enabled(enabled, egui::Button::new((mark, tl!(label))).selected(checked).min_size(vec2(200.0, 0.0)));
     if resp.clicked() {
         crate::widgets::run_from_ribbon(app, id, params);
@@ -543,7 +543,7 @@ fn home(app: &mut WordApp, ui: &mut Ui) {
                 small(ui, app, "charborder", None, "Character Border", "format.border", json!({}), flag("border"));
                 small(ui, app, "enclose", None, "Enclose Characters", "format.enclose", json!({}), false);
                 ui.add_space(4.0);
-                menu_button(ui, app, "effects", None, "Text Effects and Typography", false, "", |ui, app| {
+                menu_button(ui, app, "effects", None, "Text Effects and Typography", false, "format.textEffects", |ui, app| {
                     let theme = app.session.doc.settings.theme_colors.clone();
                     crate::wordart_menus::style_gallery(ui, app, "format.textEffects");
                     ui.separator();
@@ -696,7 +696,7 @@ fn home(app: &mut WordApp, ui: &mut Ui) {
         });
     });
     group(ui, "Styles", Some("styles.pane"), app, |ui, app| {
-        crate::previews::style_gallery(app, ui, &st);
+        ui.add_enabled_ui(app.access_allows("para.style"), |ui| crate::previews::style_gallery(app, ui, &st));
     });
     group(ui, "Editing", None, app, |ui, app| {
         stack(ui, |ui| {
@@ -831,7 +831,7 @@ fn insert(app: &mut WordApp, ui: &mut Ui) {
                 }
                 mi(ui, app, "Field…", "ui.dialog", json!({"name": "field"}));
             });
-            menu_button(ui, app, "wordArt", Some("WordArt"), "WordArt", false, "", |ui, app| {
+            menu_button(ui, app, "wordArt", Some("WordArt"), "WordArt", false, "insert.wordArt", |ui, app| {
                 crate::wordart_menus::style_gallery(ui, app, "insert.wordArt")
             });
             small(ui, app, "dropCap", Some("Drop Cap"), "Drop Cap", "insert.dropCap", json!({}), false);
@@ -899,7 +899,7 @@ fn draw(app: &mut WordApp, ui: &mut Ui) {
         // Pens added with Add Pen; right-click one to remove it.
         let pens = app.session.view.draw.pens.clone();
         for (i, pen) in pens.iter().enumerate() {
-            gallery_pen(ui, app, i, *pen, custom == Some(i));
+            ui.add_enabled_ui(app.access_allows(pen_command(pen.kind)), |ui| gallery_pen(ui, app, i, *pen, custom == Some(i)));
         }
         menu_button(ui, app, "addPen", Some("Add\nPen"), "Add Pen", true, "", |ui, app| {
             for (label, kind) in [("Pen", InkTool::Pen), ("Pencil", InkTool::Pencil), ("Highlighter", InkTool::Highlighter)] {
@@ -1009,6 +1009,9 @@ fn style_set_box(app: &mut WordApp, ui: &mut Ui) -> (Rect, Rect) {
     let mut gui = ui.new_child(egui::UiBuilder::new().max_rect(gallery).layout(egui::Layout::left_to_right(egui::Align::Min)));
     gui.set_clip_rect(gallery.intersect(ui.clip_rect()));
     gui.spacing_mut().item_spacing = vec2(1.0, 1.0);
+    if !app.access_allows("design.styleSet") {
+        gui.disable();
+    }
     crate::previews::style_set_gallery(app, &mut gui);
     ui.add_space(8.0);
     (gallery, gui.min_rect())
@@ -1755,7 +1758,7 @@ fn smart_art_design(app: &mut WordApp, ui: &mut Ui) {
         });
     });
     group(ui, "SmartArt Styles", None, app, |ui, app| {
-        menu_button(ui, app, "smartArtColors", Some("Change\nColors"), "Change Colors", true, "", |ui, app| {
+        menu_button(ui, app, "smartArtColors", Some("Change\nColors"), "Change Colors", true, "smartArt.colors", |ui, app| {
             for colors in SmartArtColors::ALL {
                 let on = g.colors == colors;
                 let resp = ui.add(egui::Button::new(crate::dialogs_smart_art::colors_label(colors)).selected(on).min_size(vec2(200.0, 24.0)));
@@ -1870,16 +1873,18 @@ fn shape_format(app: &mut WordApp, ui: &mut Ui) {
         });
     }
     group(ui, "WordArt Styles", None, app, |ui, app| {
-        menu_button(ui, app, "wordArt", Some("Styles"), "WordArt Styles", true, "", |ui, app| {
+        menu_button(ui, app, "wordArt", Some("Styles"), "WordArt Styles", true, "wordArt.style", |ui, app| {
             crate::wordart_menus::style_gallery(ui, app, "wordArt.style")
         });
         stack(ui, |ui| {
-            menu_button(ui, app, "textFill", Some("Text Fill"), "Text Fill", false, "", |ui, app| crate::wordart_menus::fill_menu(ui, app, &theme));
+            menu_button(ui, app, "textFill", Some("Text Fill"), "Text Fill", false, "format.textEffects", |ui, app| {
+                crate::wordart_menus::fill_menu(ui, app, &theme)
+            });
             let outline = crate::wordart_menus::current_outline(app);
-            menu_button(ui, app, "textOutline", Some("Text Outline"), "Text Outline", false, "", |ui, app| {
+            menu_button(ui, app, "textOutline", Some("Text Outline"), "Text Outline", false, "format.textEffects", |ui, app| {
                 crate::wordart_menus::outline_menu(ui, app, &theme, outline)
             });
-            menu_button(ui, app, "transform", Some("Text Effects"), "Text Effects", false, "", |ui, app| {
+            menu_button(ui, app, "transform", Some("Text Effects"), "Text Effects", false, "format.textEffects", |ui, app| {
                 crate::wordart_menus::effects_menu(ui, app, &theme, true)
             });
         });

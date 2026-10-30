@@ -46,8 +46,12 @@ pub struct ObjectDrag {
 /// How near (screen points) a press must be to a connector's end to grab it.
 const END_GRAB: f32 = 7.0;
 
-/// The selected connector's start and end on its page (points), and its layout.
+/// The selected connector's start and end on its page (points), and its layout. None on a read-only
+/// document: its ends get no handles to drag.
 fn connector_ends(app: &WordApp, layout: &DocLayout) -> Option<(ObjectHit, (f32, f32), (f32, f32))> {
+    if app.read_only() {
+        return None;
+    }
     let (pos, InlineObject::Shape { kind, float, .. }) = selected(app)? else { return None };
     if !kind.is_connector() {
         return None;
@@ -104,8 +108,11 @@ fn active_story(app: &WordApp, layout: &DocLayout) -> StoryRef {
 
 /// Whether the object under `hit` keeps its place and size: charts and diagrams can be selected
 /// and deleted, not moved or resized (they aren't written back on save yet), so they get no
-/// handles, no move cursor and no drag.
+/// handles, no move cursor and no drag. Nothing moves or resizes on a read-only document either.
 fn fixed(app: &WordApp, hit: &ObjectHit) -> bool {
+    if app.read_only() {
+        return true;
+    }
     let pos = hit.pos();
     matches!(app.session.doc.para_at(&pos).and_then(|p| p.object_at(pos.off)), Some(InlineObject::Graphic { .. }))
 }

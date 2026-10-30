@@ -77,7 +77,8 @@ fn on_page(rects: &[Rect], layout: &DocLayout, scale: f32, page: usize, p: Pos2)
 
 /// Mouse input while a tool is on; `false` (nothing done) when none is, so the caret logic runs.
 pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layout: &DocLayout, scale: f32) -> bool {
-    let Some(tool) = app.canvas.table_tool else { return false };
+    // Draw Table or its eraser left on when `setMode` turned editing off draws nothing.
+    let Some(tool) = app.canvas.table_tool.filter(|_| !app.read_only()) else { return false };
     if !app.canvas.focused && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         stop(app);
         return true;
@@ -120,7 +121,7 @@ pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect]
 
 /// The pointer while a tool is on (a crosshair; the tool's icon is drawn beside it).
 pub fn cursor(app: &WordApp, ui: &Ui, resp: &egui::Response) {
-    if app.canvas.table_tool.is_some() && (resp.hovered() || app.canvas.table_stroke.is_some()) {
+    if app.canvas.table_tool.is_some() && !app.read_only() && (resp.hovered() || app.canvas.table_stroke.is_some()) {
         ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
     }
 }

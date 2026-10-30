@@ -12,7 +12,7 @@ use super::{HostLink, HostOpen, HostTransport, SaveDone, SaveOutcome, SaveReason
 use crate::draft_bridge::{DraftBridge, HiddenFlush};
 use crate::{Download, Services, WordApp, i18n};
 
-struct Sent {
+pub(super) struct Sent {
     doc_id: String,
     bytes: Vec<u8>,
     revision: u64,
@@ -21,9 +21,9 @@ struct Sent {
 }
 
 #[derive(Default)]
-struct FakeHost {
-    sent: RefCell<Vec<Sent>>,
-    calls: RefCell<Vec<String>>,
+pub(super) struct FakeHost {
+    pub(super) sent: RefCell<Vec<Sent>>,
+    pub(super) calls: RefCell<Vec<String>>,
 }
 
 impl HostTransport for FakeHost {
@@ -42,31 +42,31 @@ impl HostTransport for FakeHost {
 }
 
 impl FakeHost {
-    fn sends(&self) -> Vec<(String, u64, SaveReason)> {
+    pub(super) fn sends(&self) -> Vec<(String, u64, SaveReason)> {
         self.sent.borrow().iter().map(|s| (s.doc_id.clone(), s.revision, s.reason)).collect()
     }
 
     /// Answer save `i`, as the shell's promise would, between frames.
-    fn answer(&self, i: usize, outcome: SaveOutcome) {
+    pub(super) fn answer(&self, i: usize, outcome: SaveOutcome) {
         let done = self.sent.borrow_mut().get_mut(i).and_then(|s| s.done.take());
         (done.expect("an unanswered save"))(outcome);
     }
 
-    fn take_calls(&self) -> Vec<String> {
+    pub(super) fn take_calls(&self) -> Vec<String> {
         std::mem::take(&mut *self.calls.borrow_mut())
     }
 }
 
-struct Page {
-    host: Rc<FakeHost>,
-    link: HostLink,
-    downloads: Rc<RefCell<Vec<String>>>,
-    drafts: Rc<RefCell<Vec<String>>>,
-    ctx: egui::Context,
+pub(super) struct Page {
+    pub(super) host: Rc<FakeHost>,
+    pub(super) link: HostLink,
+    pub(super) downloads: Rc<RefCell<Vec<String>>>,
+    pub(super) drafts: Rc<RefCell<Vec<String>>>,
+    pub(super) ctx: egui::Context,
 }
 
 /// The web app with the office shell's `erpHost` and `erpDrafts`, on the Start screen.
-fn web_app() -> (WordApp, Page) {
+pub(super) fn web_app() -> (WordApp, Page) {
     i18n::set_current(i18n::Lang::from_pref("vi"));
     let host = Rc::new(FakeHost::default());
     let link = HostLink::new(host.clone());
@@ -100,24 +100,31 @@ fn web_app() -> (WordApp, Page) {
     (app, Page { host, link, downloads, drafts, ctx: egui::Context::default() })
 }
 
-fn docx(text: &str) -> Vec<u8> {
+pub(super) fn docx(text: &str) -> Vec<u8> {
     wordcraft_engine::io::save_bytes_with("x.docx", &wordcraft_doc::Document::from_text(text), None, &Default::default()).unwrap()
 }
 
 fn hand_in(page: &Page, doc_id: &str, title: &str, text: &str) {
-    page.link.open(HostOpen { doc_id: doc_id.into(), version: 1, title: title.into(), format: "docx".into(), bytes: docx(text) });
+    page.link.open(HostOpen {
+        doc_id: doc_id.into(),
+        version: 1,
+        title: title.into(),
+        format: "docx".into(),
+        bytes: docx(text),
+        ..Default::default()
+    });
 }
 
-fn body(app: &WordApp) -> String {
+pub(super) fn body(app: &WordApp) -> String {
     app.session.doc.plain_text(StoryRef::Body)
 }
 
-fn type_text(app: &mut WordApp, text: &str) {
+pub(super) fn type_text(app: &mut WordApp, text: &str) {
     app.run("text.insert", json!({"text": text})).unwrap();
 }
 
 /// The text of a sent save's bytes.
-fn sent_text(page: &Page, i: usize) -> String {
+pub(super) fn sent_text(page: &Page, i: usize) -> String {
     let bytes = page.host.sent.borrow()[i].bytes.clone();
     wordcraft_engine::io::open_bytes("x.docx", &bytes).unwrap().plain_text(StoryRef::Body)
 }
@@ -143,11 +150,19 @@ fn an_open_from_the_host_becomes_a_document_named_by_its_title() {
 #[test]
 fn refused_opens_report_the_shells_intake_key_and_never_ask_for_a_password() {
     let (mut app, page) = web_app();
-    page.link.open(HostOpen { doc_id: "x".into(), version: 1, title: "Bảng".into(), format: "xlsx".into(), bytes: docx("A") });
-    page.link.open(HostOpen { doc_id: "g".into(), version: 1, title: "Hỏng".into(), format: "docx".into(), bytes: b"not a zip".to_vec() });
+    page.link
+        .open(HostOpen { doc_id: "x".into(), version: 1, title: "Bảng".into(), format: "xlsx".into(), bytes: docx("A"), ..Default::default() });
+    page.link.open(HostOpen {
+        doc_id: "g".into(),
+        version: 1,
+        title: "Hỏng".into(),
+        format: "docx".into(),
+        bytes: b"not a zip".to_vec(),
+        ..Default::default()
+    });
     let locked =
         wordcraft_engine::io::save_bytes_with("x.docx", &wordcraft_doc::Document::from_text("Mật"), Some("sesame"), &Default::default()).unwrap();
-    page.link.open(HostOpen { doc_id: "p".into(), version: 1, title: "Khoá".into(), format: "docx".into(), bytes: locked });
+    page.link.open(HostOpen { doc_id: "p".into(), version: 1, title: "Khoá".into(), format: "docx".into(), bytes: locked, ..Default::default() });
     app.host_tick(&page.ctx, 0.0);
     assert_eq!(page.host.take_calls(), vec!["opened x false unsupported", "opened g false parserFailed", "opened p false unsupported",]);
     assert!(app.dialog.is_none(), "no password prompt");
@@ -506,7 +521,14 @@ fn reopening_the_same_document_replaces_it_in_its_tab() {
     app.host_observe(0.0);
     app.run("ui.activateDocument", json!({"index": 1})).unwrap();
     page.host.take_calls();
-    page.link.open(HostOpen { doc_id: "d1".into(), version: 5, title: "A".into(), format: "docx".into(), bytes: docx("theirs") });
+    page.link.open(HostOpen {
+        doc_id: "d1".into(),
+        version: 5,
+        title: "A".into(),
+        format: "docx".into(),
+        bytes: docx("theirs"),
+        ..Default::default()
+    });
     app.host_tick(&page.ctx, 0.0);
     assert_eq!(page.host.take_calls(), vec!["opened d1 true ", "dirty d1 false"]);
     assert_eq!(app.document_count(), 2);

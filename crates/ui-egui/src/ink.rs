@@ -66,6 +66,11 @@ const GRAB_SLOP: f32 = 4.0;
 /// Handle the pointer while a pen, the eraser or the lasso is in use; `true` when it did (no
 /// text selection or object dragging then).
 pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layout: &DocLayout, scale: f32) -> bool {
+    // A tool picked up before `setMode` turned editing off draws and erases nothing.
+    if app.read_only() {
+        app.canvas.ink = None;
+        return false;
+    }
     let mode = app.session.view.draw.mode;
     if mode != DrawMode::Lasso {
         app.canvas.ink_ui.lasso = None;
@@ -267,6 +272,9 @@ fn paint_lasso(app: &WordApp, painter: &Painter, rects: &[Rect], layout: &DocLay
 
 /// The pointer over the page while a pen, the eraser or the lasso is in use.
 pub fn cursor(app: &WordApp) -> Option<egui::CursorIcon> {
+    if app.read_only() {
+        return None;
+    }
     match app.session.view.draw.mode {
         DrawMode::Select => None,
         DrawMode::Lasso if matches!(app.canvas.ink_ui.lasso, Some(LassoDrag::Move { .. })) => Some(egui::CursorIcon::Grabbing),
