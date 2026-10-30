@@ -4,7 +4,7 @@
 //! flag off or in embed mode (`status: 'disabled'`) there is no hook.
 
 use serde_json::Value;
-use wordcraft_ui_egui::account::{AccountError, AccountSnapshot, AccountView, LicenceView, OrgView, SignedInView, is_pro_feature};
+use wordcraft_ui_egui::account::{AccountError, AccountSnapshot, AccountView, LicenceView, OrgView, SignedInView, is_paid_feature};
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) use bridge::connect;
@@ -38,7 +38,8 @@ fn signed_in(value: &Value, error: Option<AccountError>) -> SignedInView {
         .and_then(Value::as_array)
         .map(|list| list.iter().filter_map(|e| text(e.get("feature"))).collect())
         .unwrap_or_default();
-    let licence = if features.is_empty() { LicenceView::Free } else { LicenceView::Online { pro: features.iter().any(|f| is_pro_feature(f)) } };
+    // The free plan grants `erpconsoffice.use` too; "pro" here means a paid plan.
+    let licence = if features.is_empty() { LicenceView::Free } else { LicenceView::Online { pro: features.iter().any(|f| is_paid_feature(f)) } };
     SignedInView {
         name: text(user.and_then(|u| u.get("name"))).unwrap_or_default(),
         email: text(user.and_then(|u| u.get("email"))).filter(|e| !e.is_empty()),
@@ -269,11 +270,11 @@ mod tests {
         assert_eq!(view.licence, LicenceView::Free);
         assert!(view.online && view.warning.is_none());
 
-        let free = signed_in(json!({"activeOrg": null, "entitlements": [{"id": "e1", "feature": "vanban.use"}]}));
+        let free = signed_in(json!({"activeOrg": null, "entitlements": [{"id": "e1", "feature": "erpconsoffice.use"}]}));
         let AccountView::SignedIn(view) = snapshot_from_json(&free).view else { panic!("signed in") };
         assert_eq!(view.active_org, None, "personal context");
         assert_eq!(view.licence, LicenceView::Online { pro: false });
-        let pro = signed_in(json!({"activeOrg": "org_a", "entitlements": [{"feature": "vanban.use"}, {"feature": "vanban.advanced"}]}));
+        let pro = signed_in(json!({"activeOrg": "org_a", "entitlements": [{"feature": "erpconsoffice.use"}, {"feature": "erpconsoffice.advanced"}]}));
         let AccountView::SignedIn(view) = snapshot_from_json(&pro).view else { panic!("signed in") };
         assert_eq!(view.active_org.as_deref(), Some("org_a"), "a bare id is accepted");
         assert_eq!(view.licence, LicenceView::Online { pro: true });

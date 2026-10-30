@@ -15,11 +15,14 @@ pub struct Access {
     /// Opened for commenting: read-only like viewing until comments come to the web, but the
     /// interface says so in its own words.
     pub commenting: bool,
+    /// Read-only by the app's edit lock ([`crate::Session::edit_lock`]), not by a host: Save
+    /// still writes the document, as it stands, to its own file.
+    pub may_save: bool,
 }
 
 impl Default for Access {
     fn default() -> Self {
-        Access { read_only: false, can_download: true, commenting: false }
+        Access { read_only: false, can_download: true, commenting: false, may_save: false }
     }
 }
 
@@ -73,7 +76,8 @@ fn picks_an_editing_tool(id: &str) -> bool {
 impl Access {
     /// Whether `spec` may run; `None` lets it.
     pub fn refusal(&self, spec: &CommandSpec) -> Option<Refusal> {
-        if self.read_only && (spec.mutates || edits_anyway(spec.id) || picks_an_editing_tool(spec.id)) {
+        let edits = spec.mutates || edits_anyway(spec.id) || picks_an_editing_tool(spec.id);
+        if self.read_only && edits && !(self.may_save && spec.id == "file.save") {
             return Some(Refusal::ReadOnly);
         }
         if !self.can_download && takes_content_out(spec.id) {

@@ -20,7 +20,7 @@ impl WordApp {
 
     /// A downgrade never drops what was being typed: the input method's composition goes into the
     /// document as one undo step while it is still editable, and a later flush saves it.
-    fn commit_composition(&mut self) {
+    pub(crate) fn commit_composition(&mut self) {
         let text = std::mem::take(&mut self.canvas.ime_preedit);
         if text.is_empty() {
             return;

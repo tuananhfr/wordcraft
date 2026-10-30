@@ -108,7 +108,9 @@ fn share_editing_comments(app: &mut WordApp, ui: &mut Ui, t: &Tokens) {
     };
     let mode = ui.add_enabled_ui(!read_only, |ui| crate::widgets::icon_text_menu_button(ui, icon, label, regular(12.0))).inner;
     mode.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, !read_only, label));
-    if !read_only {
+    if let Some(lock) = app.edit_lock().filter(|_| read_only) {
+        mode.on_disabled_hover_text(crate::i18n::t(lock.reason()));
+    } else if !read_only {
         egui::Popup::menu(&mode).show(|ui| editing_choices(app, ui));
     }
     ui.add_space(4.0);

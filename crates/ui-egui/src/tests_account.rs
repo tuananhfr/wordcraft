@@ -11,36 +11,42 @@ use serde_json::json;
 
 use crate::WordApp;
 use crate::account::{
-    ACCOUNT_PAGE, AccountError, AccountHook, AccountSnapshot, AccountView, LicenceView, OrgView, SignedInView, WarningView, date_text, error_text,
+    ACCOUNT_PAGE, AccountError, AccountHook, AccountSnapshot, AccountView, EditLock, LicenceView, OrgView, SignedInView, WarningView, date_text,
+    error_text,
 };
 use crate::i18n;
 
 /// 2026-10-24 (UTC).
-const EXPIRES: i64 = 1_792_828_800;
+pub(crate) const EXPIRES: i64 = 1_792_828_800;
 
 #[derive(Default)]
-struct Fake {
+pub(crate) struct Fake {
     snapshot: Mutex<AccountSnapshot>,
     calls: Mutex<Vec<String>>,
     attached: AtomicUsize,
+    lock: Mutex<Option<EditLock>>,
 }
 
 impl Fake {
-    fn new(view: AccountView) -> Arc<Fake> {
+    pub(crate) fn new(view: AccountView) -> Arc<Fake> {
         let fake = Arc::new(Fake::default());
         fake.set(view);
         fake
     }
 
-    fn set(&self, view: AccountView) {
+    pub(crate) fn set(&self, view: AccountView) {
         self.snapshot.lock().unwrap().view = view;
+    }
+
+    pub(crate) fn set_lock(&self, lock: Option<EditLock>) {
+        *self.lock.lock().unwrap() = lock;
     }
 
     fn set_error(&self, error: Option<AccountError>) {
         self.snapshot.lock().unwrap().error = error;
     }
 
-    fn calls(&self) -> Vec<String> {
+    pub(crate) fn calls(&self) -> Vec<String> {
         self.calls.lock().unwrap().clone()
     }
 
@@ -80,6 +86,12 @@ impl AccountHook for Hook {
     fn attach(&self, _ctx: &egui::Context) {
         self.0.attached.fetch_add(1, Ordering::SeqCst);
     }
+    fn edit_lock(&self) -> Option<EditLock> {
+        *self.0.lock.lock().unwrap()
+    }
+    fn edit_refused(&self) {
+        self.0.call("edit_refused".into());
+    }
 }
 
 fn app(fake: Option<&Arc<Fake>>, language: &str) -> WordApp {
@@ -89,7 +101,7 @@ fn app(fake: Option<&Arc<Fake>>, language: &str) -> WordApp {
     app
 }
 
-fn harness_in(fake: Option<&Arc<Fake>>, width: f32, language: &str) -> egui_kittest::Harness<'static, WordApp> {
+pub(crate) fn harness_in(fake: Option<&Arc<Fake>>, width: f32, language: &str) -> egui_kittest::Harness<'static, WordApp> {
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(width, 844.0)).build_ui_state(
         |ui, app: &mut WordApp| {
             app.logic(ui.ctx());
@@ -101,11 +113,11 @@ fn harness_in(fake: Option<&Arc<Fake>>, width: f32, language: &str) -> egui_kitt
     h
 }
 
-fn harness(fake: Option<&Arc<Fake>>) -> egui_kittest::Harness<'static, WordApp> {
+pub(crate) fn harness(fake: Option<&Arc<Fake>>) -> egui_kittest::Harness<'static, WordApp> {
     harness_in(fake, 1366.0, "en")
 }
 
-fn account_page(h: &mut egui_kittest::Harness<'static, WordApp>) {
+pub(crate) fn account_page(h: &mut egui_kittest::Harness<'static, WordApp>) {
     h.state_mut().show_account_page();
     h.run_steps(4);
 }
@@ -114,7 +126,7 @@ fn org(id: &str, name: &str, role: Option<&str>) -> OrgView {
     OrgView { id: id.into(), name: name.into(), role: role.map(Into::into) }
 }
 
-fn signed_in(licence: LicenceView) -> SignedInView {
+pub(crate) fn signed_in(licence: LicenceView) -> SignedInView {
     SignedInView {
         name: "Nguyễn An".into(),
         email: Some("an.nguyen@example.com".into()),

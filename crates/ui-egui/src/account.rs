@@ -1,12 +1,14 @@
-//! Optional PI ID account (ERPCons): File › Account, the title bar's account button and the paid
-//! licence expiry notice. The host installs an [`AccountHook`] (desktop: `erpcons-account` on a
-//! worker thread; web: the office shell's `window.erpAccount`). Without one nothing here shows and
-//! every feature is allowed.
+//! Optional PI ID account (ERPCons): File › Account, the title bar's account button, the paid
+//! licence expiry notice and, on desktop, the edit lock of an unlicensed app. The host installs an
+//! [`AccountHook`] (desktop: `erpcons-account` on a worker thread; web: the office shell's
+//! `window.erpAccount`). Without one nothing here shows and every feature is allowed.
 
+mod lock;
 mod page;
 
+pub use lock::EditLock;
 pub use page::{date_text, error_text};
-pub(crate) use page::{page, title_button, warning_notice};
+pub(crate) use page::{lock_notice, page, title_button, warning_notice};
 
 use crate::WordApp;
 
@@ -21,11 +23,20 @@ pub trait AccountHook {
     fn cancel_sign_in(&self);
     fn sign_out(&self);
     fn select_org(&self, org_id: Option<String>);
+    /// File › Account's Retry: sync now and activate again where PI refused.
     fn retry_activation(&self);
     fn allowed(&self, feature: &str) -> bool;
     fn warning_shown(&self, days: u32);
     /// Called once with the egui context so the adapter can request a repaint when its snapshot changes.
     fn attach(&self, ctx: &egui::Context);
+    /// Why editing is locked now, `None` when it isn't. Asked every frame, so it answers from cached
+    /// state. Only the desktop adapter locks; the web keeps its free tier.
+    fn edit_lock(&self) -> Option<EditLock> {
+        None
+    }
+    /// An edit was just refused by [`AccountHook::edit_lock`]; the adapter may sync with PI, at its
+    /// own pace, in case that lifts it.
+    fn edit_refused(&self) {}
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -110,11 +121,16 @@ pub enum AccountError {
     Other,
 }
 
-/// Whether holding `feature` means a paid plan. `.view` and `.export` are pinned free and the built-in
-/// catalog lists `.use` as free (products.md §2, §3); anything else needs an entitlement.
+/// Whether `feature` needs a lease or an entitlement: everything but the pinned free `.view` and
+/// `.export` (products.md §2). `erpconsoffice.use` (editing) is one since erpcons-account 0.5.0.
 pub fn is_pro_feature(feature: &str) -> bool {
-    let builtin_free = feature.split_once('.').is_some_and(|(_, name)| name == "use");
-    !(feature.ends_with(".view") || feature.ends_with(".export") || builtin_free)
+    !(feature.ends_with(".view") || feature.ends_with(".export"))
+}
+
+/// Whether holding `feature` means a paid plan: a pro feature other than `.use`, which the free
+/// plan grants.
+pub fn is_paid_feature(feature: &str) -> bool {
+    is_pro_feature(feature) && feature.split_once('.').is_none_or(|(_, name)| name != "use")
 }
 
 /// The avatar letter: the given name's first letter (Vietnamese names put it last, as the office
@@ -130,12 +146,21 @@ pub(crate) struct AccountState {
     attached: bool,
     /// The expiry warning closed in this run; hidden even before the adapter's snapshot drops it.
     dismissed: Option<WarningView>,
+    /// The edit lock applied to the documents (`Session::edit_lock`).
+    lock: Option<EditLock>,
+    /// The lock notice closed in this run; it comes back when the reason changes.
+    lock_dismissed: Option<EditLock>,
 }
 
 impl WordApp {
-    /// Whether `feature` may be used. True without an account hook; nothing is gated on it yet.
+    /// Whether `feature` may be used. True without an account hook.
     pub fn allowed(&self, feature: &str) -> bool {
         self.services.account.as_ref().is_none_or(|hook| hook.allowed(feature))
+    }
+
+    /// Why editing is locked, as applied to the documents; `None` without an account hook.
+    pub fn edit_lock(&self) -> Option<EditLock> {
+        self.account.lock
     }
 
     /// Opens File › Account; does nothing without an account hook.
@@ -159,11 +184,23 @@ impl WordApp {
             self.account.attached = true;
         }
     }
+
+    /// Every frame, from `logic`: the hook's edit lock goes on every open document, or comes off
+    /// without reopening any. What the input method was composing goes in first, as when a host
+    /// turns editing off; a dialog whose OK would edit then closes (`access_gate::close_refused`).
+    pub(crate) fn sync_edit_lock(&mut self) {
+        let lock = self.services.account.as_ref().and_then(|hook| hook.edit_lock());
+        if lock.is_some() && !self.session.edit_lock {
+            self.commit_composition();
+        }
+        self.account.lock = lock;
+        self.session.edit_lock = lock.is_some();
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::is_pro_feature;
+    use super::{is_paid_feature, is_pro_feature};
 
     #[test]
     fn the_avatar_shows_the_given_name_like_the_office_shell() {
@@ -173,12 +210,14 @@ mod tests {
     }
 
     #[test]
-    fn only_features_outside_the_free_built_ins_are_pro() {
-        for free in ["vanban.view", "vanban.export", "vanban.use", "pdf.view", "bangtinh.export"] {
-            assert!(!is_pro_feature(free), "{free}");
+    fn view_and_export_stay_free_and_editing_needs_a_licence() {
+        for free in ["erpconsoffice.view", "erpconsoffice.export"] {
+            assert!(!is_pro_feature(free) && !is_paid_feature(free), "{free}");
         }
-        for pro in ["vanban.advanced", "vanban.mail_merge", "pdf.ocr", "vanban.use.extra"] {
-            assert!(is_pro_feature(pro), "{pro}");
+        assert!(is_pro_feature("erpconsoffice.use"), "editing needs a lease");
+        assert!(!is_paid_feature("erpconsoffice.use"), "the free plan grants it");
+        for paid in ["erpconsoffice.advanced", "erpconsoffice.mail_merge", "erpconsoffice.use.extra"] {
+            assert!(is_pro_feature(paid) && is_paid_feature(paid), "{paid}");
         }
     }
 }

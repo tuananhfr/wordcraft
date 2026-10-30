@@ -1,8 +1,9 @@
-//! File › Account, the title bar's account button and the paid licence expiry notice.
+//! File › Account, the title bar's account button, the paid licence expiry notice and the edit
+//! lock notice.
 
 use egui::{Align2, Rect, Response, RichText, Sense, Stroke, TextWrapMode, Ui, vec2};
 
-use super::{AccountError, AccountView, LicenceView, SignedInView};
+use super::{AccountError, AccountView, EditLock, LicenceView, SignedInView};
 use crate::theme::{Tokens, medium, regular, semibold};
 use crate::{WordApp, i18n, icons};
 
@@ -18,6 +19,8 @@ pub(crate) fn page(app: &mut WordApp, ui: &mut Ui) {
     let Some(snapshot) = app.account_snapshot() else { return };
     let t = Tokens::get(ui.ctx());
     crate::backstage::heading(ui, "Account");
+    // At start-up the lock only says the licence is being read; nothing to show for it here.
+    let lock = app.edit_lock().filter(|lock| *lock != EditLock::Checking);
     let mut action = None;
     match &snapshot.view {
         AccountView::Guest => {
@@ -27,7 +30,8 @@ pub(crate) fn page(app: &mut WordApp, ui: &mut Ui) {
                 }
             });
             ui.add_space(6.0);
-            ui.label(RichText::new(tl!("Signing in is optional: every feature works without an account.")).color(t.text_dim));
+            let line = lock.map_or(tl!("Signing in is optional: every feature works without an account."), |lock| i18n::t(lock.reason()));
+            ui.add(egui::Label::new(RichText::new(line).color(t.text_dim)).wrap());
         }
         AccountView::SigningIn => {
             ui.horizontal(|ui| {
@@ -40,7 +44,7 @@ pub(crate) fn page(app: &mut WordApp, ui: &mut Ui) {
             }
         }
         AccountView::SignedIn(view) => {
-            ui.add_enabled_ui(!snapshot.busy, |ui| signed_in(ui, view, &t, &mut action));
+            ui.add_enabled_ui(!snapshot.busy, |ui| signed_in(ui, view, lock, &t, &mut action));
         }
     }
     if snapshot.busy && snapshot.view != AccountView::SigningIn {
@@ -63,7 +67,7 @@ pub(crate) fn page(app: &mut WordApp, ui: &mut Ui) {
     }
 }
 
-fn signed_in(ui: &mut Ui, view: &SignedInView, t: &Tokens, action: &mut Option<Action>) {
+fn signed_in(ui: &mut Ui, view: &SignedInView, lock: Option<EditLock>, t: &Tokens, action: &mut Option<Action>) {
     let name = if view.name.trim().is_empty() { tl!("PI ID account") } else { view.name.as_str() };
     // egui wraps a word wider than the page at any letter or `@`/`.`/`_`, which splits names and
     // addresses on phone-wide pages; one elided line keeps them whole, with the full text on hover.
@@ -92,7 +96,11 @@ fn signed_in(ui: &mut Ui, view: &SignedInView, t: &Tokens, action: &mut Option<A
     for line in licence_lines(view.licence) {
         ui.add(egui::Label::new(line).wrap());
     }
-    if view.licence == LicenceView::DeviceCapReached && ui.button(tl!("Retry")).clicked() {
+    if let Some(lock) = lock {
+        ui.add(egui::Label::new(RichText::new(i18n::t(lock.reason())).font(medium(14.0))).wrap());
+    }
+    let retry = lock.map_or(view.licence == LicenceView::DeviceCapReached, EditLock::retry_offered);
+    if retry && ui.button(tl!("Retry")).clicked() {
         *action = Some(Action::RetryActivation);
     }
     if view.session_only {
@@ -191,18 +199,7 @@ pub(crate) fn warning_notice(app: &mut WordApp, ui: &mut Ui) {
         tl!("Paid features expire on {date} ({days} days left). Connect to the internet to renew them."),
         &[("date", &date_text(warning.expires_at)), ("days", &days)],
     );
-    let t = Tokens::get(ui.ctx());
-    let (mut close, mut open) = (false, false);
-    egui::Frame::new().fill(t.panel).inner_margin(8.0).show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.horizontal_top(|ui| {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                close = ui.small_button(tl!("Close")).clicked();
-                open = ui.small_button(tl!("Account")).clicked();
-                ui.add(egui::Label::new(RichText::new(text).font(regular(13.0))).wrap());
-            });
-        });
-    });
+    let (close, open) = notice_bar(ui, &text, tl!("Account"));
     if close {
         app.account.dismissed = Some(warning);
         if let Some(hook) = &app.services.account {
@@ -212,6 +209,45 @@ pub(crate) fn warning_notice(app: &mut WordApp, ui: &mut Ui) {
     if open {
         app.show_account_page();
     }
+}
+
+/// Why editing is locked, above the page, with the way out: Sign in for a guest, File › Account
+/// otherwise. Closing it hides it until the reason changes.
+pub(crate) fn lock_notice(app: &mut WordApp, ui: &mut Ui) {
+    // At start-up the lock only says the licence is being read: no notice for a moment's check.
+    let Some(lock) = app.edit_lock().filter(|lock| *lock != EditLock::Checking) else { return };
+    if app.account.lock_dismissed == Some(lock) {
+        return;
+    }
+    let guest = app.account_snapshot().is_some_and(|s| s.view == AccountView::Guest);
+    let (close, act) = notice_bar(ui, i18n::t(lock.reason()), if guest { tl!("Sign in") } else { tl!("Account") });
+    if close {
+        app.account.lock_dismissed = Some(lock);
+    }
+    if act {
+        if guest && let Some(hook) = &app.services.account {
+            hook.sign_in();
+        }
+        app.show_account_page();
+    }
+}
+
+/// A notice bar above the page: `text`, a button labelled `action` and Close. Returns which of
+/// Close and `action` was clicked.
+fn notice_bar(ui: &mut Ui, text: &str, action: &str) -> (bool, bool) {
+    let t = Tokens::get(ui.ctx());
+    let (mut close, mut act) = (false, false);
+    egui::Frame::new().fill(t.panel).inner_margin(8.0).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal_top(|ui| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                close = ui.small_button(tl!("Close")).clicked();
+                act = ui.small_button(action).clicked();
+                ui.add(egui::Label::new(RichText::new(text).font(regular(13.0))).wrap());
+            });
+        });
+    });
+    (close, act)
 }
 
 /// A local calendar date: `dd/mm/yyyy` in Vietnamese, the ISO date WordCraft shows elsewhere otherwise.

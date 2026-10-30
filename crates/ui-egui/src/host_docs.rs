@@ -84,7 +84,7 @@ impl HostMode {
     }
 
     fn access(self, can_download: bool) -> wordcraft_engine::Access {
-        wordcraft_engine::Access { read_only: self.read_only(), can_download, commenting: self == HostMode::Comment }
+        wordcraft_engine::Access { read_only: self.read_only(), can_download, commenting: self == HostMode::Comment, may_save: false }
     }
 }
 

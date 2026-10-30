@@ -1,7 +1,8 @@
 //! The host's grant for the shown document ([`wordcraft_engine::Access`], `erp-host.md` v2 rules
-//! 12–14) where the interface reaches past the engine's own check: interface commands (`ui.*`),
-//! Save As and Export written by the browser, typed text and the input method, pastes, file drops,
-//! dialogs, drags on the rulers, and whatever egui copies to the clipboard. Without a host every
+//! 12–14), and the desktop app's edit lock on every document ([`crate::account::EditLock`]), where
+//! the interface reaches past the engine's own check: interface commands (`ui.*`), Save As and
+//! Export written by the browser, typed text and the input method, pastes, file drops, dialogs,
+//! drags on the rulers, and whatever egui copies to the clipboard. Without a host or a lock every
 //! document has full access and nothing here refuses anything.
 
 mod dialogs;
@@ -11,7 +12,7 @@ use wordcraft_engine::access::Refusal;
 
 pub(crate) use dialogs::{close_refused, offered};
 
-use crate::WordApp;
+use crate::{WordApp, i18n};
 
 /// Interface commands that only change the document.
 fn ui_edits(id: &str) -> bool {
@@ -33,18 +34,18 @@ fn message(access: wordcraft_engine::Access, refusal: Refusal) -> &'static str {
 }
 
 impl WordApp {
-    /// The shown document can't be changed (opened for viewing or commenting).
+    /// The shown document can't be changed (opened for viewing or commenting, or editing locked).
     pub fn read_only(&self) -> bool {
-        self.session.access.read_only
+        self.session.granted().read_only
     }
 
     /// The shown document may be saved as a copy, exported, printed and copied from.
     pub fn can_download(&self) -> bool {
-        self.session.access.can_download
+        self.session.granted().can_download
     }
 
     fn access_refusal(&self, id: &str) -> Option<Refusal> {
-        let access = self.session.access;
+        let access = self.session.granted();
         match self.session.registry.get(id) {
             Some(spec) => access.refusal(spec),
             None if access.read_only && ui_edits(id) => Some(Refusal::ReadOnly),
@@ -53,25 +54,44 @@ impl WordApp {
         }
     }
 
-    /// Whether the host's grant lets the user run `id` on the shown document (for greying out).
+    /// Whether the host's grant and the edit lock let the user run `id` on the shown document
+    /// (for greying out).
     pub(crate) fn access_allows(&self, id: &str) -> bool {
         self.access_refusal(id).is_none()
+    }
+
+    /// Says why in the status bar. A refusal by the edit lock gives the lock's reason and tells
+    /// the account hook, whose next sync may lift it.
+    pub(crate) fn say_refused(&mut self, refusal: Refusal) -> &'static str {
+        let access = self.session.granted();
+        let lock = self.edit_lock().filter(|_| refusal == Refusal::ReadOnly && access.may_save);
+        let text = match lock {
+            Some(lock) => i18n::t(lock.reason()),
+            None => message(access, refusal),
+        };
+        if lock.is_some()
+            && let Some(hook) = &self.services.account
+        {
+            hook.edit_refused();
+        }
+        self.status(text);
+        text
     }
 
     /// The command entry points' check: a refused command says why in the status bar and does
     /// nothing else.
     pub(crate) fn refuse_by_access(&mut self, id: &str) -> Option<Result<Value, String>> {
-        let text = message(self.session.access, self.access_refusal(id)?);
-        self.status(text);
-        Some(Err(text.to_string()))
+        let refusal = self.access_refusal(id)?;
+        Some(Err(self.say_refused(refusal).to_string()))
     }
 
-    /// A file dropped on a read-only document: nothing is inserted or opened from it.
+    /// A file dropped on a document the host shows read-only: nothing is inserted or opened from
+    /// it. Under the edit lock a document still opens; what would insert is refused as a command.
     pub(crate) fn refuse_drop(&mut self) -> bool {
-        if !self.read_only() {
+        if !self.session.access.read_only {
             return false;
         }
-        self.status(message(self.session.access, Refusal::ReadOnly));
+        self.say_refused(Refusal::ReadOnly);
         true
     }
 }
@@ -101,7 +121,7 @@ pub(crate) fn canvas_input(app: &mut WordApp, events: &mut Vec<egui::Event>) {
     }
     if refused {
         let refusal = if read_only { Refusal::ReadOnly } else { Refusal::NoDownload };
-        app.status(message(app.session.access, refusal));
+        app.say_refused(refusal);
     }
 }
 

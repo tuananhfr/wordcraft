@@ -2633,3 +2633,13 @@ preview	Title	Tytuł
 	Downloading, printing and copying are turned off for this document.	Pobieranie, drukowanie i kopiowanie są wyłączone dla tego dokumentu.
 	Viewing	Tylko podgląd
 	Commenting on the web is coming later; for now you can only view.	Komentowanie w sieci pojawi się później; na razie można tylko przeglądać.
+	Checking your PI ID license…	Sprawdzanie licencji PI ID…
+	PI ID licensing is unavailable on this computer, so editing is off	Licencje PI ID są niedostępne na tym komputerze, więc edycja jest wyłączona
+	Sign in with PI ID to edit	Zaloguj się w PI ID, aby edytować
+	Choose an organization to edit	Wybierz organizację, aby edytować
+	This device was removed from your PI ID account. Sign in again to edit	To urządzenie zostało usunięte z konta PI ID. Zaloguj się ponownie, aby edytować
+	Your plan's device limit is reached. Remove a device in PI ID, then press Retry in File › Account	Osiągnięto limit urządzeń w planie. Usuń urządzenie w PI ID, a następnie kliknij Ponów próbę w Plik › Konto
+	This computer is not activated for editing yet	Ten komputer nie jest jeszcze aktywowany do edycji
+	Connect to the internet to renew your license and edit	Połącz się z internetem, aby odnowić licencję i edytować
+	Could not renew your license. The app keeps trying	Nie udało się odnowić licencji. Aplikacja ponawia próby
+	This organization has no Office plan for editing	Ta organizacja nie ma planu Office do edycji

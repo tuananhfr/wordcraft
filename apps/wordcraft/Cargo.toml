@@ -70,8 +70,9 @@ clipboard-win = { version = "5.4", features = ["std"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 erpcons-update = { git = "https://github.com/tuananhfr/erpcons-update", tag = "v0.1.0" }
-# Optional PI ID sign-in; inert unless the build sets ERPCONS_PI_ISSUER (`src/account.rs`).
-erpcons-account = { git = "https://github.com/tuananhfr/erpcons-account", tag = "v0.4.2" }
+# Optional PI ID sign-in and the editing licence; inert unless the build sets ERPCONS_PI_ISSUER
+# (`src/account/config.rs`).
+erpcons-account = { git = "https://github.com/tuananhfr/erpcons-account", tag = "v0.5.0" }
 # Opens the PI ID sign-in page in the system browser; already used on Windows for Settings.
 open = "5"
 craft-print = { git = "https://github.com/storytold/craft-libs", rev = "d27646a5f7c8b4fc85d9dd3213b8c88b58e0088d" }
@@ -87,4 +88,4 @@ getrandom = "0.3"
 
 [dev-dependencies]
 # In-process PI Platform mock for the account adapter's sign-in test.
-pi-mock = { git = "https://github.com/tuananhfr/erpcons-account", tag = "v0.4.2" }
+pi-mock = { git = "https://github.com/tuananhfr/erpcons-account", tag = "v0.5.0" }

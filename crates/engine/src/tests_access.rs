@@ -107,3 +107,46 @@ fn access_belongs_to_its_document_and_is_never_saved() {
     let again = crate::io::open_bytes("a.docx", &bytes).unwrap();
     assert!(again.settings.protection.is_none(), "nothing about the grant is written into the file");
 }
+
+/// The desktop app's edit lock (no licence to edit): read-only like a viewer, except that Save
+/// writes the document, edits made before the lock included, back to its own file.
+#[test]
+fn the_edit_lock_refuses_edits_but_saves_in_place() {
+    let dir = std::env::temp_dir().join(format!("wordcraft-edit-lock-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("locked.docx");
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    s.run("text.insert", &json!({"text": "Một"})).unwrap();
+    s.edit_lock = true;
+    assert!(s.granted().read_only && s.granted().may_save);
+    for (id, p) in
+        [("text.insert", json!({"text": "x"})), ("format.bold", json!({})), ("edit.undo", json!({})), ("file.encrypt", json!({"password": "x"}))]
+    {
+        let r = s.run(id, &p);
+        assert!(matches!(&r, Err(CmdError::Disabled(m)) if m.contains("read-only")), "{id}: {r:?}");
+    }
+    s.run("file.save", &json!({"path": path.to_string_lossy()})).unwrap();
+    assert!(!s.dirty, "saved");
+    let again = crate::io::open_bytes("locked.docx", &std::fs::read(&path).unwrap()).unwrap();
+    assert_eq!(again.plain_text(wordcraft_doc::StoryRef::Body).trim(), "Một");
+    s.run("file.exportPdf", &json!({"path": dir.join("locked.pdf").to_string_lossy()})).unwrap();
+    // A host's read-only grant wins: it allows no Save.
+    s.access.read_only = true;
+    assert!(!s.granted().may_save);
+    assert!(s.run("file.save", &json!({"path": path.to_string_lossy()})).is_err());
+    s.access.read_only = false;
+    s.edit_lock = false;
+    s.run("text.insert", &json!({"text": "!"})).unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn the_edit_lock_is_the_users_and_stays_across_documents() {
+    let mut s = sample();
+    s.edit_lock = true;
+    let mut other = s.sibling();
+    s.swap_document(&mut other);
+    assert!(s.edit_lock, "the shown document is locked too");
+    assert!(s.run("text.insert", &json!({"text": "x"})).is_err());
+    assert_eq!(s.access, Access::default(), "the host's grant is untouched");
+}

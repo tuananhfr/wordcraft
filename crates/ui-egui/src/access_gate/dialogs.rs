@@ -43,7 +43,7 @@ impl WordApp {
         if self.dialog_allowed(name) {
             return false;
         }
-        self.status(super::message(self.session.access, Refusal::ReadOnly));
+        self.say_refused(Refusal::ReadOnly);
         true
     }
 }

@@ -1648,6 +1648,7 @@ impl WordApp {
             self.ctx = Some(ctx.clone());
         }
         self.attach_account(ctx);
+        self.sync_edit_lock();
         #[cfg(not(target_arch = "wasm32"))]
         self.poll_updates();
         self.poll_printing(ctx);
@@ -1855,6 +1856,7 @@ impl WordApp {
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
                 alt_chunk_notice::show(self, ui);
                 font_notice::show(self, ui);
+                account::lock_notice(self, ui);
                 account::warning_notice(self, ui);
                 canvas::show(self, ui);
             });
@@ -2245,6 +2247,9 @@ mod tests_focus;
 
 #[cfg(test)]
 mod tests_account;
+
+#[cfg(test)]
+mod tests_edit_lock;
 
 #[cfg(test)]
 mod tests_intake;

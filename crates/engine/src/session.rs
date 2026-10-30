@@ -367,6 +367,10 @@ pub struct Session {
     pub initials: String,
     /// What the embedding host allows with this document (online viewers); never saved.
     pub access: crate::access::Access,
+    /// The app has turned editing off for every open document (the desktop app without a licence
+    /// to edit): read-only on top of `access`, with Save still allowed. The user's, not the
+    /// document's; never saved.
+    pub edit_lock: bool,
     /// Format painter: copied formatting waiting to be applied (and whether it stays on).
     pub painter: Option<(CharProps, wordcraft_doc::props::ParaProps, bool)>,
     /// Last message for the status bar / agents.
@@ -605,6 +609,7 @@ impl Session {
             author: "WordCraft User".into(),
             initials: String::new(),
             access: Default::default(),
+            edit_lock: false,
             painter: None,
             status: String::new(),
             history: Vec::new(),
@@ -911,7 +916,7 @@ impl Session {
     }
     /// The shared execution guard for history controls and commands.
     pub fn history_block_reason(&self, redo: bool) -> Option<&'static str> {
-        if self.access.read_only {
+        if self.granted().read_only {
             Some(crate::access::Refusal::ReadOnly.reason())
         } else if self.step_lifts_protection(redo) {
             Some("Use Stop Protection to enable Undo or Redo.")
@@ -1128,6 +1133,7 @@ impl Session {
             initials,
             // The host's grant goes with its document.
             access: _,
+            edit_lock,
             painter,
             status,
             history: _,
@@ -1178,6 +1184,7 @@ impl Session {
         std::mem::swap(&mut self.registry, registry);
         std::mem::swap(&mut self.author, author);
         std::mem::swap(&mut self.initials, initials);
+        std::mem::swap(&mut self.edit_lock, edit_lock);
         std::mem::swap(&mut self.painter, painter);
         std::mem::swap(&mut self.status, status);
         std::mem::swap(&mut self.last_command, last_command);
@@ -1243,6 +1250,7 @@ impl Session {
             initials: _,
             // The host's grant, like the file path: not an edit to the document.
             access: _,
+            edit_lock: _,
             painter: _,
             status: _,
             history,
@@ -1350,10 +1358,16 @@ impl Session {
         }
     }
 
+    /// What commands are checked against: the host's [`crate::access::Access`], read-only too
+    /// while [`Session::edit_lock`] is on. A host's read-only grant wins, and it allows no Save.
+    pub fn granted(&self) -> crate::access::Access {
+        if self.edit_lock && !self.access.read_only { crate::access::Access { read_only: true, may_save: true, ..self.access } } else { self.access }
+    }
+
     /// Why `spec` can't run now (the host's [`crate::access::Access`] first, then the command's
     /// own state); `None` when it can.
     pub fn refusal(&self, spec: &crate::CommandSpec) -> Option<&'static str> {
-        self.access.refusal(spec).map(crate::access::Refusal::reason).or_else(|| (spec.enabled)(self))
+        self.granted().refusal(spec).map(crate::access::Refusal::reason).or_else(|| (spec.enabled)(self))
     }
 
     /// Run a command by id with JSON params (the single entry point for the UI, CLI, MCP and

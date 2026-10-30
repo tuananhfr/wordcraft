@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::net::TcpStream;
 
-use erpcons_account::{ApiError, ExpiryWarning, Membership, MemorySecretStore, PinnedKey, SignedIn, User};
+use erpcons_account::{ApiError, ExpiryWarning, Membership, MemorySecretStore, OFFICE_EXPORT, OFFICE_USE, OFFICE_VIEW, PinnedKey, SignedIn, User};
 use pi_mock::{ORG_A, Scenario, Server};
 
 use super::*;
@@ -29,7 +29,7 @@ fn signed_in_status(licence: LicenceState) -> Status {
 fn status_maps_to_the_view() {
     assert_eq!(view_of(&Status::Guest), AccountView::Guest);
     assert_eq!(view_of(&Status::SigningIn), AccountView::SigningIn);
-    let licence = LicenceState::Active { lease_id: "l".into(), features: vec!["vanban.view".into(), "vanban.use".into()], expires_at: 1_800_000_000 };
+    let licence = LicenceState::Active { lease_id: "l".into(), features: vec![OFFICE_VIEW.into(), OFFICE_USE.into()], expires_at: 1_800_000_000 };
     let AccountView::SignedIn(view) = view_of(&signed_in_status(licence)) else { panic!("signed in") };
     assert_eq!(view.name, "Nguyễn An");
     assert_eq!(view.email.as_deref(), Some("an@example.com"));
@@ -52,8 +52,8 @@ fn licence_states_map_to_the_view() {
         |features: &[&str]| LicenceState::Active { lease_id: "l".into(), features: features.iter().map(|f| f.to_string()).collect(), expires_at: 5 };
     assert_eq!(licence_of(&LicenceState::NotActivated), LicenceView::Free);
     assert_eq!(licence_of(&LicenceState::NotEntitled), LicenceView::Free);
-    assert_eq!(licence_of(&active(&["vanban.view", "vanban.export"])), LicenceView::Active { expires_at: 5, pro: false });
-    assert_eq!(licence_of(&active(&["vanban.view", "vanban.advanced"])), LicenceView::Active { expires_at: 5, pro: true });
+    assert_eq!(licence_of(&active(&[OFFICE_VIEW, OFFICE_EXPORT, OFFICE_USE])), LicenceView::Active { expires_at: 5, pro: false });
+    assert_eq!(licence_of(&active(&[OFFICE_VIEW, "erpconsoffice.advanced"])), LicenceView::Active { expires_at: 5, pro: true });
     assert_eq!(licence_of(&LicenceState::Inactive { lease_id: "l".into(), expires_at: 9 }), LicenceView::Inactive { expires_at: 9 });
     assert_eq!(licence_of(&LicenceState::DeviceRevoked), LicenceView::DeviceRevoked);
     assert_eq!(licence_of(&LicenceState::DeviceCapReached), LicenceView::DeviceCapReached);
@@ -116,7 +116,7 @@ fn the_browser_pages_are_translated_and_escaped() {
 }
 
 /// The system browser in tests: follows the authorization redirect to the app's loopback listener.
-fn follow_redirect(url: &str) -> Result<(), String> {
+pub(super) fn follow_redirect(url: &str) -> Result<(), String> {
     let url = url.to_owned();
     std::thread::spawn(move || {
         if let Some(location) = http_get(&url).and_then(|response| location_of(&response)) {
@@ -144,7 +144,7 @@ fn location_of(response: &str) -> Option<String> {
 }
 
 fn mock_config(server: &Server, dir: &tempfile::TempDir) -> Config {
-    let mut config = Config::new(server.issuer(), Product::VanBan, "0.6.5");
+    let mut config = config::for_issuer(server.issuer(), "0.6.5");
     // The mock's development key is pinned here only, never in a build.
     config.platform_keys = vec![PinnedKey { kid: server.lease_key_id(), key: server.lease_public_key() }];
     config.state_dir = Some(dir.path().to_path_buf());
@@ -191,12 +191,14 @@ fn signs_in_switches_org_and_signs_out_against_pi_mock() {
     assert_eq!(view.email.as_deref(), Some("an.nguyen@example.com"));
     assert!(!view.name.is_empty());
     assert_eq!(view.active_org, None, "PI's organization page picked personal");
-    assert_eq!(view.licence, LicenceView::Free, "Office keeps offline licensing off");
+    assert_eq!(view.licence, LicenceView::Free, "PI leases to organizations only: nothing activated");
     assert!(view.online);
-    assert!(hook.allowed("vanban.use"));
+    assert!(!hook.allowed(OFFICE_USE));
+    assert_eq!(hook.edit_lock(), Some(EditLock::ChooseOrg));
 
     hook.select_org(Some(ORG_A.into()));
     wait_for(&hook, "org switch", |s| matches!(&s.view, AccountView::SignedIn(v) if v.active_org.as_deref() == Some(ORG_A)));
+    assert_eq!(hook.edit_lock(), Some(EditLock::NoPlan), "organization A has no Office plan");
     hook.select_org(None);
     wait_for(&hook, "personal context", |s| matches!(&s.view, AccountView::SignedIn(v) if v.active_org.is_none()));
 
@@ -207,8 +209,7 @@ fn signs_in_switches_org_and_signs_out_against_pi_mock() {
     let dir = dir.path().to_string_lossy().into_owned();
     for request in server.requests() {
         assert!(!request.body.contains(&dir) && !request.query.contains(&dir), "{} {}", request.method, request.path);
-        // No device, lease or entitlement endpoint: Office keeps offline licensing off (ADR 0011).
-        assert!(!request.path.starts_with("/api/") || request.path == "/api/v1/id/me", "{} {}", request.method, request.path);
+        assert!(!request.path.starts_with("/api/") || request.path.starts_with("/api/v1/id/"), "{} {}", request.method, request.path);
     }
 }
 
