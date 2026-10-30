@@ -153,9 +153,8 @@
         <RegistryValue Root="HKLM" Key="Software\Classes\Applications\wordcraft.exe\SupportedTypes" Name=".txt" Value="" Type="string" />
       </Component>
 
-      <Component Id="WordcraftCli" Guid="0097E561-7495-46B4-97A2-5AEA03EB7EDA">
-        <File Id="WordcraftCliExe" Source="$(var.BinDir)\wordcraft-cli.exe" KeyPath="yes" />
-      </Component>
+      <!-- No wordcraft-cli.exe: it would edit documents without the PI licence gate. The major
+           upgrade removes the copy that earlier MSIs installed. -->
     </ComponentGroup>
   </Fragment>
 </Wix>
