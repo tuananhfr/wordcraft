@@ -25,6 +25,7 @@ mod preferences;
 mod print;
 mod region;
 mod updates;
+mod window_fit;
 
 const PRODUCT_NAME: &str = "Văn bản – ERPCons";
 
@@ -36,26 +37,30 @@ use wordcraft_ui_egui::{
 };
 
 /// The app, the restored window geometry until the first frame has checked it, the control
-/// server's key file (removed on exit), the file dialogs the app asked for and, on macOS, the
-/// documents opened from Finder.
+/// server's key file (removed on exit), the file dialogs the app asked for, the first-launch
+/// window fit and, on macOS, the documents opened from Finder.
 struct App(
     WordApp,
     Option<WindowGeometry>,
     Option<control_server::KeyFile>,
     file_dialogs::Launcher,
+    window_fit::WindowFit,
     #[cfg(target_os = "macos")] fmv_macos_events::Inbox,
 );
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         #[cfg(target_os = "macos")]
-        apple_events::poll(&self.4, &mut self.0, ctx);
+        apple_events::poll(&self.5, &mut self.0, ctx);
         let language = self.0.ui.language.clone();
         self.0.logic(ctx);
         preferences::language_changed(&language, &self.0.ui.language, || save_prefs(&self.0));
         self.3.show(frame);
         let prev = self.0.ui.window;
         self.0.ui.window = ctx.input(|i| WindowGeometry::track(prev, i.viewport(), i.viewport_rect().size()));
+        if let Some(fitted) = self.4.apply(ctx) {
+            self.0.ui.window = Some(fitted);
+        }
         if let Some(pos) = ctx.input(|i| take_rescue(&mut self.1, i.viewport())) {
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
         }
@@ -290,7 +295,7 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title(PRODUCT_NAME)
             .with_app_id("vn.erpcons.vanban")
-            .with_inner_size([1440.0, 920.0])
+            .with_inner_size(window_fit::DEFAULT_INNER_SIZE)
             .with_min_inner_size([760.0, 480.0])
             .with_drag_and_drop(true)
             .with_fullsize_content_view(true)
@@ -308,8 +313,10 @@ fn main() -> eframe::Result {
     graphics::configure(&mut options, eframe::wgpu::Backends::from_env());
     load_user_fonts();
     let restored = saved_window();
-    if let Some(window) = restored {
-        options.viewport = window.apply(options.viewport);
+    match restored {
+        Some(window) => options.viewport = window.apply(options.viewport),
+        // Centred on the primary monitor, whose origin window_fit's restore position assumes.
+        None => options.centered = true,
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     // winit has no file drag-and-drop on Wayland (only on X11), so dropping files from the file
@@ -396,6 +403,7 @@ fn main() -> eframe::Result {
                 restored,
                 key_file,
                 dialogs,
+                window_fit::WindowFit::new(restored),
                 #[cfg(target_os = "macos")]
                 apple_events.connect(&cc.egui_ctx),
             )))
