@@ -472,6 +472,8 @@ pub struct Session {
     /// The paragraph, list and comment ids this client makes (`erpHost.setClientId`); the user's,
     /// not the document's, so it stays across documents.
     pub(crate) ids: wordcraft_doc::ids::ClientIds,
+    /// Region co-editing of a shared document (web, `erpHost` v3); `None` everywhere else.
+    pub live: Option<crate::live::Live>,
 }
 
 /// The number of edit locations Go Back cycles through (Word: four).
@@ -656,6 +658,7 @@ impl Session {
             edit_marks: Vec::new(),
             go_back_step: 0,
             ids: wordcraft_doc::ids::ClientIds::default(),
+            live: None,
         }
     }
 
@@ -1079,6 +1082,9 @@ impl Session {
         self.go_back_step = 0;
         self.view.outline.collapsed.clear();
         self.reset_history();
+        if let Some(live) = self.live.as_mut() {
+            live.reset(&self.doc);
+        }
         self.touch();
         self.dirty = false;
         self.relayout();
@@ -1183,6 +1189,8 @@ impl Session {
             edit_marks: _,
             go_back_step: _,
             ids,
+            // The room shares one document.
+            live: _,
         } = other;
         std::mem::swap(&mut self.user_dict_path, user_dict_path);
         std::mem::swap(&mut self.clipboard, clipboard);
@@ -1309,6 +1317,7 @@ impl Session {
             go_back_step: _,
             // Ids already made stay made: undo never hands one out again.
             ids: _,
+            live: _,
         } = self;
         let head = if history.len() + SNAPSHOT_HEAD > MAX_UNDO { history.iter().take(SNAPSHOT_HEAD).cloned().collect() } else { Vec::new() };
         EditSnapshot {
@@ -1385,6 +1394,17 @@ impl Session {
     /// control channel). Mutating commands are undoable; a failed command leaves the document as
     /// it was; a panic inside a command becomes an error.
     pub fn run(&mut self, id: &str, params: &Value) -> Result<Value, CmdError> {
+        if self.transaction_depth == 0
+            && self.live.is_some()
+            && let Some(result) = self.live_run(id, params)
+        {
+            return result;
+        }
+        self.run_plain(id, params)
+    }
+
+    /// [`Session::run`] without co-editing's lock gate.
+    pub(crate) fn run_plain(&mut self, id: &str, params: &Value) -> Result<Value, CmdError> {
         if self.transaction_depth == 0 {
             self.transaction_checkpoint = false;
         }

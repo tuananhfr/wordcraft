@@ -28,6 +28,8 @@ regex = { workspace = true }
 regex-automata = { workspace = true }
 image = { workspace = true }
 zeroize = { workspace = true }
+# Co-editing: pictures travel by content hash.
+sha2 = { workspace = true }
 unicode-normalization = "0.1.26"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
