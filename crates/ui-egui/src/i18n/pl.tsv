@@ -2643,3 +2643,10 @@ preview	Title	Tytuł
 	Connect to the internet to renew your license and edit	Połącz się z internetem, aby odnowić licencję i edytować
 	Could not renew your license. The app keeps trying	Nie udało się odnowić licencji. Aplikacja ponawia próby
 	This organization has no Office plan for editing	Ta organizacja nie ma planu Office do edycji
+	Someone else is editing this part: {name}.	Ktoś inny edytuje tę część: {name}.
+	Someone else is editing this part; your change was not made.	Ktoś inny edytuje tę część; Twoja zmiana nie została wprowadzona.
+	Nothing of yours left to undo.	Nie ma już nic Twojego do cofnięcia.
+	Changed while you were away	Zmieniono podczas Twojej nieobecności
+	Someone else changed this part while you were offline. Which version do you keep?	Ktoś inny zmienił tę część, gdy byłeś offline. Którą wersję zachować?
+	Keep mine	Zachowaj moją
+	Use theirs	Użyj nowej

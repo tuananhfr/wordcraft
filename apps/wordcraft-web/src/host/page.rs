@@ -28,6 +28,9 @@ pub(crate) fn connect() -> Option<Host> {
     if version >= 2 {
         link.set_shell_shares();
     }
+    if super::regions::speaks_regions(&erp_host) {
+        link.set_regions();
+    }
     Some(Host { link, erp_host, version, ready_sent: false })
 }
 
@@ -121,6 +124,9 @@ impl Host {
         let _ = js_sys::Reflect::set(&handlers, &JsValue::from_str("acknowledged"), acknowledged.as_ref());
         if version >= 2 {
             self.add_v2_handlers(&handlers, ctx);
+        }
+        if self.link.regions() {
+            super::regions::add_handlers(&handlers, &self.link);
         }
         if call(&self.erp_host, "ready", &js_sys::Array::of1(&handlers)).is_none() {
             log::warn!("erpHost.ready failed");

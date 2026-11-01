@@ -66,4 +66,8 @@ impl HostTransport for JsHost {
             log::warn!("erpHost.closed failed");
         }
     }
+
+    fn region_calls(&self, calls: Vec<wordcraft_engine::live::Call>, answer: std::rc::Rc<dyn Fn(String, bool)>) {
+        super::regions::perform(&self.host, calls, answer);
+    }
 }

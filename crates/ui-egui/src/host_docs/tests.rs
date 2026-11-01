@@ -24,6 +24,9 @@ pub(super) struct Sent {
 pub(super) struct FakeHost {
     pub(super) sent: RefCell<Vec<Sent>>,
     pub(super) calls: RefCell<Vec<String>>,
+    /// v3 region calls, and how to answer `regionWillEdit`.
+    pub(super) regions: RefCell<Vec<wordcraft_engine::live::Call>>,
+    pub(super) answer: RefCell<Option<Rc<dyn Fn(String, bool)>>>,
 }
 
 impl HostTransport for FakeHost {
@@ -38,6 +41,10 @@ impl HostTransport for FakeHost {
     }
     fn closed(&self, doc_id: &str) {
         self.calls.borrow_mut().push(format!("closed {doc_id}"));
+    }
+    fn region_calls(&self, calls: Vec<wordcraft_engine::live::Call>, answer: Rc<dyn Fn(String, bool)>) {
+        self.regions.borrow_mut().extend(calls);
+        *self.answer.borrow_mut() = Some(answer);
     }
 }
 
@@ -104,7 +111,7 @@ pub(super) fn docx(text: &str) -> Vec<u8> {
     wordcraft_engine::io::save_bytes_with("x.docx", &wordcraft_doc::Document::from_text(text), None, &Default::default()).unwrap()
 }
 
-fn hand_in(page: &Page, doc_id: &str, title: &str, text: &str) {
+pub(super) fn hand_in(page: &Page, doc_id: &str, title: &str, text: &str) {
     page.link.open(HostOpen {
         doc_id: doc_id.into(),
         version: 1,

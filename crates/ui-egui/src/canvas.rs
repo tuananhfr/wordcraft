@@ -1226,6 +1226,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         app.canvas.mini_anchor = first;
         // Content controls: the frame of the one the caret is in (all of them in Design Mode).
         crate::content_controls::paint(app, &painter, &t, &layout, &rects, geo.scale);
+        // Co-editing: others' locks and selections.
+        crate::live_overlay::paint(app, &painter, &layout, &rects, geo.scale);
         // Read Aloud: the sentence being spoken.
         if let Some((a, b)) = crate::read_aloud::highlight(app) {
             for (pi, r) in layout.selection_rects(&app.session.doc, &a, &b, app.session.page_hint) {

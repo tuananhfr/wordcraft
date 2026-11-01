@@ -19,17 +19,21 @@ use crate::open_documents::{save_name_of, untitled_name};
 mod access;
 mod autosave;
 mod draft_keep;
+mod live;
 mod saves;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod tests_access;
 #[cfg(test)]
+mod tests_live;
+#[cfg(test)]
 mod tests_offered;
 #[cfg(test)]
 mod tests_view_look;
 mod view_keep;
 
+pub use live::{ConflictAnswer, LiveMsg, cursors_of, locks_of, present};
 use saves::{Saves, Snapshot, Work};
 
 /// What a save is for (`erpHost.save`'s `reason`), weakest first: coalesced triggers keep the
@@ -129,6 +133,11 @@ pub trait HostTransport {
     fn dirty(&self, doc_id: &str, dirty: bool);
     fn opened(&self, doc_id: &str, ok: bool, reason: Option<&str>);
     fn closed(&self, doc_id: &str);
+    /// v3 region calls (`regionWillEdit`, `regionChanged`, `regionDidEndEdit`,
+    /// `selectionChanged`); `answer` takes `regionWillEdit`'s answer, later.
+    fn region_calls(&self, calls: Vec<wordcraft_engine::live::Call>, answer: Rc<dyn Fn(String, bool)>) {
+        let _ = (calls, answer);
+    }
 }
 
 /// The app's host documents, shared with the host's callbacks, which run between frames.
@@ -156,6 +165,12 @@ struct Shared {
     wake: RefCell<Option<egui::Context>>,
     /// The shell has its own Share button (v2), so the editor shows none.
     shell_shares: Cell<bool>,
+    /// The shell takes region calls (v3).
+    regions: Cell<bool>,
+    /// v3 calls for the next frame.
+    live_inbox: RefCell<Vec<LiveMsg>>,
+    /// `regionConflict` questions waiting for the user.
+    conflicts: RefCell<std::collections::VecDeque<(String, ConflictAnswer)>>,
 }
 
 impl HostLink {
@@ -391,6 +406,7 @@ impl WordApp {
         if let Some(at) = link.with_saves(|s| s.next_autosave()).flatten() {
             ctx.request_repaint_after(std::time::Duration::from_millis((at - now).clamp(0.0, autosave::CEILING_MS) as u64));
         }
+        self.host_live_tick(ctx, &link, now);
     }
 
     /// End of every frame (and from [`Self::host_tick`]): what each host document now is, for
@@ -520,6 +536,7 @@ impl WordApp {
                     session.access = open.mode.access(open.can_download);
                 }
                 let revision = self.find_document(document).map_or(0, |(s, _)| s.rev());
+                self.start_live(link, document);
                 let work = link.with_saves(|s| s.add(&open.doc_id, document, open.version, revision)).unwrap_or_default();
                 link.with_saves(|s| s.set_read_only(&open.doc_id, open.mode.read_only()));
                 link.run(work);
