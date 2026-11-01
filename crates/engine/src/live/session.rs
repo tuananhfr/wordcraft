@@ -225,6 +225,14 @@ impl Session {
             return Some(Ok(json!({})));
         }
         if !self.registry.get(id).is_some_and(|s| s.mutates) || NOT_EDITS.contains(&id) {
+            // Caret moves between edits waiting for a lock run again with them, or the edits
+            // after them would land where the caret was before.
+            if (id.starts_with("caret.") || id.starts_with("select."))
+                && let Some(live) = self.live.as_mut()
+                && !live.queue.is_empty()
+            {
+                live.queue.push(Action::Command(id.to_string(), params.clone()));
+            }
             return None;
         }
         let snap = self.edit_snapshot();

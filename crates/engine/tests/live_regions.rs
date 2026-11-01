@@ -399,6 +399,29 @@ fn offline_edits_need_no_lock_and_still_go_out() {
     assert!(!calls.iter().any(|c| matches!(c, Call::WillEdit(..))));
 }
 
+#[test]
+fn a_picture_travels_with_its_bytes_until_the_room_has_them() {
+    const PNG: &str = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    let mut room = Room::new(2, &doc(&["Picture: ", "After"]));
+    caret(room.page(0), 0, 9);
+    run(room.page(0), "insert.picture", json!({"data": PNG, "width": 20}));
+    run(room.page(0), "caret.end", json!({}));
+    run(room.page(0), "text.insert", json!({"text": " caption"}));
+    room.settle();
+    room.converged();
+    assert_eq!(room.pages[1].doc.media.len(), 1, "the picture arrived");
+    // Every payload of that lock carries the bytes: the shell keeps only the newest one.
+    let with_bytes = room.sent.iter().filter(|(_, p)| p.contains("\"data\"")).count();
+    assert_eq!(with_bytes, room.sent.len());
+    room.wait(20_000.0);
+    let before = room.sent.len();
+    type_at(room.page(0), 0, 0, "A ");
+    room.settle();
+    let (_, last) = room.sent.last().expect("sent");
+    assert!(room.sent.len() > before && !last.contains("\"data\""), "once handed back, only its hash travels");
+    room.converged();
+}
+
 /// Every mutating command, from a caret and from a selection across paragraphs: what reaches the
 /// other page makes the same document, and what changes more than the body's blocks takes `*`.
 #[test]
