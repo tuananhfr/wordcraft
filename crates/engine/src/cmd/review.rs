@@ -128,7 +128,7 @@ fn new_comment(s: &mut Session, v: &Value) -> CmdResult {
         (a, b)
     };
     let part = s.doc.add_part(PartKind::Comment, vec![para_block(Paragraph::with_text(&text, Default::default()))]);
-    let id = s.doc.comments.keys().next_back().map(|k| k + 1).unwrap_or(0);
+    let id = s.new_comment_id()?;
     let initials = s.user_initials();
     s.doc.comments.insert(id, Comment { author: s.author.clone(), initials, date: now_iso(), parent: None, resolved: false, part });
     let props = Default::default();
@@ -145,7 +145,7 @@ fn reply(s: &mut Session, v: &Value) -> CmdResult {
     }
     let text = p::req_str(v, "text")?;
     let part = s.doc.add_part(PartKind::Comment, vec![para_block(Paragraph::with_text(text, Default::default()))]);
-    let id = s.doc.comments.keys().next_back().map(|k| k + 1).unwrap_or(0);
+    let id = s.new_comment_id()?;
     let initials = s.user_initials();
     s.doc.comments.insert(id, Comment { author: s.author.clone(), initials, date: now_iso(), parent: Some(parent), resolved: false, part });
     Ok(json!({"id": id}))

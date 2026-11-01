@@ -33,7 +33,7 @@ impl Cell {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Row {
     #[serde(default)]
     pub props: RowProps,
@@ -41,6 +41,16 @@ pub struct Row {
     /// Content controls around the row (repeating sections; see [`crate::control`]).
     #[serde(default, skip_serializing_if = "ControlWrap::is_empty")]
     pub controls: ControlWrap,
+    /// Stable identity (`w:tr/@w14:paraId`), in the same id space as [`Paragraph::id`]; not part
+    /// of equality.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<u32>,
+}
+
+impl PartialEq for Row {
+    fn eq(&self, o: &Self) -> bool {
+        self.props == o.props && self.cells == o.cells && self.controls == o.controls
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -79,6 +89,7 @@ impl Table {
                         })
                         .collect(),
                     controls: ControlWrap::default(),
+                    id: None,
                 })
                 .collect(),
             controls: ControlWrap::default(),
@@ -113,7 +124,7 @@ impl Table {
         if self.rows.len() >= MAX_ROWS {
             return;
         }
-        let mut row = Row { props: src.props.clone(), cells: Vec::with_capacity(src.cells.len()), controls: ControlWrap::default() };
+        let mut row = Row { props: src.props.clone(), cells: Vec::with_capacity(src.cells.len()), controls: ControlWrap::default(), id: None };
         row.props.header = false;
         for c in &src.cells {
             let mut nc = Cell::empty();

@@ -319,15 +319,20 @@ fn selection_html_exports_run_formatting_links_and_lists() {
     }
 }
 
+/// Pasted lists get ids from the client's own range (`wordcraft_doc::ids`), so a list id at
+/// `u32::MAX` no longer leaves no room for them.
 #[test]
-fn numbering_id_exhaustion_fails_without_leaving_partial_resources() {
+fn pasted_lists_get_client_ids_whatever_ids_the_destination_holds() {
     let clip = copy(&mut source());
     let mut dst = Session::new(Document::new());
+    assert!(dst.set_client_prefix("0b0b0b"));
     dst.doc.numbering.nums.push(Num { id: u32::MAX, abstract_id: 0, ..Default::default() });
-    let before = dst.doc.clone();
-    assert!(dst.run("edit.paste", &clip).is_err());
-    assert_eq!(dst.doc, before);
-    assert_eq!(dst.undo_depth(), 0);
+    let before = dst.doc.list_ids();
+    dst.run("edit.paste", &clip).unwrap();
+    let added: Vec<u32> = dst.doc.list_ids().difference(&before).copied().collect();
+    assert!(!added.is_empty());
+    assert!(added.iter().all(|id| id >> 7 == 0x0b0b0b), "{added:x?}");
+    assert_eq!(dst.undo_depth(), 1);
 }
 
 #[test]

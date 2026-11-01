@@ -776,6 +776,10 @@ pub struct Paragraph {
     /// Change counter for caches (not part of equality).
     #[serde(skip, default = "next_rev")]
     pub rev: u64,
+    /// Stable identity (`w14:paraId`, see [`crate::ids`]): identity, not content, so not part of
+    /// equality.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<u32>,
 }
 
 impl PartialEq for Paragraph {
@@ -807,6 +811,7 @@ impl Paragraph {
             objects: Vec::new(),
             section: None,
             rev: next_rev(),
+            id: None,
         }
     }
     /// A paragraph of plain text in one run.
@@ -1168,9 +1173,12 @@ impl Paragraph {
     }
 
     /// Split at `off`: `self` keeps `..off`, the returned paragraph gets `off..` with the same
-    /// paragraph properties (the section break, if any, moves to the second half).
+    /// paragraph properties (the section break, if any, moves to the second half). The half that
+    /// keeps the text keeps the [`id`](Self::id): the first, unless the split is at the start of
+    /// a paragraph with text (Enter there adds an empty paragraph above).
     pub fn split_off(&mut self, off: usize) -> Result<Paragraph> {
         self.check(off)?;
+        let id = if off == 0 && !self.text.is_empty() { self.id.take() } else { None };
         let k = self.objects_before(off);
         let tail_text = self.text.split_off(off);
         let tail_objs = if k <= self.objects.len() { self.objects.split_off(k) } else { Vec::new() };
@@ -1201,6 +1209,7 @@ impl Paragraph {
             objects: tail_objs,
             section: self.section.take(),
             rev: next_rev(),
+            id,
         };
         if tail.text.is_empty() {
             tail.mark = self.props_at(off).unlinked();

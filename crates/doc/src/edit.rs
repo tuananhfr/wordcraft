@@ -583,12 +583,15 @@ impl Document {
             let added = src.len();
             let keep = target.props.clone();
             let sect = tail.section.clone();
+            // A split at the start moved the id to the tail; it comes back with it.
+            let id = target.id.or(tail.id);
             let mut src = src;
             src.section = None;
             target.append(src);
             target.append(tail);
             target.props = keep;
             target.section = sect;
+            target.id = id;
             return Ok(Pos { off: pos.off + added, ..pos.clone() });
         }
         // Multi-block: split, merge first into left part, last into right part.
@@ -623,6 +626,10 @@ impl Document {
                 let tail = std::mem::replace(r, p.clone());
                 let off = r.len();
                 let sect = tail.section.clone();
+                // The paragraph pasted into keeps its id; the copy's id would repeat its source's.
+                if tail.id.is_some() {
+                    r.id = tail.id;
+                }
                 r.append(tail);
                 r.section = sect;
                 Ok(Pos { story: pos.story, path: right, off })

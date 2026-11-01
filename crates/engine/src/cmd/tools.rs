@@ -586,7 +586,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 .and_then(|x| x.props.numbering)
                 .filter(|n| n.num != 0)
                 .ok_or_else(|| CmdError::Failed("not in a numbered list".into()))?;
-            let new = s.doc.numbering.restart(n.num).ok_or_else(|| CmdError::Failed("bad list".into()))?;
+            let nid = crate::client_ids::new_list_id(s.client_ids(), &s.doc, &[])?;
+            let new = s.doc.numbering.restart_as(n.num, nid).ok_or_else(|| CmdError::Failed("bad list".into()))?;
             if let Some(num) = s.doc.numbering.nums.iter_mut().find(|x| x.id == new) {
                 num.start_overrides = vec![(n.level, value)];
             }
@@ -610,7 +611,8 @@ pub fn specs() -> Vec<CommandSpec> {
             let fmt = wordcraft_doc::section::NumFormat::from_ooxml(p::str(v, "format").unwrap_or("decimal"));
             let text = p::str(v, "text").unwrap_or("%1.").to_string();
             let start = p::u64(v, "start").unwrap_or(1).min(100_000) as u32;
-            let id = s.doc.numbering.add_list(wordcraft_doc::ListKind::Numbered);
+            let (aid, nid) = s.new_list_ids()?;
+            let id = s.doc.numbering.add_list_as(wordcraft_doc::ListKind::Numbered, aid, nid);
             if let Some(a) = s.doc.numbering.abstract_of(id).map(|a| a.id)
                 && let Some(abs) = s.doc.numbering.abstracts.iter_mut().find(|x| x.id == a)
                 && let Some(l) = abs.levels.first_mut()

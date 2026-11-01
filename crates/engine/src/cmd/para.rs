@@ -493,12 +493,17 @@ fn list(s: &mut Session, v: &Value, default: ListKind) -> CmdResult {
         .prev_para(a.story, &a.path)
         .and_then(|q| s.doc.para(a.story, &q).and_then(|x| x.props.numbering))
         .filter(|n| n.num != 0 && same_kind(n));
-    let num = match prev_num {
-        Some(n) => n.num,
-        None => match kind {
-            ListKind::Bullet | ListKind::BulletChar(_) => s.doc.numbering.find_kind(kind).unwrap_or_else(|| s.doc.numbering.add_list(kind)),
-            _ => s.doc.numbering.add_list(kind),
-        },
+    let existing = match prev_num {
+        Some(n) => Some(n.num),
+        None if matches!(kind, ListKind::Bullet | ListKind::BulletChar(_)) => s.doc.numbering.find_kind(kind),
+        None => None,
+    };
+    let num = match existing {
+        Some(num) => num,
+        None => {
+            let (aid, nid) = s.new_list_ids()?;
+            s.doc.numbering.add_list_as(kind, aid, nid)
+        }
     };
     fmt(s, &|p| {
         let level = p.numbering.filter(|n| n.num != 0).map(|n| n.level).unwrap_or(0);
@@ -518,7 +523,8 @@ fn restart_numbering(s: &mut Session, _: &Value) -> CmdResult {
     let Some(n) = s.doc.para_at(&f).and_then(|p| p.props.numbering).filter(|n| n.num != 0) else {
         return Err(CmdError::Failed("not in a numbered list".into()));
     };
-    let new = s.doc.numbering.restart(n.num).ok_or_else(|| CmdError::Failed("bad list".into()))?;
+    let nid = crate::client_ids::new_list_id(s.client_ids(), &s.doc, &[])?;
+    let new = s.doc.numbering.restart_as(n.num, nid).ok_or_else(|| CmdError::Failed("bad list".into()))?;
     // This paragraph and the following ones of the same list use the new instance.
     let paths: Vec<_> = s.doc.para_paths(f.story).into_iter().filter(|p| *p >= f.path).collect();
     for path in paths {

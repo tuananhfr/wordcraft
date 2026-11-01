@@ -146,7 +146,7 @@ impl Writer<'_> {
     }
 
     fn para_inner(&mut self, w: &mut W, p: &Paragraph, rels: &mut PartRels, top: bool, depth: usize, framed: bool) {
-        let para_id = self.take_para_id(p);
+        let para_id = self.take_para_id(p).or_else(|| p.id.filter(|i| self.written_ids.insert(*i)).map(wordcraft_doc::ids::format_para_id));
         match &para_id {
             Some(id) => w.open("w:p", &[("w14:paraId", id), ("w14:textId", "77777777")]),
             None => w.open("w:p", &[]),
@@ -1170,7 +1170,10 @@ impl Writer<'_> {
                 super::sdt::open(w, c);
                 open_rows += 1;
             }
-            w.open("w:tr", &[]);
+            match r.id.filter(|i| self.written_ids.insert(*i)).map(wordcraft_doc::ids::format_para_id) {
+                Some(id) => w.open("w:tr", &[("w14:paraId", &id), ("w14:textId", "77777777")]),
+                None => w.open("w:tr", &[]),
+            }
             let chg = r.props.fmt_change.as_ref().map(|c| self.change_attrs(c.rev));
             trpr(w, &r.props, chg.as_ref());
             let mut open_cells = 0u32;

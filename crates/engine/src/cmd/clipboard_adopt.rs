@@ -13,13 +13,16 @@ use crate::{CmdError, Session};
 type StyleMap = BTreeMap<String, String>;
 type NumMap = BTreeMap<u32, u32>;
 
-fn next_ids(ids: impl Iterator<Item = u32>, count: usize, first: u32) -> Result<u32, CmdError> {
-    if count == 0 {
-        return Ok(first);
+/// A new list id for each of `from`, unused in the destination and by each other.
+fn new_list_ids(s: &Session, from: impl Iterator<Item = u32>, made: &mut Vec<u32>) -> Result<NumMap, CmdError> {
+    let mut map = NumMap::new();
+    for id in from {
+        let new =
+            crate::client_ids::new_list_id(s.client_ids(), &s.doc, made).map_err(|_| CmdError::Failed(super::paste::CLIPBOARD_UNUSABLE.into()))?;
+        made.push(new);
+        map.insert(id, new);
     }
-    let next = ids.max().map_or(Some(first), |n| n.checked_add(1));
-    next.filter(|n| u32::try_from(count).ok().and_then(|len| n.checked_add(len)).is_some())
-        .ok_or_else(|| CmdError::Failed(super::paste::CLIPBOARD_UNUSABLE.into()))
+    Ok(map)
 }
 
 fn style(id: &mut Option<String>, map: &StyleMap) {
@@ -95,10 +98,9 @@ fn block(b: &mut Block, styles: &StyleMap, nums: &NumMap, media: &BTreeMap<Strin
 }
 
 pub(crate) fn adopt(s: &mut Session, mut src: Document, keep_source: bool, fit_pictures: bool) -> Result<Fragment, CmdError> {
-    let next_abs = next_ids(s.doc.numbering.abstracts.iter().map(|a| a.id), src.numbering.abstracts.len(), 0)?;
-    let next_num = next_ids(s.doc.numbering.nums.iter().map(|n| n.id), src.numbering.nums.len(), 1)?;
-    let abs: NumMap = src.numbering.abstracts.iter().enumerate().map(|(i, a)| (a.id, next_abs + i as u32)).collect();
-    let nums: NumMap = src.numbering.nums.iter().enumerate().map(|(i, n)| (n.id, next_num + i as u32)).collect();
+    let mut made = Vec::new();
+    let abs = new_list_ids(s, src.numbering.abstracts.iter().map(|a| a.id), &mut made)?;
+    let nums = new_list_ids(s, src.numbering.nums.iter().map(|n| n.id), &mut made)?;
     let mut styles = StyleMap::new();
     for st in &src.styles.styles {
         let existing =

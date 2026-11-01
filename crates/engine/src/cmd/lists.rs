@@ -194,9 +194,8 @@ fn define(s: &mut Session, v: &Value) -> CmdResult {
             n
         }
         None => {
-            let aid = s.doc.numbering.abstracts.iter().map(|a| a.id.saturating_add(1)).max().unwrap_or(0);
+            let (aid, nid) = s.new_list_ids()?;
             s.doc.numbering.abstracts.push(AbstractNum { id: aid, name, levels: levels.clone() });
-            let nid = s.doc.numbering.nums.iter().map(|n| n.id.saturating_add(1)).max().unwrap_or(1).max(1);
             s.doc.numbering.nums.push(Num { id: nid, abstract_id: aid, ..Default::default() });
             nid
         }

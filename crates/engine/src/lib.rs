@@ -8,6 +8,7 @@
 
 pub mod access;
 pub mod catalog;
+mod client_ids;
 pub mod cmd;
 pub mod compatibility;
 pub mod file_access;

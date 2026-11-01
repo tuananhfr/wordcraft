@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 use wordcraft_doc::Document;
+use wordcraft_doc::ids::ClientIds;
 use wordcraft_doc::numbering::{AbstractNum, Num};
 use wordcraft_doc::styles::{Style, StyleKind};
 
@@ -93,17 +94,18 @@ fn update_styles(s: &mut Session, v: &Value) -> CmdResult {
     let path = p::str(v, "path").map(str::to_string).or(attached).ok_or_else(|| CmdError::Params("no template is attached; give `path`".into()))?;
     let base = s.path.clone();
     let src = load_other(&path, p::str(v, "data"), base.as_deref())?;
-    let report = apply_template_styles(&mut s.doc, &src);
+    let client = s.client_ids().clone();
+    let report = apply_template_styles(&mut s.doc, &src, &client);
     touch_all(s);
     Ok(report)
 }
 
 /// What [`update_styles`] does to a document: all of `src`'s styles and its defaults.
-pub fn apply_template_styles(doc: &mut Document, src: &Document) -> Value {
+pub fn apply_template_styles(doc: &mut Document, src: &Document, client: &ClientIds) -> Value {
     doc.styles.default_chr = src.styles.default_chr.clone();
     doc.styles.default_para = src.styles.default_para.clone();
     let ids: Vec<String> = src.styles.styles.iter().map(|st| st.id.clone()).collect();
-    copy_styles(doc, src, &ids)
+    copy_styles(doc, src, &ids, client)
 }
 
 fn organizer(s: &mut Session, v: &Value) -> CmdResult {
@@ -154,7 +156,8 @@ fn copy_from(s: &mut Session, v: &Value) -> CmdResult {
         let st = src.styles.find(n).ok_or_else(|| CmdError::Params(format!("`{path}` has no style `{n}`")))?;
         ids.push(st.id.clone());
     }
-    let report = copy_styles(&mut s.doc, &src, &ids);
+    let client = s.client_ids().clone();
+    let report = copy_styles(&mut s.doc, &src, &ids, &client);
     touch_all(s);
     Ok(report)
 }
@@ -276,7 +279,7 @@ fn percent_decode(s: &str) -> String {
 /// are based on that the document lacks, and their linked halves, come too; `based on`, `next`
 /// and `linked` are mapped to the document's ids, and lists a style numbers with are copied.
 /// Returns `{"added": [name], "replaced": [name], "skipped": [name]}`.
-pub fn copy_styles(doc: &mut Document, src: &Document, ids: &[String]) -> Value {
+pub fn copy_styles(doc: &mut Document, src: &Document, ids: &[String], client: &ClientIds) -> Value {
     let sheet = &src.styles;
     let same_name = |doc: &Document, st: &Style| doc.styles.styles.iter().find(|d| d.name.eq_ignore_ascii_case(&st.name)).map(|d| d.id.clone());
     // What to copy: the asked-for styles, their linked halves, and missing bases.
@@ -341,7 +344,7 @@ pub fn copy_styles(doc: &mut Document, src: &Document, ids: &[String]) -> Value 
         let linked = st.linked.as_deref().and_then(|r| map.get(r).cloned());
         let numbering = st.para.numbering.map(|mut n| {
             if n.num != 0 {
-                n.num = import_num(doc, src, n.num, &map, &mut nums).unwrap_or(0);
+                n.num = import_num(doc, src, n.num, &map, &mut nums, client).unwrap_or(0);
             }
             n
         });
@@ -356,14 +359,21 @@ pub fn copy_styles(doc: &mut Document, src: &Document, ids: &[String]) -> Value 
 }
 
 /// Copy list `num` of `src` (and its abstract list) into `doc` under new ids; memoised in `done`.
-fn import_num(doc: &mut Document, src: &Document, num: u32, map: &HashMap<String, String>, done: &mut HashMap<u32, u32>) -> Option<u32> {
+fn import_num(
+    doc: &mut Document,
+    src: &Document,
+    num: u32,
+    map: &HashMap<String, String>,
+    done: &mut HashMap<u32, u32>,
+    client: &ClientIds,
+) -> Option<u32> {
     if let Some(n) = done.get(&num) {
         return Some(*n);
     }
     let n = src.numbering.nums.iter().find(|n| n.id == num)?;
     let abs = src.numbering.abstracts.iter().find(|a| a.id == n.abstract_id)?;
-    let new_abs = doc.numbering.abstracts.iter().map(|a| a.id).max().map_or(Some(0), |m| m.checked_add(1))?;
-    let new_num = doc.numbering.nums.iter().map(|n| n.id).max().map_or(Some(1), |m| m.checked_add(1))?;
+    let new_abs = crate::client_ids::new_list_id(client, doc, &[]).ok()?;
+    let new_num = crate::client_ids::new_list_id(client, doc, &[new_abs]).ok()?;
     let mut levels = abs.levels.clone();
     for l in &mut levels {
         l.style = l.style.as_deref().and_then(|s| map.get(s).cloned().or_else(|| doc.styles.get(s).map(|x| x.id.clone())));

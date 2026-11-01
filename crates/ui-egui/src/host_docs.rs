@@ -150,6 +150,8 @@ struct Shared {
     modes: RefCell<Vec<(String, HostMode, bool)>>,
     /// The last `setUser` for the next frame: the user's name, `None` for no user.
     user: RefCell<Option<Option<String>>>,
+    /// The last `setClientId` prefix for the next frame.
+    client_id: RefCell<Option<String>>,
     pumping: Cell<bool>,
     wake: RefCell<Option<egui::Context>>,
     /// The shell has its own Share button (v2), so the editor shows none.
@@ -218,6 +220,20 @@ impl HostLink {
             *user = Some(name);
         }
         self.wake();
+    }
+
+    /// `setClientId(prefix)`: the 6 lowercase hex digits every id this client makes from now on
+    /// carries; anything else is ignored with a warning (`false`).
+    pub fn set_client_id(&self, prefix: &str) -> bool {
+        if !wordcraft_doc::ids::is_client_prefix(prefix) {
+            log::warn!("erpHost setClientId: {prefix:?} is not 6 lowercase hex digits");
+            return false;
+        }
+        if let Ok(mut id) = self.shared.client_id.try_borrow_mut() {
+            *id = Some(prefix.to_string());
+        }
+        self.wake();
+        true
     }
 
     fn wake(&self) {
@@ -350,6 +366,10 @@ impl WordApp {
             && wake.is_none()
         {
             *wake = Some(ctx.clone());
+        }
+        // Before the opens: a document's first edit already carries the host's prefix.
+        if let Some(prefix) = link.shared.client_id.try_borrow_mut().ok().and_then(|mut c| c.take()) {
+            self.session.set_client_prefix(&prefix);
         }
         let opens = link.shared.opens.try_borrow_mut().map(|mut o| std::mem::take(&mut *o)).unwrap_or_default();
         for open in opens {

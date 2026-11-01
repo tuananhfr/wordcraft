@@ -358,6 +358,7 @@ impl Reader<'_> {
     fn read_para(&mut self, sc: &mut StoryCtx, e: &El, rels: &Rels, depth: usize) -> Paragraph {
         let mut pb = PB::default();
         let mut para = Paragraph::new();
+        para.id = para_id_attr(e);
         let mut mark_moves: [Option<&El>; 2] = [None, None];
         self.moves.closed_here = [None, None];
         for o in std::mem::take(&mut sc.pending) {
@@ -1469,7 +1470,8 @@ impl Reader<'_> {
         let mut rows = Vec::new();
         collect(t, "w:tr", &mut rows, &mut Vec::new(), 0);
         for (tr, row_controls) in rows.into_iter().take(MAX_ROWS) {
-            let mut row = Row { props: tr.child("w:trPr").map(trpr).unwrap_or_default(), cells: Vec::new(), controls: row_controls };
+            let mut row =
+                Row { props: tr.child("w:trPr").map(trpr).unwrap_or_default(), cells: Vec::new(), controls: row_controls, id: para_id_attr(tr) };
             if let Some(ch) = tr.child("w:trPr").and_then(|p| p.child("w:trPrChange")) {
                 let old = ch.child("w:trPr").map(trpr).unwrap_or_default();
                 row.props.fmt_change = PropChange::boxed(self.revision(RevisionKind::Format, ch), old);
@@ -1836,4 +1838,9 @@ fn group_xfrm(sppr: Option<&El>) -> Xfrm {
         ch_off: pair("a:chOff", "x", "y", max),
         ch_ext: pos(pair("a:chExt", "cx", "cy", max)),
     }
+}
+
+/// A `w:p`'s or `w:tr`'s `w14:paraId`, when valid.
+fn para_id_attr(e: &El) -> Option<u32> {
+    e.attr("w14:paraId").and_then(wordcraft_doc::ids::parse_para_id)
 }

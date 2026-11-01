@@ -461,6 +461,8 @@ fn failed_command_restores_history_changed_by_nested_commands() {
     for (len, redo) in [(kept - 1, Some("New Comment")), (kept, None)] {
         let session = || {
             let mut s = s();
+            // Comment ids carry the client prefix, random by default; the timelines compared must share it.
+            assert!(s.set_client_prefix("0a0a0a"));
             run(&mut s, "text.insert", json!({"text": "note"}));
             for i in 1..=len + usize::from(redo.is_some()) - 4 {
                 run(&mut s, "para.indents", json!({"left": i as f32}));

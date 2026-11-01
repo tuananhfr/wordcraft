@@ -254,6 +254,7 @@ pub(crate) fn assemble(paras: Vec<ParaOut>) -> Blocks {
             },
             cells,
             controls: Default::default(),
+            id: None,
         }
     }
     fn flush_table(out: &mut Blocks, rows: &mut Vec<Row>, cells: &mut Vec<Cell>, cell: &mut Blocks, grid: &[f32], props: &TableProps, nested: bool) {

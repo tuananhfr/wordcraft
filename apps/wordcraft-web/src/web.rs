@@ -62,6 +62,8 @@ pub fn start() {
                     let doc = if sample { wordcraft_engine::sample::sample_document() } else { wordcraft_engine::blank_document(&region) };
                     let mut session = Session::new(doc);
                     session.system_region = region;
+                    // The engine's own random prefix has no entropy in wasm; the host's setClientId replaces this one.
+                    session.set_client_prefix(&format!("{:06x}", (js_sys::Math::random() * f64::from(0x100_0000)) as u32 & 0xff_ffff));
                     let (bridge, drafts) = drafts::connect().unzip();
                     let mut services = services(inbox.clone(), cc.egui_ctx.clone(), dirty, saves, &clipboard);
                     services.drafts = bridge;

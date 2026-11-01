@@ -83,6 +83,8 @@ pub(crate) struct Writer<'d> {
     hf: Vec<(u32, String, bool)>,
     /// Paragraphs that need a `w14:paraId` (last paragraph of each comment), by address.
     para_ids: HashMap<usize, String>,
+    /// Paragraph and row ids written so far: a repeated id is left out rather than written twice.
+    written_ids: std::collections::HashSet<u32>,
     /// A note reference mark to put at the start of the next paragraph.
     pending_mark: Option<&'static str>,
     /// The note being written (is footnote, part id): its reference to itself is the mark above.
@@ -148,6 +150,7 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
         endnotes: Vec::new(),
         hf: Vec::new(),
         para_ids: HashMap::new(),
+        written_ids: std::collections::HashSet::new(),
         pending_mark: None,
         current_note: None,
         toc_hold_end: false,
@@ -174,11 +177,22 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
 
     // Comments get paragraph ids before any story is written.
     let mut comment_paras: Vec<(u32, String)> = Vec::new();
-    for (i, (cid, c)) in doc.comments.iter().enumerate() {
+    let id_counts = doc.id_counts();
+    let mut spare = 0x1000_0000u32;
+    for (cid, c) in doc.comments.iter() {
         if let Some(part) = doc.parts.get(&c.part)
             && let Some(last) = part.blocks.iter().rev().find_map(|b| b.as_para())
         {
-            let pid = format!("{:08X}", 0x1000_0000u32 + i as u32 + 1);
+            // The paragraph's own id when it has a unique one, so anchors on it survive a save.
+            let own = last.id.filter(|i| id_counts.get(i) == Some(&1));
+            let id = own.unwrap_or_else(|| {
+                while id_counts.contains_key(&spare) || wr.written_ids.contains(&spare) {
+                    spare = spare.wrapping_add(1) & wordcraft_doc::ids::MAX_PARA_ID;
+                }
+                spare
+            });
+            wr.written_ids.insert(id);
+            let pid = wordcraft_doc::ids::format_para_id(id);
             wr.para_ids.insert(last as *const _ as usize, pid.clone());
             comment_paras.push((*cid, pid));
         }

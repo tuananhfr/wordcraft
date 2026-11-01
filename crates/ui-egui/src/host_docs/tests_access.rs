@@ -378,3 +378,23 @@ fn set_user_becomes_the_author_of_a_new_comment_in_edit_mode() {
     app.host_tick(&page.ctx, 0.0);
     assert_eq!(app.session.author, prefs_name, "an anonymous viewer: the preferences' name is back");
 }
+
+#[test]
+fn set_client_id_prefixes_the_ids_this_client_makes_and_a_bad_prefix_changes_nothing() {
+    let (mut app, page) = web_app();
+    assert!(page.link.set_client_id("0a1b2c"));
+    assert!(!page.link.set_client_id("0A1B2C"));
+    assert!(!page.link.set_client_id("0a1b2"));
+    app.host_tick(&page.ctx, 0.0);
+    assert_eq!(app.session.client_prefix(), "0a1b2c");
+    open_as(&page, "d1", "Xin chào", HostMode::Edit, true);
+    app.host_tick(&page.ctx, 0.0);
+    let opened: Vec<Option<u32>> = app.session.doc.body.iter().filter_map(|b| b.as_para()).map(|p| p.id).collect();
+    assert_eq!(opened, [Some(1)], "ids of an opened file are the file's, the same on every client");
+    app.run("caret.docEnd", json!({})).unwrap();
+    app.run("text.newParagraph", json!({})).unwrap();
+    app.run("select.all", json!({})).unwrap();
+    let comment = app.run("review.newComment", json!({"text": "Ý kiến"})).unwrap()["id"].as_u64().unwrap() as u32;
+    let new_para = app.session.doc.body.iter().filter_map(|b| b.as_para()).filter_map(|p| p.id).next_back().unwrap();
+    assert_eq!((new_para >> 7, comment >> 7), (0x0a1b2c, 0x0a1b2c));
+}

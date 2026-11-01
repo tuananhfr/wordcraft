@@ -131,7 +131,7 @@ impl Host {
         acknowledged.forget();
     }
 
-    /// `setMode(docId, mode, canDownload)` and `setUser(user)`.
+    /// `setMode(docId, mode, canDownload)`, `setUser(user)` and `setClientId(prefix)`.
     fn add_v2_handlers(&self, handlers: &js_sys::Object, ctx: &egui::Context) {
         let link = self.link.clone();
         let wake = ctx.clone();
@@ -151,9 +151,22 @@ impl Host {
             link.set_user(access::user_name(name));
             wake.request_repaint();
         });
+        let link = self.link.clone();
+        let wake = ctx.clone();
+        let set_client_id = wasm_bindgen::closure::Closure::<dyn FnMut(JsValue)>::new(move |prefix: JsValue| {
+            match prefix.as_string() {
+                Some(prefix) => {
+                    link.set_client_id(&prefix);
+                }
+                None => log::warn!("erpHost setClientId: prefix must be a string"),
+            }
+            wake.request_repaint();
+        });
         let _ = js_sys::Reflect::set(handlers, &JsValue::from_str("setMode"), set_mode.as_ref());
         let _ = js_sys::Reflect::set(handlers, &JsValue::from_str("setUser"), set_user.as_ref());
+        let _ = js_sys::Reflect::set(handlers, &JsValue::from_str("setClientId"), set_client_id.as_ref());
         set_mode.forget();
         set_user.forget();
+        set_client_id.forget();
     }
 }

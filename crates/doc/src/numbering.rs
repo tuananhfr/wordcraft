@@ -221,16 +221,25 @@ impl Numbering {
     }
     /// Create a new list of `kind`; returns the `num` id.
     pub fn add_list(&mut self, kind: ListKind) -> u32 {
-        let aid = self.abstracts.iter().map(|a| a.id + 1).max().unwrap_or(0);
-        self.abstracts.push(AbstractNum { id: aid, name: None, levels: levels_for(kind) });
-        let nid = self.nums.iter().map(|n| n.id + 1).max().unwrap_or(1).max(1);
-        self.nums.push(Num { id: nid, abstract_id: aid, ..Default::default() });
-        nid
+        let aid = self.abstracts.iter().map(|a| a.id.saturating_add(1)).max().unwrap_or(0);
+        let nid = self.nums.iter().map(|n| n.id.saturating_add(1)).max().unwrap_or(1).max(1);
+        self.add_list_as(kind, aid, nid)
+    }
+    /// [`Numbering::add_list`] with the abstract list and list ids given (an editing client's own,
+    /// see [`crate::ids`]).
+    pub fn add_list_as(&mut self, kind: ListKind, abstract_id: u32, num: u32) -> u32 {
+        self.abstracts.push(AbstractNum { id: abstract_id, name: None, levels: levels_for(kind) });
+        self.nums.push(Num { id: num, abstract_id, ..Default::default() });
+        num
     }
     /// A new `num` that restarts numbering of an existing list.
     pub fn restart(&mut self, num: u32) -> Option<u32> {
+        let nid = self.nums.iter().map(|n| n.id.saturating_add(1)).max().unwrap_or(1).max(1);
+        self.restart_as(num, nid)
+    }
+    /// [`Numbering::restart`] with the new list's id given.
+    pub fn restart_as(&mut self, num: u32, nid: u32) -> Option<u32> {
         let a = self.num(num)?.abstract_id;
-        let nid = self.nums.iter().map(|n| n.id + 1).max().unwrap_or(1).max(1);
         let starts = self.abstracts.iter().find(|x| x.id == a).map(|x| x.levels.iter().enumerate().map(|(i, l)| (i as u8, l.start)).collect());
         self.nums.push(Num { id: nid, abstract_id: a, start_overrides: starts.unwrap_or_default(), ..Default::default() });
         Some(nid)

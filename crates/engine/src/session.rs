@@ -469,6 +469,9 @@ pub struct Session {
     edit_marks: Vec<Pos>,
     /// How many Go Back presses since the last edit (which place comes next).
     go_back_step: usize,
+    /// The paragraph, list and comment ids this client makes (`erpHost.setClientId`); the user's,
+    /// not the document's, so it stays across documents.
+    pub(crate) ids: wordcraft_doc::ids::ClientIds,
 }
 
 /// The number of edit locations Go Back cycles through (Word: four).
@@ -585,7 +588,8 @@ impl Session {
         }
     }
 
-    pub fn new(doc: Document) -> Self {
+    pub fn new(mut doc: Document) -> Self {
+        wordcraft_doc::ids::assign_missing(&mut doc);
         let start = doc.start_of(StoryRef::Body);
         let bib_style = doc_bib_style(&doc);
         Session {
@@ -651,6 +655,7 @@ impl Session {
             widened: None,
             edit_marks: Vec::new(),
             go_back_step: 0,
+            ids: wordcraft_doc::ids::ClientIds::default(),
         }
     }
 
@@ -1061,6 +1066,7 @@ impl Session {
         self.bib_style = doc_bib_style(&doc);
         self.doc = doc;
         self.doc.ensure_nonempty();
+        wordcraft_doc::ids::assign_missing(&mut self.doc);
         self.password = None;
         self.suggested_save_path = None;
         self.sel = Selection::caret(self.doc.start_of(StoryRef::Body));
@@ -1094,6 +1100,7 @@ impl Session {
     /// brings it in.
     pub fn sibling(&self) -> Session {
         let mut s = Session::new(self.blank_document());
+        s.ids = self.ids.clone();
         s.view = self.view.clone();
         s.view.outline.collapsed.clear();
         s.view.draw.lasso = None;
@@ -1175,6 +1182,7 @@ impl Session {
             widened: _,
             edit_marks: _,
             go_back_step: _,
+            ids,
         } = other;
         std::mem::swap(&mut self.user_dict_path, user_dict_path);
         std::mem::swap(&mut self.clipboard, clipboard);
@@ -1201,6 +1209,7 @@ impl Session {
         std::mem::swap(&mut self.editing_lang, editing_lang);
         std::mem::swap(&mut self.math_latex, math_latex);
         std::mem::swap(&mut self.math_normal_text, math_normal_text);
+        std::mem::swap(&mut self.ids, ids);
         // Dark page and the Draw tab's tools and pens are the user's; a lasso and an Ink Replay
         // are on this document's ink.
         std::mem::swap(&mut self.view.dark_mode, &mut view.dark_mode);
@@ -1298,6 +1307,8 @@ impl Session {
             // Go Back's places, like the caret history: not part of the document.
             edit_marks: _,
             go_back_step: _,
+            // Ids already made stay made: undo never hands one out again.
+            ids: _,
         } = self;
         let head = if history.len() + SNAPSHOT_HEAD > MAX_UNDO { history.iter().take(SNAPSHOT_HEAD).cloned().collect() } else { Vec::new() };
         EditSnapshot {
@@ -1492,6 +1503,7 @@ impl Session {
                     self.touch();
                     self.doc.ensure_nonempty();
                     self.doc.prune_text_boxes();
+                    self.ensure_block_ids(before_doc.as_ref().map(|b| &b.0));
                     // Glued connectors follow the shapes they join.
                     if crate::cmd::connectors::reroutes_after(id) && crate::cmd::connectors::reroute(self) {
                         self.touch();
