@@ -7,6 +7,7 @@
 //! The host bridge drains [`Live::take_calls`] into the shell and feeds its answers back through
 //! the `live_*` methods of [`Session`].
 
+pub mod anchor;
 pub mod diff;
 pub mod payload;
 pub mod region;
