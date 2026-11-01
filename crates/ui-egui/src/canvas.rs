@@ -1228,6 +1228,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         crate::content_controls::paint(app, &painter, &t, &layout, &rects, geo.scale);
         // Co-editing: others' locks and selections.
         crate::live_overlay::paint(app, &painter, &layout, &rects, geo.scale);
+        // Cloud comments the shell shows.
+        crate::comment_marks::paint(app, &painter, &layout, &rects, geo.scale);
         // Read Aloud: the sentence being spoken.
         if let Some((a, b)) = crate::read_aloud::highlight(app) {
             for (pi, r) in layout.selection_rects(&app.session.doc, &a, &b, app.session.page_hint) {
@@ -1357,6 +1359,11 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     // the scroll area is built, so it reads last frame's viewport.
     app.canvas.viewport = Some(out.inner_rect);
     let (resp, rects) = out.inner;
+    if resp.clicked()
+        && let Some(p) = resp.interact_pointer_pos()
+    {
+        app.host.marks.click_at(p);
+    }
     // A click on the page leaves the selected comment balloon; a click inside a balloon (its
     // Delete or Resolve button, say) does not (#1085).
     let in_balloon = ui.input(|i| i.pointer.interact_pos()).is_some_and(|p| app.canvas.balloon_rects.iter().any(|(_, r)| r.contains(p)));

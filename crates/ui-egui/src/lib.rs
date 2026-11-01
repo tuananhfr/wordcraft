@@ -35,6 +35,7 @@ pub mod clipboard_keys;
 pub mod close_many;
 pub mod closed_documents;
 pub mod colors;
+mod comment_marks;
 pub mod content_controls;
 pub mod control;
 pub mod credits;

@@ -52,6 +52,11 @@ fn block_ends(doc: &Document, k: usize) -> Option<(Pos, Pos)> {
 
 /// `a..b` on screen, one rectangle per page.
 fn frames(doc: &Document, layout: &DocLayout, rects: &[Rect], scale: f32, hint: usize, a: &Pos, b: &Pos) -> Vec<Rect> {
+    page_frames(doc, layout, rects, scale, hint, a, b).into_iter().map(|(_, r)| r).collect()
+}
+
+/// `a..b` on screen, one rectangle per page, with the page's index.
+pub(crate) fn page_frames(doc: &Document, layout: &DocLayout, rects: &[Rect], scale: f32, hint: usize, a: &Pos, b: &Pos) -> Vec<(usize, Rect)> {
     let mut out: Vec<(usize, Rect)> = Vec::new();
     for (pi, sr) in layout.selection_rects(doc, a, b, hint) {
         let Some(pr) = rects.get(pi) else { continue };
@@ -61,7 +66,7 @@ fn frames(doc: &Document, layout: &DocLayout, rects: &[Rect], scale: f32, hint: 
             None => out.push((pi, s)),
         }
     }
-    out.into_iter().map(|(_, r)| r).collect()
+    out
 }
 
 /// Others' locks and selections over the pages (`rects`, on screen at `scale`).

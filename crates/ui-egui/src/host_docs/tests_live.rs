@@ -9,7 +9,7 @@ use super::live::{cursors_of, locks_of, present};
 use super::tests::{Page, body, hand_in, type_text, web_app};
 use crate::WordApp;
 
-fn page() -> (WordApp, Page) {
+pub(super) fn page() -> (WordApp, Page) {
     let (mut app, page) = web_app();
     page.link.set_regions();
     hand_in(&page, "d1", "Biên bản", "Đoạn một");
@@ -21,7 +21,7 @@ fn page() -> (WordApp, Page) {
 }
 
 /// Frames on both pages until the room has nothing left to pass on.
-fn exchange(pages: &mut [(WordApp, Page); 2], locks: &mut Vec<(String, usize)>, now: f64) {
+pub(super) fn exchange(pages: &mut [(WordApp, Page); 2], locks: &mut Vec<(String, usize)>, now: f64) {
     for _ in 0..20 {
         let mut moved = false;
         for i in 0..2 {

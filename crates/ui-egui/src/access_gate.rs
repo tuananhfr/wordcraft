@@ -24,9 +24,11 @@ fn ui_takes_content_out(id: &str) -> bool {
     matches!(id, "ui.print" | "ui.printSubmit" | "ui.printSettings" | crate::share::SHARE)
 }
 
-fn message(access: wordcraft_engine::Access, refusal: Refusal) -> &'static str {
+/// `comments_here`: the shell shows Cloud comments, so commenting happens in its panel.
+fn message(access: wordcraft_engine::Access, refusal: Refusal, comments_here: bool) -> &'static str {
     match refusal {
-        // Comment mode is view-only until comments come to the web (owner's decision for M5).
+        Refusal::ReadOnly if access.commenting && comments_here => tl!("You can comment on this document; its content is view-only."),
+        // Without the shell's comments, comment mode is only view-only (owner's decision for M5).
         Refusal::ReadOnly if access.commenting => tl!("Commenting on the web is coming later; for now you can only view."),
         Refusal::ReadOnly => tl!("This document is read-only."),
         Refusal::NoDownload => tl!("Downloading, printing and copying are turned off for this document."),
@@ -67,7 +69,7 @@ impl WordApp {
         let lock = self.edit_lock().filter(|_| refusal == Refusal::ReadOnly && access.may_save);
         let text = match lock {
             Some(lock) => i18n::t(lock.reason()),
-            None => message(access, refusal),
+            None => message(access, refusal, self.services.host.as_ref().is_some_and(|h| h.comments())),
         };
         if lock.is_some()
             && let Some(hook) = &self.services.account

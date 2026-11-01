@@ -3,8 +3,9 @@
 //! host's flush send them back through [`HostTransport::save`], and a document is saved only as of
 //! the revision the host acknowledged. They are never drafted (`erpDrafts`): the host keeps its own
 //! copy of unacknowledged bytes. v2 adds access modes ([`HostMode`]: read-only documents never
-//! save) and the signed-in user as author. Without [`crate::Services::host`] (desktop, the web app
-//! on its own) nothing here runs.
+//! save) and the signed-in user as author. A shell with region calls gets co-editing ([`live`]),
+//! one with `commentClicked` Cloud comments ([`comments`]). Without [`crate::Services::host`]
+//! (desktop, the web app on its own) nothing here runs.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -18,6 +19,7 @@ use crate::open_documents::{save_name_of, untitled_name};
 
 mod access;
 mod autosave;
+mod comments;
 mod draft_keep;
 mod live;
 mod saves;
@@ -26,6 +28,8 @@ mod tests;
 #[cfg(test)]
 mod tests_access;
 #[cfg(test)]
+mod tests_comments;
+#[cfg(test)]
 mod tests_live;
 #[cfg(test)]
 mod tests_offered;
@@ -33,6 +37,7 @@ mod tests_offered;
 mod tests_view_look;
 mod view_keep;
 
+pub use comments::{CommentAnswer, CommentMsg};
 pub use live::{ConflictAnswer, LiveMsg, cursors_of, locks_of, present};
 use saves::{Saves, Snapshot, Work};
 
@@ -138,6 +143,10 @@ pub trait HostTransport {
     fn region_calls(&self, calls: Vec<wordcraft_engine::live::Call>, answer: Rc<dyn Fn(String, bool)>) {
         let _ = (calls, answer);
     }
+    /// `commentClicked(threadId)`: the user clicked a Cloud comment's mark.
+    fn comment_clicked(&self, thread_id: &str) {
+        let _ = thread_id;
+    }
 }
 
 /// The app's host documents, shared with the host's callbacks, which run between frames.
@@ -171,6 +180,11 @@ struct Shared {
     live_inbox: RefCell<Vec<LiveMsg>>,
     /// `regionConflict` questions waiting for the user.
     conflicts: RefCell<std::collections::VecDeque<(String, ConflictAnswer)>>,
+    /// The shell shows Cloud comments.
+    comments: Cell<bool>,
+    comment_inbox: RefCell<Vec<CommentMsg>>,
+    /// `anchorOfSelection`'s answer as of the last frame.
+    selection_anchor: RefCell<Value>,
 }
 
 impl HostLink {
@@ -361,6 +375,8 @@ pub(crate) struct HostState {
     pub(crate) prefs_author: Option<(String, String)>,
     /// Balloon drafts put aside while their document is read-only.
     kept_drafts: Vec<draft_keep::KeptDraft>,
+    /// The Cloud comments the shell shows ([`comments`]).
+    pub(crate) marks: crate::comment_marks::CommentMarks,
 }
 
 impl WordApp {
@@ -407,6 +423,7 @@ impl WordApp {
             ctx.request_repaint_after(std::time::Duration::from_millis((at - now).clamp(0.0, autosave::CEILING_MS) as u64));
         }
         self.host_live_tick(ctx, &link, now);
+        self.host_comments_tick(&link);
     }
 
     /// End of every frame (and from [`Self::host_tick`]): what each host document now is, for
@@ -434,6 +451,7 @@ impl WordApp {
                 link.transport.dirty(&doc_id, dirty);
             }
         }
+        self.host_comments_observe(&link);
     }
 
     /// AutoSave waits while the document's text is being composed (an IME). A save that would warn

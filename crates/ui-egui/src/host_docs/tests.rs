@@ -14,7 +14,7 @@ use crate::{Download, Services, WordApp, i18n};
 
 pub(super) struct Sent {
     doc_id: String,
-    bytes: Vec<u8>,
+    pub(super) bytes: Vec<u8>,
     revision: u64,
     reason: SaveReason,
     done: Option<SaveDone>,
@@ -45,6 +45,9 @@ impl HostTransport for FakeHost {
     fn region_calls(&self, calls: Vec<wordcraft_engine::live::Call>, answer: Rc<dyn Fn(String, bool)>) {
         self.regions.borrow_mut().extend(calls);
         *self.answer.borrow_mut() = Some(answer);
+    }
+    fn comment_clicked(&self, thread_id: &str) {
+        self.calls.borrow_mut().push(format!("commentClicked {thread_id}"));
     }
 }
 
