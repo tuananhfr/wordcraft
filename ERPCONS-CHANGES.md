@@ -1,5 +1,6 @@
 # ERPCons changes
 
+- Release 0.7.0 (desktop, Windows only): the first desktop build whose editing needs a PI ID licence lease (`erpcons-account` v0.5.0, issuer `https://platform.pih.vn`); installers no longer ship the CLI.
 - First window (desktop): with no saved window geometry the window opens maximized, and Restore gives a window that fits the screen, centred above the taskbar (at most 1440×920); that geometry is what gets saved. The fixed 1440×920 start size ran off 1366×768 screens and 150 % scaling, losing the close button under the screen edge and the bottom under the taskbar; eframe only clamps it to the whole monitor (`apps/wordcraft/src/window_fit.rs`).
 ## 2026-10-30: Windows releases no longer ship wordcraft-cli
 
