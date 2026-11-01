@@ -20,9 +20,9 @@ fn json_of(value: &JsValue) -> Value {
     js_sys::JSON::stringify(value).ok().and_then(|s| s.as_string()).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or(Value::Null)
 }
 
-fn set(handlers: &js_sys::Object, name: &str, f: JsValue) {
-    if js_sys::Reflect::set(handlers, &JsValue::from_str(name), &f).is_err() {
-        log::warn!("erpHost.ready: couldn't add {name}");
+fn set(handlers: &js_sys::Object, handler: &str, f: JsValue) {
+    if js_sys::Reflect::set(handlers, &JsValue::from_str(handler), &f).is_err() {
+        log::warn!("erpHost.ready: couldn't add {handler}");
     }
 }
 

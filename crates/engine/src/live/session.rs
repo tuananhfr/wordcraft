@@ -325,7 +325,10 @@ impl Session {
         if let Some(Ok(bytes)) = &docx {
             match crate::io::open_bytes("live.docx", bytes) {
                 Ok(doc) => self.adopt(doc),
-                Err(e) => log::warn!("co-editing: the document didn't read back: {e}"),
+                Err(e) => {
+                    let reason = wordcraft_fonts::log_safe::scrub(&e.to_string(), "live.docx");
+                    log::warn!("co-editing: the document didn't read back: {reason}");
+                }
             }
         }
         let Some(live) = self.live.as_mut() else { return Verdict::Unchanged };
