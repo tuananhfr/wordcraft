@@ -31,6 +31,9 @@ pub(crate) fn connect() -> Option<Host> {
     if super::regions::speaks_regions(&erp_host) {
         link.set_regions();
     }
+    if version >= 2 && super::comments::speaks_comments(&erp_host) {
+        link.set_comments();
+    }
     Some(Host { link, erp_host, version, ready_sent: false })
 }
 
@@ -127,6 +130,9 @@ impl Host {
         }
         if self.link.regions() {
             super::regions::add_handlers(&handlers, &self.link);
+        }
+        if self.link.comments() {
+            super::comments::add_handlers(&handlers, &self.link);
         }
         if call(&self.erp_host, "ready", &js_sys::Array::of1(&handlers)).is_none() {
             log::warn!("erpHost.ready failed");
