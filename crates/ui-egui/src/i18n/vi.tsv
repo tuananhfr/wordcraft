@@ -2634,10 +2634,10 @@ preview	Title	Tiêu đề
 	Connect to the internet to renew your license and edit	Kết nối Internet để gia hạn giấy phép và sửa tiếp
 	Could not renew your license. The app keeps trying	Chưa gia hạn được giấy phép. Ứng dụng đang tự thử lại
 	This organization has no Office plan for editing	Tổ chức này chưa có gói Office để sửa
-	Someone else is editing this part: {name}.	Người khác đang sửa phần này: {name}.
-	Someone else is editing this part; your change was not made.	Người khác đang sửa phần này; thay đổi của bạn chưa được thực hiện.
+	Someone else is editing this part: {name}.	{name} đang sửa phần này.
+	Someone else is editing this part; your change was not made.	Có người khác đang sửa phần này nên thay đổi của bạn chưa được thực hiện.
 	Nothing of yours left to undo.	Không còn thao tác nào của bạn để hoàn tác.
-	Changed while you were away	Đã thay đổi khi bạn vắng mặt
-	Someone else changed this part while you were offline. Which version do you keep?	Người khác đã sửa phần này khi bạn mất kết nối. Bạn giữ bản nào?
+	Changed while you were away	Có thay đổi khi bạn vắng mặt
+	Someone else changed this part while you were offline. Which version do you keep?	Trong lúc bạn mất kết nối, người khác đã sửa phần này. Bạn muốn giữ bản nào?
 	Keep mine	Giữ bản của tôi
 	Use theirs	Dùng bản mới
