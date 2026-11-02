@@ -177,10 +177,14 @@ fn search(doc: &Document, soft: &Soft, blocks: impl Iterator<Item = usize>, near
     for k in blocks {
         let Some(block) = doc.body.get(k) else { continue };
         for (path, p) in paragraphs(block) {
+            // Character offsets counted on from the previous hit: from the start each time made a
+            // short quote in a long paragraph quadratic, on every keystroke.
+            let mut last = (0, 0);
             for (b, _) in p.text.match_indices(soft.quote.as_str()) {
                 let before = p.text.get(..b).is_some_and(|t| t.ends_with(&soft.before));
                 let after = p.text.get(b + soft.quote.len()..).is_some_and(|t| t.starts_with(&soft.after));
-                let start = char_at(&p.text, b);
+                let start = last.1 + p.text.get(last.0..b).map_or(0, |t| t.chars().count());
+                last = (b, start);
                 let key = (u8::from(!before) + u8::from(!after), k.abs_diff(near), path != old.0, start.abs_diff(old.1), k, path.clone(), start);
                 if best.as_ref().is_none_or(|(seen, _)| key < *seen) {
                     best = Some((key, (k, path.clone(), start)));
