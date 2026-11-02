@@ -283,6 +283,23 @@ pub(super) fn owned_parts(doc: &Document, blocks: &[Arc<Block>]) -> (Vec<u32>, V
     (parts, comments)
 }
 
+/// Of `old_comments` (anchored in the blocks at `gone` and their stories `old_parts`), those
+/// anchored nowhere else, and their replies.
+fn owned_comments(doc: &Document, gone: &[usize], old_parts: &[u32], old_comments: &[u32]) -> HashSet<u32> {
+    let outside: HashSet<u32> = doc
+        .body
+        .iter()
+        .enumerate()
+        .filter(|(k, _)| !gone.contains(k))
+        .map(|(_, b)| b)
+        .chain(doc.parts.iter().filter(|(id, _)| !old_parts.contains(id)).flat_map(|(_, p)| p.blocks.iter()))
+        .flat_map(|b| comment_ids(b))
+        .collect();
+    let parent = |c: u32| doc.comments.get(&c).and_then(|cm| cm.parent);
+    let roots: HashSet<u32> = old_comments.iter().copied().filter(|c| parent(*c).is_none() && !outside.contains(c)).collect();
+    old_comments.iter().copied().filter(|c| parent(*c).map_or(roots.contains(c), |p| roots.contains(&p))).collect()
+}
+
 /// Where a run lands in a body of top-level ids: the blocks `remove` names go, and the run takes
 /// the place of the first of them; with none of them there, it goes after `prev`, else before
 /// `next`, else at the end. Returns (indexes to remove, ascending; insertion index).
@@ -367,25 +384,21 @@ pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPa
     // Stories: drop the old blocks', add the payload's under fresh ids.
     let old: Vec<Arc<Block>> = gone.iter().filter_map(|k| doc.body.get(*k).cloned()).collect();
     let (old_parts, old_comments) = owned_parts(doc, &old);
-    for id in &old_parts {
+    let owned = owned_comments(doc, gone, &old_parts, &old_comments);
+    // A comment still anchored outside the old blocks (across paragraphs, or anchored here by a
+    // run too) stays as this page has it, with its text: a run may not rewrite, resolve or delete
+    // another region's comment.
+    let kept_parts: HashSet<u32> = old_comments.iter().filter(|c| !owned.contains(c)).filter_map(|c| doc.comments.get(c)).map(|c| c.part).collect();
+    for id in old_parts.iter().filter(|id| !kept_parts.contains(id)) {
         doc.parts.remove(id);
     }
-    // Comments anchored in the old blocks go unless still anchored elsewhere (a comment across
-    // paragraphs, or one a run claimed by anchoring it in its own blocks).
-    let elsewhere: HashSet<u32> = doc
-        .body
-        .iter()
-        .enumerate()
-        .filter(|(k, _)| !gone.contains(k))
-        .map(|(_, b)| b)
-        .chain(doc.parts.values().flat_map(|p| p.blocks.iter()))
-        .flat_map(|b| comment_ids(b))
-        .collect();
-    for c in old_comments.iter().filter(|c| !elsewhere.contains(c)) {
+    for c in &owned {
         doc.comments.remove(c);
     }
+    let kept: HashSet<u32> = payload.comments.keys().filter(|c| doc.comments.contains_key(c)).copied().collect();
+    let skipped_parts: HashSet<u32> = payload.comments.iter().filter(|(c, _)| kept.contains(c)).map(|(_, c)| c.part).collect();
     let mut part_map: HashMap<u32, u32> = HashMap::new();
-    for (local, part) in &payload.parts {
+    for (local, part) in payload.parts.iter().filter(|(local, _)| !skipped_parts.contains(local)) {
         part_map.insert(*local, doc.add_part(part.kind, Vec::new()));
     }
     let remap = |b: &mut Block| {
@@ -408,12 +421,7 @@ pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPa
         }
         doc.parts.insert(*id, part);
     }
-    // A comment anchored outside the replaced blocks keeps this page's version: a run may not
-    // rewrite or resolve another region's comment.
-    for (cid, c) in &payload.comments {
-        if !old_comments.contains(cid) && doc.comments.contains_key(cid) {
-            continue;
-        }
+    for (cid, c) in payload.comments.iter().filter(|(c, _)| !kept.contains(c)) {
         let mut c = c.clone();
         c.part = part_map.get(&c.part).copied().unwrap_or(0);
         doc.comments.insert(*cid, c);

@@ -126,6 +126,9 @@ pub struct Live {
     queue: Vec<Action>,
     queue_sel: Option<Selection>,
     others: Vec<Lock>,
+    /// Blocks others' runs brought, by the region they came under: while that lock is held no
+    /// other run may replace them. A page that joined or reloaded since doesn't know them.
+    remote_followers: HashMap<Region, BTreeSet<u32>>,
     cursors: Vec<Cursor>,
     feedback: Option<Feedback>,
     /// Picture hashes everyone in the room has.
@@ -152,6 +155,7 @@ impl Live {
             queue: Vec::new(),
             queue_sel: None,
             others: Vec::new(),
+            remote_followers: HashMap::new(),
             cursors: Vec::new(),
             feedback: None,
             known_media: HashSet::new(),
@@ -175,6 +179,7 @@ impl Live {
             self.calls.push(Call::DidEndEdit(r.id()));
         }
         self.owner.clear();
+        self.remote_followers.clear();
         self.asked.clear();
         self.queue.clear();
         self.queue_sel = None;
@@ -227,6 +232,7 @@ impl Live {
 
     /// `showLocks`: the locks others hold (ours are known from the answers).
     pub fn set_locks(&mut self, others: Vec<Lock>) {
+        self.remote_followers.retain(|r, _| others.iter().any(|l| Region::parse(&l.region) == Some(*r)));
         self.others = others;
     }
 

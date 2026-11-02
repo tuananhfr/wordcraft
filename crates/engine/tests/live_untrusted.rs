@@ -12,8 +12,8 @@ use wordcraft_doc::ids::block_id;
 use wordcraft_doc::{Block, SectionProps, Table};
 use wordcraft_engine::Session;
 use wordcraft_engine::io::save_bytes;
-use wordcraft_engine::live::{Call, Lock};
 use wordcraft_engine::live::payload::encode_doc;
+use wordcraft_engine::live::{Call, Lock};
 
 /// What page `who` sends after `edit`, its locks granted, without delivering it.
 fn sent(room: &mut Room, who: usize, edit: impl FnOnce(&mut Session)) -> Vec<(String, String)> {
@@ -117,8 +117,67 @@ fn a_run_brings_only_new_or_replaced_block_ids() {
     p["p"]["blocks"][0].as_object_mut().unwrap().remove("id");
     refused(&mut room, &region, &p.to_string());
     let mut p = honest.clone();
-    p["p"]["blocks"] = json!([block.clone(), block]);
+    p["p"]["blocks"] = json!([block.clone(), block.clone()]);
     refused(&mut room, &region, &p.to_string());
+    // Paragraphs of a story the run brings (a note, a text box, a comment's text) alike.
+    let mut story = block;
+    story["section"] = Value::Null;
+    for id in [json!(0x8000_0000u32), json!(taken), honest["p"]["blocks"][0]["id"].clone()] {
+        story["id"] = id;
+        let mut p = honest.clone();
+        p["p"]["parts"] = json!({"7": {"kind": "footnote", "blocks": [story.clone()]}});
+        refused(&mut room, &region, &p.to_string());
+    }
+}
+
+#[test]
+fn a_run_replaces_no_block_another_lock_brought() {
+    let mut room = Room::new(3, &doc(&["One", "Two", "Three"]));
+    // A presses Enter in its paragraph: the new one is A's while A holds the lock.
+    let a_region = para_region(&room.pages[1].doc, 0);
+    let a_runs = sent(&mut room, 0, |s| {
+        caret(s, 0, 3);
+        run(s, "text.newParagraph", json!({}));
+        run(s, "text.insert", json!({"text": "new"}));
+    });
+    let a_lock = Lock { region: a_region, holder: "m0".into(), name: "User 0".into(), colour: "#336699".into() };
+    room.live(1).set_locks(vec![a_lock]);
+    for (r, p) in &a_runs {
+        room.page(1).live_apply_remote(r, p).unwrap();
+    }
+    assert_eq!(texts(&room.pages[1].doc)[..4], ["One", "new", "Two", "Three"]);
+    let follower = format!("{:08X}", id_of(&room.pages[1], 1));
+    // C, who never saw it, sends a run of the last paragraph that also removes it.
+    let (region, payload) = sent(&mut room, 2, |s| type_at(s, 2, 0, "C: ")).into_iter().find(|(r, _)| r.starts_with("para:")).expect("a run");
+    let honest: Value = serde_json::from_str(&payload).unwrap();
+    let mut p = honest.clone();
+    p["r"].as_array_mut().unwrap().push(json!(follower));
+    refused(&mut room, &region, &p.to_string());
+    room.page(1).live_apply_remote(&region, &payload).unwrap();
+    assert_eq!(texts(&room.pages[1].doc)[..4], ["One", "new", "Two", "C: Three"]);
+}
+
+#[test]
+fn a_run_of_a_block_this_page_is_editing_is_refused() {
+    let mut room = Room::new(2, &doc(&["One", "Two", "Three"]));
+    let (_, honest) = run_of(&mut room, 2);
+    // B presses Enter in the first paragraph: the new one follows B's lock.
+    sent(&mut room, 1, |s| {
+        caret(s, 0, 3);
+        run(s, "text.newParagraph", json!({}));
+        run(s, "text.insert", json!({"text": "mine"}));
+    });
+    let follower = id_of(&room.pages[1], 1);
+    // Someone takes the lock string of that paragraph, which the server sees as free.
+    let mut p = honest.clone();
+    p["r"] = json!([format!("{follower:08X}")]);
+    p["p"]["blocks"][0]["id"] = json!(follower);
+    refused(&mut room, &format!("para:{follower:08X}"), &p.to_string());
+    let own = para_region(&room.pages[1].doc, 0);
+    let mut p = honest;
+    p["r"] = json!([own[5..].to_string()]);
+    p["p"]["blocks"][0]["id"] = json!(id_of(&room.pages[1], 0));
+    refused(&mut room, &own, &p.to_string());
 }
 
 #[test]
@@ -163,10 +222,39 @@ fn a_run_touches_no_comment_anchored_elsewhere() {
     p["p"]["comments"] = json!({ cid.to_string(): forged });
     room.page(1).live_apply_remote(&region, &p.to_string()).unwrap();
     assert!(kept(&room), "a run rewrote another paragraph's comment");
-    // Anchored inside the run too, the next run's removal of that anchor keeps it.
+    // Anchored inside the run too, the next run's removal of that anchor keeps it and its text.
     let mut p = honest.clone();
     p["p"]["blocks"][0]["objects"] = json!([{"type": "commentStart", "id": cid}]);
     room.page(1).live_apply_remote(&region, &p.to_string()).unwrap();
     room.page(1).live_apply_remote(&region, &honest.to_string()).unwrap();
     assert!(kept(&room), "a run deleted another paragraph's comment");
+    assert!(comment_text(&room, 1, cid).is_some_and(|t| t.contains("keep me")), "the comment lost its text");
+}
+
+/// The text of comment `cid` on page `k`.
+fn comment_text(room: &Room, k: usize, cid: u32) -> Option<String> {
+    let c = room.pages[k].doc.comments.get(&cid)?;
+    let part = room.pages[k].doc.parts.get(&c.part)?;
+    Some(part.blocks.iter().filter_map(|b| b.as_para()).map(|p| p.text.as_str()).collect())
+}
+
+#[test]
+fn a_comment_across_paragraphs_outlives_a_run_that_drops_its_start() {
+    let mut room = Room::new(2, &doc(&["One", "Two words"]));
+    run(room.page(0), "select.range", json!({"anchor": {"block": 0, "off": 0}, "focus": {"block": 1, "off": 3}}));
+    run(room.page(0), "review.newComment", json!({"text": "keep me"}));
+    room.wait(20_000.0);
+    room.converged();
+    let cid = *room.pages[1].doc.comments.keys().next().expect("the comment arrived");
+    assert!(comment_text(&room, 1, cid).is_some_and(|t| t.contains("keep me")));
+    // A run of the first paragraph with its start swapped for a bookmark, the comment left out.
+    let (region, mut p) = run_of(&mut room, 0);
+    for o in p["p"]["blocks"][0]["objects"].as_array_mut().expect("the comment's start") {
+        if o["type"] == "commentStart" {
+            *o = json!({"type": "bookmarkStart", "name": "x"});
+        }
+    }
+    p["p"]["comments"] = json!({});
+    room.page(1).live_apply_remote(&region, &p.to_string()).unwrap();
+    assert!(comment_text(&room, 1, cid).is_some_and(|t| t.contains("keep me")), "the comment lost its text");
 }

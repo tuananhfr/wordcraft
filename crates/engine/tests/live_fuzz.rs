@@ -111,7 +111,9 @@ fn numbers(v: &Json) -> usize {
 fn swap_number(rng: &mut Rng, v: &mut Json, k: usize) -> usize {
     match v {
         Json::Number(_) if k == 0 => {
-            *v = rng.pick(&[json!(u32::MAX), json!(0x8000_0000u32), json!(0), json!(-1), json!(1e-30), json!(1e30), json!(1_000_000), json!(1)]).clone();
+            *v = rng
+                .pick(&[json!(u32::MAX), json!(0x8000_0000u32), json!(0), json!(-1), json!(1e-30), json!(1e30), json!(1_000_000), json!(1)])
+                .clone();
             usize::MAX
         }
         Json::Number(_) => k - 1,

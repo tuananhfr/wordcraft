@@ -471,10 +471,13 @@ impl Session {
                     live.held.keys().any(|r| *r == Region::Doc || r.block() == Some(id))
                         || live.owner.contains_key(&id)
                         || live.others.iter().filter_map(|l| Region::parse(&l.region)).any(|r| r != region && r.block() == Some(id))
+                        || live.remote_followers.iter().any(|(r, ids)| *r != region && ids.contains(&id))
                 };
-                guard::check_run(&self.doc, region, &locked, &gone, &payload)?;
+                guard::check_run(&self.doc, &locked, &gone, &payload)?;
                 let range = payload::replace(&mut self.doc, &gone, at, &payload, &mut live.hashes).map_err(|e| e.to_string())?;
                 live.known_media.extend(payload.media.keys().map(|k| payload::hash_of_wire_key(k).to_string()));
+                let brought = self.doc.body.get(range.clone()).unwrap_or_default().iter().filter_map(|b| block_id(b));
+                live.remote_followers.entry(region).or_default().extend(brought.filter(|id| Some(*id) != region.block()));
                 range.start
             }
         };
