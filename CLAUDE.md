@@ -2,6 +2,43 @@
 
 WordCraft is a clean-room, open-source, Rust-native word processor targeting Microsoft Word parity — and going further on speed, openness and agent control. It runs natively on macOS, Windows, Linux and BSD, and on the web via WASM. Siblings with the same conventions: `../photocraft` (Photoshop), `../vectorcraft` (Illustrator), `../filmcraft` (Premiere), `../lightcraft` (Lightroom), `../pdfcraft` (Acrobat), `../effectcraft` (After Effects), `../designcraft` (InDesign). Shared rules and learnings: [`storytold/craftrules`](https://github.com/storytold/craftrules) (`../../craftrules`) — read its `AGENTS.md`.
 
+## ERPCons fork (read first; overrides the upstream sections below)
+This checkout is the Word editor ("Văn bản") of ERPCons Văn phòng, a fork in the `erpcons-workspace` folder. The
+workspace `../CLAUDE.md` holds the cross-repo rules; `../erpcons-office/CLAUDE.md` describes the site that hosts the
+web build.
+- **Branches:** work and release from `tuananhfr`; `wip/desktop` is the desktop integration branch, merged into
+  `tuananhfr` before a release. `main` is untouched upstream. Release tags are `erpcons-v<version>`. Feature work often
+  lives in worktrees under `../tmp/*-wordcraft` (`git worktree list`).
+- **Log every change** in `ERPCONS-CHANGES.md`, saying which build it affects: (web), (desktop) or (both).
+- **Upstream lines that do not apply here:** `plan/` (absent; use `docs/gaps.md`, `docs/roadmap.md`), "don't stop to
+  ask" and "commit after every arc" (plan first, commit only when asked), `craftrules` and the sibling crafts (not
+  checked out), a fresh `CARGO_TARGET_DIR` per agent (see the workspace's disk rules).
+- **Commands** (from the workspace root, Git Bash). Host cargo exes are blocked by Windows Smart App Control, so cargo
+  runs in the `erpcons-build` Docker image:
+  - one crate: `bash erpcons-office/build/run.sh test wordcraft [--dir tmp/<worktree>] -p wordcraft-engine [<filter>]`
+  - gate before a merge or release: `bash erpcons-office/build/run.sh gate wordcraft [--dir ...]` (rustfmt on changed
+    files, workspace clippy `-D warnings` and tests, wasm32 clippy of `wordcraft-web`; CI `erpcons-ci.yml` checks
+    `wordcraft`, `wordcraft-ui-egui`, `wordcraft-engine`)
+  - Windows app: `bash erpcons-office/build/run.sh desktop-win wordcraft`, then on the host
+    `pwsh wordcraft/packaging/windows/package.ps1 -Arch x64 -SkipBuild`
+  - web: `trunk build --release` in `apps/wordcraft-web` (→ `dist/web`); the site assembles it via `erpcons-office`
+- **Two builds, one UI:** desktop `apps/wordcraft` and web `apps/wordcraft-web` share `crates/ui-egui` + engine. Keep
+  web-only code in `apps/wordcraft-web` or behind `cfg(target_arch = "wasm32")`.
+- **Web ↔ office shell** (JS in `erpcons-office/editor-shell/`; contracts in `erpcons-office/docs/erp-host.md`,
+  `erp-embed.md`, `file-transfer.md`): `window.erpHost` v1/v2 online documents (`apps/wordcraft-web/src/host/`,
+  save logic in `crates/ui-egui/src/host_docs/`, access modes in `crates/engine/src/access.rs` and
+  `crates/ui-egui/src/access_gate/`), `erpDrafts` (`src/web/drafts.rs`, planner `crates/ui-egui/src/drafts.rs`),
+  `erpAccount` (`src/account.rs`), `erpShare`/`erpCanShareFiles` (`src/web/share.rs`), `erpIntakeResult`
+  (`src/intake.rs`). Without these globals the web app behaves as upstream.
+- **Desktop licence:** PI ID sign-in and the editing lock exist only when built with `ERPCONS_PI_ISSUER`
+  (`desktop-win` sets it). Without a lease the session is read-only through `Session::edit_lock`; app side in
+  `apps/wordcraft/src/account/`, UI in `crates/ui-egui/src/account/`. Self-update uses `erpcons-update`.
+  `erpcons-account`, `pi-mock` and `erpcons-update` are pinned by tag in `apps/wordcraft/Cargo.toml`.
+- **Vietnamese UI:** strings in `crates/ui-egui/src/i18n/vi.tsv`, terms per `erpcons-office/docs/glossary-vi.md`;
+  user-facing copy is Vietnamese.
+- Releases are Windows only, and the installers ship `wordcraft.exe` without `wordcraft-cli` (it bypasses the
+  licence gate). Never reintroduce ArtCraft names, logos or links.
+
 ## Start every session here
 1. Read `plan/STATUS.md` (current milestone, next task), then the task in `plan/execution-plan.md` and the relevant `plan/architecture.md` section. `plan/` is gitignored (local only); if it's missing, start from `ROADMAP.md`, `docs/gaps.md` and `docs/roadmap.md` (Current focus).
 2. Follow the autonomous operation protocol (`plan/execution-plan.md` §5). Don't stop to ask unless a decision is genuinely the owner's (licensing, publishing, pushing to new remotes, secrets).
