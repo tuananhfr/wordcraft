@@ -113,6 +113,12 @@ pub fn read(bytes: &[u8]) -> Result<Document, DocxError> {
     read_package(bytes)
 }
 
+/// [`read`] of a plain package whose parts inflate to at most `max_part` bytes each and
+/// `max_total` in all (lower than the build's file limits).
+pub fn read_limited(bytes: &[u8], max_part: u64, max_total: u64) -> Result<Document, DocxError> {
+    read_opened(&Package::open_limited(bytes, max_part, max_total)?)
+}
+
 /// [`read`] for bytes known not to be an encrypted package.
 pub(crate) fn read_package(bytes: &[u8]) -> Result<Document, DocxError> {
     read_opened(&Package::open(bytes)?)

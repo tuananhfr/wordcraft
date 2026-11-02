@@ -5,7 +5,7 @@ use wordcraft_doc::props::CharProps;
 use wordcraft_doc::table::{Cell, Row, Table};
 use wordcraft_doc::{Block, InlineObject, Paragraph};
 
-const MAX_DEPTH: usize = 16;
+pub(super) const MAX_DEPTH: usize = 16;
 
 /// A node a mutable walk stops at.
 pub(crate) enum NodeMut<'a> {

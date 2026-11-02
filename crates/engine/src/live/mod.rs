@@ -9,6 +9,7 @@
 
 pub mod anchor;
 pub mod diff;
+mod guard;
 pub mod payload;
 pub mod region;
 mod session;

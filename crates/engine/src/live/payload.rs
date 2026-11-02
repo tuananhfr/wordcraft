@@ -18,6 +18,8 @@ use super::walk::{ObjRef, comment_ids, obj_refs_mut, part_ids, revs_mut, style_a
 use crate::cmd::insert::{base64_decode, base64_encode};
 
 pub const VERSION: u32 = 1;
+/// The shell sends at most 1 MiB; a longer payload didn't come through it and isn't read.
+pub const MAX_LEN: usize = 2 << 20;
 /// Most stories one run may carry (notes, text boxes, comments; hostile documents fan out).
 const MAX_PARTS: usize = 4096;
 
@@ -243,7 +245,7 @@ pub enum ApplyError {
 
 /// Stories owned by blocks (notes, text boxes, comment texts, linked boxes), transitively, and
 /// the comments anchored in them.
-fn owned_parts(doc: &Document, blocks: &[Arc<Block>]) -> (Vec<u32>, Vec<u32>) {
+pub(super) fn owned_parts(doc: &Document, blocks: &[Arc<Block>]) -> (Vec<u32>, Vec<u32>) {
     let mut parts: Vec<u32> = Vec::new();
     let mut comments: Vec<u32> = Vec::new();
     let mut queue: Vec<u32> = Vec::new();
@@ -298,12 +300,12 @@ pub fn place(body: &[Option<u32>], remove: &[u32], prev: Option<u32>, next: Opti
 
 /// Puts a run into `doc`: drops the blocks at `gone` (with their stories and comments), inserts
 /// the payload's blocks at `at`. Returns the inserted range. Fails without touching the document.
-pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPayload) -> Result<Range<usize>, ApplyError> {
+pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPayload, hashes: &mut MediaHashes) -> Result<Range<usize>, ApplyError> {
     // Pictures first: the only input that can be missing.
     let mut local_by_hash: HashMap<String, String> = HashMap::new();
     if !payload.media.is_empty() {
         for (k, v) in &doc.media {
-            local_by_hash.entry(media_hash(v)).or_insert_with(|| k.clone());
+            local_by_hash.entry(hashes.of(k, v)).or_insert_with(|| k.clone());
         }
     }
     let mut media_map: HashMap<String, String> = HashMap::new();
@@ -342,16 +344,23 @@ pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPa
         }
     }
 
-    // Revisions: the same (kind, author, date, move) is the same revision.
+    // Revisions: the same (kind, author, date, move) is the same revision. Matched by their JSON
+    // in one pass: the document's list only grows.
+    let key = |r: &Revision| serde_json::to_string(r).unwrap_or_default();
+    let mut known: HashMap<String, u32> = HashMap::new();
+    if !payload.revisions.is_empty() {
+        for (i, r) in doc.revisions.iter().enumerate().rev() {
+            known.insert(key(r), i as u32);
+        }
+    }
     let rev_map: Vec<u32> = payload
         .revisions
         .iter()
-        .map(|r| match doc.revisions.iter().position(|x| x == r) {
-            Some(i) => i as u32,
-            None => {
+        .map(|r| {
+            *known.entry(key(r)).or_insert_with(|| {
                 doc.revisions.push(r.clone());
                 doc.revisions.len() as u32 - 1
-            }
+            })
         })
         .collect();
 
@@ -361,7 +370,18 @@ pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPa
     for id in &old_parts {
         doc.parts.remove(id);
     }
-    for c in &old_comments {
+    // Comments anchored in the old blocks go unless still anchored elsewhere (a comment across
+    // paragraphs, or one a run claimed by anchoring it in its own blocks).
+    let elsewhere: HashSet<u32> = doc
+        .body
+        .iter()
+        .enumerate()
+        .filter(|(k, _)| !gone.contains(k))
+        .map(|(_, b)| b)
+        .chain(doc.parts.values().flat_map(|p| p.blocks.iter()))
+        .flat_map(|b| comment_ids(b))
+        .collect();
+    for c in old_comments.iter().filter(|c| !elsewhere.contains(c)) {
         doc.comments.remove(c);
     }
     let mut part_map: HashMap<u32, u32> = HashMap::new();
@@ -388,7 +408,12 @@ pub fn replace(doc: &mut Document, gone: &[usize], at: usize, payload: &RegionPa
         }
         doc.parts.insert(*id, part);
     }
+    // A comment anchored outside the replaced blocks keeps this page's version: a run may not
+    // rewrite or resolve another region's comment.
     for (cid, c) in &payload.comments {
+        if !old_comments.contains(cid) && doc.comments.contains_key(cid) {
+            continue;
+        }
         let mut c = c.clone();
         c.part = part_map.get(&c.part).copied().unwrap_or(0);
         doc.comments.insert(*cid, c);
@@ -462,14 +487,15 @@ pub fn encode_doc(docx: &[u8]) -> String {
 }
 
 pub fn decode(payload: &str) -> Result<Wire, ApplyError> {
-    let head: serde_json::Value = serde_json::from_str(payload).map_err(|e| ApplyError::Format(e.to_string()))?;
+    // serde's messages quote the payload, which is content: errors here name the part only.
+    let head: serde_json::Value = serde_json::from_str(payload).map_err(|_| ApplyError::Format("json".into()))?;
     if head.get("v").and_then(serde_json::Value::as_u64) != Some(u64::from(VERSION)) {
         return Err(ApplyError::Format("version".into()));
     }
     match head.get("k").and_then(serde_json::Value::as_str) {
         Some("run") => {
-            let w: RunWire = serde_json::from_value(head).map_err(|e| ApplyError::Format(e.to_string()))?;
-            let id = |s: &String| parse_para_id(s).ok_or_else(|| ApplyError::Format(format!("block id {s}")));
+            let w: RunWire = serde_json::from_value(head).map_err(|_| ApplyError::Format("run".into()))?;
+            let id = |s: &String| parse_para_id(s).ok_or_else(|| ApplyError::Format("block id".into()));
             Ok(Wire::Run {
                 remove: w.r.iter().map(id).collect::<Result<_, _>>()?,
                 prev: w.prev.as_ref().map(id).transpose()?,
@@ -478,7 +504,7 @@ pub fn decode(payload: &str) -> Result<Wire, ApplyError> {
             })
         }
         Some("doc") => {
-            let w: DocWire = serde_json::from_value(head).map_err(|e| ApplyError::Format(e.to_string()))?;
+            let w: DocWire = serde_json::from_value(head).map_err(|_| ApplyError::Format("doc".into()))?;
             base64_decode(&w.x).map(Wire::Doc).ok_or_else(|| ApplyError::Format("base64".into()))
         }
         _ => Err(ApplyError::Format("kind".into())),

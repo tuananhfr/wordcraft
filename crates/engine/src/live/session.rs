@@ -9,6 +9,7 @@ use wordcraft_doc::ids::{block_id, format_para_id, parse_para_id};
 use wordcraft_doc::{Document, Path, Pos, StoryRef};
 
 use super::diff::{self, Scope};
+use super::guard;
 use super::payload::{self, Wire};
 use super::undo::Step;
 use super::{Action, Call, DOC_IDLE_MS, Feedback, Held, IDLE_MS, LEAVE_MS, LOCK_DENIED, LOCKED_BY, Live, MAX_REGIONS, NOTHING_TO_UNDO, Region};
@@ -451,21 +452,30 @@ impl Session {
         if self.live.is_none() {
             return Err("not co-editing".into());
         }
-        Region::parse(region).ok_or_else(|| format!("unknown region {region:?}"))?;
+        if payload.len() > payload::MAX_LEN {
+            return Err("the payload is too large".into());
+        }
+        let region = Region::parse(region).ok_or("unknown region")?;
         let marks = (mark(&self.doc, &self.sel.anchor), mark(&self.doc, &self.sel.focus));
-        let fallback = match payload::decode(payload).map_err(|e| e.to_string())? {
-            Wire::Run { remove, prev, next, payload } => {
-                let (gone, at) = payload::place(&payload::body_ids(&self.doc), &remove, prev, next);
-                let range = payload::replace(&mut self.doc, &gone, at, &payload).map_err(|e| e.to_string())?;
-                if let Some(live) = self.live.as_mut() {
-                    live.known_media.extend(payload.media.keys().map(|k| payload::hash_of_wire_key(k).to_string()));
-                }
-                range.start
-            }
-            Wire::Doc(bytes) => {
-                self.adopt(crate::io::open_bytes("live.docx", &bytes)?);
+        let fallback = match (region, payload::decode(payload).map_err(|e| e.to_string())?) {
+            (Region::Doc, Wire::Doc(bytes)) => {
+                self.adopt(crate::io::open_live_docx(&bytes)?);
                 self.touch();
                 return Ok(());
+            }
+            (Region::Doc, Wire::Run { .. }) | (_, Wire::Doc(_)) => return Err("the payload doesn't fit its region".into()),
+            (region, Wire::Run { remove, prev, next, payload }) => {
+                let (gone, at) = payload::place(&payload::body_ids(&self.doc), &remove, prev, next);
+                let Some(live) = self.live.as_mut() else { return Err("not co-editing".into()) };
+                let locked = |id: u32| {
+                    live.held.keys().any(|r| *r == Region::Doc || r.block() == Some(id))
+                        || live.owner.contains_key(&id)
+                        || live.others.iter().filter_map(|l| Region::parse(&l.region)).any(|r| r != region && r.block() == Some(id))
+                };
+                guard::check_run(&self.doc, region, &locked, &gone, &payload)?;
+                let range = payload::replace(&mut self.doc, &gone, at, &payload, &mut live.hashes).map_err(|e| e.to_string())?;
+                live.known_media.extend(payload.media.keys().map(|k| payload::hash_of_wire_key(k).to_string()));
+                range.start
             }
         };
         self.remark(marks, fallback);

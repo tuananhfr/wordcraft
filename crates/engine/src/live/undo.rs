@@ -96,7 +96,7 @@ impl Step {
                 let back = payload::capture(before, blocks, hashes, &mut |_| true);
                 let Some(range) = locate(doc, current, *prev, *next) else { return false };
                 let gone: Vec<usize> = range.clone().collect();
-                payload::replace(doc, &gone, range.start, &back).is_ok()
+                payload::replace(doc, &gone, range.start, &back, hashes).is_ok()
             }
             Step::Doc { before, .. } => {
                 *doc = before.clone();

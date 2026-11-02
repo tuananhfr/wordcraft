@@ -149,6 +149,23 @@ fn open_bytes_inner(name: &str, bytes: &[u8], password: Option<&str>) -> Result<
     Ok((doc, false))
 }
 
+/// Opens a whole document another editor sent while co-editing: a DOCX package only, inflating
+/// to 48 MiB a part and 64 MiB in all. It opens unasked on every page in the room, so the
+/// errors say no more than that (they reach the log).
+pub(crate) fn open_live_docx(bytes: &[u8]) -> Result<Document, &'static str> {
+    const MIB: u64 = 1024 * 1024;
+    if !bytes.starts_with(b"PK") {
+        return Err("the document payload is not a DOCX package");
+    }
+    let mut doc = wordcraft_docx::read_limited(bytes, 48 * MIB, 64 * MIB).map_err(|e| match e {
+        wordcraft_docx::DocxError::Limit(_) => "the document payload is too large",
+        _ => "unreadable document payload",
+    })?;
+    doc.ensure_nonempty();
+    alt_chunk::expand(&mut doc);
+    Ok(doc)
+}
+
 /// The narrowest text width of the document's sections, points: what a picture must fit.
 pub(crate) fn text_width(doc: &Document) -> f32 {
     doc.sections().iter().map(|(_, sp)| sp.text_width()).fold(f32::INFINITY, f32::min).clamp(36.0, 4000.0)
