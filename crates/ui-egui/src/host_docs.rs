@@ -20,6 +20,7 @@ use crate::open_documents::{save_name_of, untitled_name};
 mod access;
 mod autosave;
 mod comments;
+mod conflict_dialog;
 mod draft_keep;
 mod live;
 mod saves;

@@ -162,25 +162,7 @@ impl WordApp {
     /// The oldest `regionConflict` question, until the user answers it.
     fn ask_conflict(&mut self, ctx: &egui::Context, link: &HostLink) {
         let Some(region) = link.shared.conflicts.try_borrow().ok().and_then(|q| q.front().map(|(r, _)| r.clone())) else { return };
-        let mut answer = None;
-        egui::Window::new(tl!("Changed while you were away"))
-            .id(egui::Id::new("live_conflict").with(&region))
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, -40.0))
-            .show(ctx, |ui| {
-                ui.set_max_width(360.0);
-                ui.label(tl!("Someone else changed this part while you were offline. Which version do you keep?"));
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if ui.button(tl!("Keep mine")).clicked() {
-                        answer = Some("mine");
-                    }
-                    if ui.button(tl!("Use theirs")).clicked() {
-                        answer = Some("theirs");
-                    }
-                });
-            });
+        let answer = super::conflict_dialog::show(ctx, &region);
         if let Some(answer) = answer
             && let Some((_, done)) = link.shared.conflicts.try_borrow_mut().ok().and_then(|mut q| q.pop_front())
         {
