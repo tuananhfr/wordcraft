@@ -91,6 +91,11 @@ pub fn visible(app: &WordApp) -> bool {
     if app.session.cell_range().is_some() {
         return false;
     }
+    // Nor in a phone-wide window: over a page fitted at ~36% it covers most of the text on
+    // screen; the ribbon's Home tab has the same controls.
+    if app.narrow.is_narrow() {
+        return false;
+    }
     // Never for a collapsed caret.
     !app.session.sel.is_collapsed()
 }
@@ -309,6 +314,31 @@ mod tests {
         let r = r.unwrap_or(Rect::EVERYTHING);
         assert!(r.width() > 0.0 && r.height() > 0.0, "a tiny viewport must still place a positive-size bar");
         assert!(r.min.x.is_finite() && r.min.y.is_finite());
+    }
+
+    /// At phone width the page is at ~36% and the bar would cover most of what is on screen; the
+    /// ribbon's Home tab keeps the same controls. A tablet keeps the bar.
+    #[test]
+    fn a_phone_window_shows_no_mini_toolbar() {
+        use wordcraft_engine::Session;
+        for (width, shown) in [(360.0, false), (768.0, true)] {
+            let mut a = WordApp::new(Session::new(wordcraft_doc::Document::new()), Default::default());
+            a.run("text.insert", json!({"text": "The quick brown fox jumps over the lazy dog"})).unwrap();
+            a.run("select.text", json!({"text": "brown fox"})).unwrap();
+            let mut h = egui_kittest::Harness::builder().with_size(Vec2::new(width, 780.0)).build_ui_state(
+                |ui, app: &mut WordApp| {
+                    let ctx = ui.ctx().clone();
+                    app.logic(&ctx);
+                    app.ui(ui);
+                },
+                a,
+            );
+            for _ in 0..6 {
+                h.step();
+            }
+            assert_eq!(visible(h.state()), shown, "at {width}");
+            assert_eq!(h.ctx.data(|d| d.get_temp::<[Rect; 2]>(shown_id())).is_some(), shown, "at {width}");
+        }
     }
 
     /// #535: the bar was one fixed-width row that cut off everything after Align Left. Draw it

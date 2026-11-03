@@ -76,6 +76,7 @@ pub mod keys;
 pub mod keytips;
 mod legacy_notice;
 mod live_overlay;
+mod live_tags;
 pub mod loss_warning;
 pub mod mini_toolbar;
 pub mod narrow;
